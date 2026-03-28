@@ -8,6 +8,8 @@ const downloadRoute = require("./routes/download");
 const lyricsRoute = require("./routes/lyrics");
 const recommendRoute = require("./routes/recommend");
 const deezerRoute = require("./routes/deezer");
+const libraryRoute = require("./routes/library");
+const playlistRoute = require("./routes/playlists");
 
 const app = express();
 app.use(express.json());
@@ -19,6 +21,8 @@ app.use("/api/download", downloadRoute);
 app.use("/api/lyrics", lyricsRoute);
 app.use("/api/recommend", recommendRoute);
 app.use("/api/deezer", deezerRoute);
+app.use("/api/me/library", libraryRoute);
+app.use("/api/playlists", playlistRoute);
 
 // Health check
 app.get("/health", (req, res) => res.json({ status: "ok" }));

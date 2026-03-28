@@ -59,9 +59,36 @@ Le "cerveau" qui lie les métadonnées Deezer aux téléchargements Tubidy.
 
 ---
 
+## 4. 📚 Service Library (Persistance SQLite)
+
+Gère les favoris (Likes) et les playlists de l'utilisateur. Les données sont persistées dans `music.db`.
+
+### Endpoints
+
+- **GET `/api/me/library`** : Liste tous les titres aimés (avec métadonnées).
+- **POST `/api/me/library/like`** : Ajoute un titre aux favoris.
+- **DELETE `/api/me/library/like/:id`** : Retire un titre des favoris.
+
+---
+
+## 5. 📂 Service Playlists
+
+Gestion complète des collections musicales.
+
+### Endpoints
+
+- **GET `/api/playlists`** : Liste toutes les playlists.
+- **POST `/api/playlists`** : Crée une nouvelle playlist (`{ "name": "..." }`).
+- **GET `/api/playlists/:id`** : Récupère une playlist et tous ses titres.
+- **POST `/api/playlists/:id/tracks`** : Ajoute un titre à une playlist.
+- **DELETE `/api/playlists/:id`** : Supprime une playlist.
+
+---
+
 ## ⚙️ Configuration & Dépendances
 
 - **Port** : 3000 (configurable via `apis.config.js`).
 - **Axios** : Pour les requêtes API et le polling.
 - **Cheerio** : Pour le parsing DOM des scrapers.
+- **Better-SQLite3** : Pour la persistance locale des données utilisateur.
 - **Rate Limit** : Inclus sur les routes de recherche pour éviter les bannissements d'IP.
