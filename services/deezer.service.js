@@ -65,7 +65,12 @@ async function getTrack(id) {
     const response = await axios.get(`${BASE_URL}/track/${id}`);
     return response.data;
   } catch (error) {
-    console.error("[deezer] Error in getTrack:", error.message);
+    console.error(
+      `[deezer] Error in getTrack for ID ${id}:`,
+      error.response ? error.response.status : error.message,
+    );
+    if (error.response)
+      console.error("[deezer] Error data:", error.response.data);
     throw error;
   }
 }

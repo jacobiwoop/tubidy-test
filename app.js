@@ -14,6 +14,12 @@ const playlistRoute = require("./routes/playlists");
 const app = express();
 app.use(express.json());
 
+// Logger simple
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // Routes
 app.use("/api/search", searchRoute);
 app.use("/api/stream", streamRoute);
@@ -32,8 +38,17 @@ app.use((req, res) => res.status(404).json({ error: "Route not found" }));
 
 // Error handler global
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: err.message || "Internal server error" });
+  const status = err.response?.status || 500;
+  console.error(
+    `[Error] ${req.method} ${req.url} - Status: ${status} - Message: ${err.message}`,
+  );
+  if (err.response?.data) {
+    console.error("[Error Data]", JSON.stringify(err.response.data));
+  }
+  res.status(status).json({
+    error: err.message || "Internal server error",
+    details: err.response?.data || null,
+  });
 });
 
 app.listen(port, () => {

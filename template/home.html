@@ -1,0 +1,523 @@
+<!doctype html>
+
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-container": "#1c5329",
+              surface: "#131313",
+              background: "#131313",
+              "tertiary-container": "#ff767b",
+              "on-secondary-fixed-variant": "#195127",
+              "on-error": "#690005",
+              "on-surface": "#e5e2e1",
+              "on-primary": "#003914",
+              "outline-variant": "#3d4a3d",
+              "on-tertiary-fixed": "#400009",
+              "inverse-primary": "#006e2d",
+              "surface-variant": "#353534",
+              "primary-fixed-dim": "#53e076",
+              "on-background": "#e5e2e1",
+              "primary-container": "#1db954",
+              "on-primary-fixed-variant": "#005320",
+              primary: "#53e076",
+              "on-secondary": "#003914",
+              "surface-dim": "#131313",
+              "error-container": "#93000a",
+              "surface-tint": "#53e076",
+              outline: "#869585",
+              "surface-container-highest": "#353534",
+              "tertiary-fixed-dim": "#ffb3b3",
+              "on-error-container": "#ffdad6",
+              "surface-container-low": "#1c1b1b",
+              "secondary-fixed": "#b5f1b8",
+              "primary-fixed": "#72fe8f",
+              "secondary-fixed-dim": "#99d59d",
+              secondary: "#99d59d",
+              "on-tertiary-fixed-variant": "#881d28",
+              "inverse-surface": "#e5e2e1",
+              "surface-container-lowest": "#0e0e0e",
+              "inverse-on-surface": "#313030",
+              "on-primary-fixed": "#002108",
+              "tertiary-fixed": "#ffdad9",
+              "on-secondary-container": "#8cc690",
+              "surface-container": "#201f1f",
+              "surface-bright": "#393939",
+              "on-secondary-fixed": "#002108",
+              "surface-container-high": "#2a2a2a",
+              "on-surface-variant": "#bccbb9",
+              "on-tertiary": "#680114",
+              "on-primary-container": "#004118",
+              tertiary: "#ffb3b3",
+              "on-tertiary-container": "#730a1b",
+              error: "#ffb4ab",
+            },
+            fontFamily: {
+              headline: ["Plus Jakarta Sans"],
+              body: ["Inter"],
+              label: ["Inter"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .glass-player {
+        background: rgba(32, 31, 31, 0.7);
+        backdrop-filter: blur(24px);
+      }
+    </style>
+    <style>
+      body {
+        min-height: max(884px, 100dvh);
+      }
+    </style>
+  </head>
+  <body class="bg-surface text-on-surface font-body min-h-screen pb-40">
+    <!-- Top AppBar -->
+    <header
+      class="flex justify-between items-center px-4 py-3 w-full bg-[#131313]/90 backdrop-blur-xl z-40 top-0 sticky"
+    >
+      <div class="flex items-center gap-4">
+        <div
+          class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high"
+        >
+          <img
+            alt="user profile picture"
+            class="w-full h-full object-cover"
+            data-alt="close-up portrait of a stylish man with a warm smile and soft studio lighting background"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRogVdKoRnL9eXji2r65cXf8amitFG0mGjp-nzL8HgNGdAJcMidAlyCWHKRfnluU88XmE4vu80oF9G5EIg6A5nnM-4PqZQvMOd-j2tnUipBK_Pk0svmKGhnxc4iDtJgokLHrEFR94rATG2FyE_IHO5OYWwBhNACiO1hgiOAdvhBLiCIzGcZult4LsA7pDTX2mOTe6KsHB5Rhn4wAfd5COQ4rMAeTwKpRVL-t_LNPh1YLDERa4ia6G3mYGtLsMC6wW-MJV5TGMk6UA"
+          />
+        </div>
+        <h1
+          class="font-plus-jakarta-sans text-2xl font-bold tracking-tight text-[#1DB954]"
+        >
+          For You
+        </h1>
+      </div>
+      <div class="flex items-center gap-6">
+        <nav class="hidden md:flex items-center gap-8">
+          <a
+            class="text-white font-bold border-b-2 border-[#1DB954] transition-colors"
+            href="#"
+            >Home</a
+          >
+          <a
+            class="text-[#BCCBB9] font-medium hover:text-white transition-colors"
+            href="#"
+            >Search</a
+          >
+          <a
+            class="text-[#BCCBB9] font-medium hover:text-white transition-colors"
+            href="#"
+            >Library</a
+          >
+        </nav>
+        <button class="active:opacity-80 transition-transform scale-95">
+          <span
+            class="material-symbols-outlined text-on-surface text-2xl"
+            data-icon="notifications"
+            >notifications</span
+          >
+        </button>
+      </div>
+    </header>
+    <main class="px-4 md:px-8 space-y-12 mt-6">
+      <!-- Quick Access Filters -->
+      <div class="flex gap-2 overflow-x-auto hide-scrollbar">
+        <span
+          class="px-4 py-1.5 bg-primary text-on-primary rounded-full text-sm font-semibold whitespace-nowrap"
+          >All</span
+        >
+        <span
+          class="px-4 py-1.5 bg-surface-container-high text-white rounded-full text-sm font-semibold whitespace-nowrap hover:bg-surface-bright transition-colors"
+          >Music</span
+        >
+        <span
+          class="px-4 py-1.5 bg-surface-container-high text-white rounded-full text-sm font-semibold whitespace-nowrap hover:bg-surface-bright transition-colors"
+          >Podcasts</span
+        >
+      </div>
+      <!-- Hero Greeting Section -->
+      <section>
+        <h2 class="font-headline font-bold text-3xl tracking-tight mb-6">
+          Good morning
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <!-- Bento Quick Cards -->
+          <div
+            class="group flex items-center bg-surface-container-low hover:bg-surface-container-high rounded-lg transition-colors overflow-hidden cursor-pointer"
+          >
+            <div class="w-16 h-16 flex-shrink-0">
+              <img
+                class="w-full h-full object-cover"
+                data-alt="abstract vibrant purple and orange swirl representing energetic electronic music aesthetic"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEyqaDlx0wWNMf5R2EL_ImEwf-d5CAdAiVs-Nqjpmoo3fPCN2MkU_CXsCMHwVLhTKrOTzmczA6dLC2MRoLhxUNQof59T4zUUvirmo8onuM1ex8oUBRAmJ_R8Y6VLew_9H8sJRO95p0OyYqso6aJLg9PwHA6Z0aSxx7ASay3rO_1hO9HLcj_5vjaETVfzzOTjAb9RqQUEpx9EIYraUvK0Hr8whePmv2pASTvAFnbAEKlFb2cpYlckE8gwKlBtJmksL7jfY_kzVVP5s"
+              />
+            </div>
+            <span class="px-3 font-semibold text-sm truncate">Daily Mix 1</span>
+            <button
+              class="ml-auto mr-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 bg-primary-container p-2 rounded-full shadow-lg"
+            >
+              <span
+                class="material-symbols-outlined text-on-primary text-xl"
+                data-icon="play_arrow"
+                style="font-variation-settings: &quot;FILL&quot; 1"
+                >play_arrow</span
+              >
+            </button>
+          </div>
+          <div
+            class="group flex items-center bg-surface-container-low hover:bg-surface-container-high rounded-lg transition-colors overflow-hidden cursor-pointer"
+          >
+            <div class="w-16 h-16 flex-shrink-0">
+              <img
+                class="w-full h-full object-cover"
+                data-alt="close up of a vintage jazz saxophone with moody atmospheric blue lighting and smoke"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCb0KFqpG1I4wVfh43CEZDTDWk1AHu_9pWQCvxwdUCYxpDbFxOutc5vhmC738lM1MuTEWuUNg7hBxN9r0extZKbJO5NRx_KVVX63xER5B362B88OIce1ZJhtfkN867RRKbbQEOu6HkuVxce0Sy0qkCMjRJC0oO9pKSxw7JArbaBj_NIt0Szd_nOHy4ZIE-ipK3qzW5vHs2lzfkcKBddAllG7_BLxJSgiU_1_jthsirCqfL6vurwAWj4_3wGnRekES_AvCrqQmC_UHs"
+              />
+            </div>
+            <span class="px-3 font-semibold text-sm truncate">Jazz Vibes</span>
+            <button
+              class="ml-auto mr-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 bg-primary-container p-2 rounded-full shadow-lg"
+            >
+              <span
+                class="material-symbols-outlined text-on-primary text-xl"
+                data-icon="play_arrow"
+                style="font-variation-settings: &quot;FILL&quot; 1"
+                >play_arrow</span
+              >
+            </button>
+          </div>
+          <div
+            class="group flex items-center bg-surface-container-low hover:bg-surface-container-high rounded-lg transition-colors overflow-hidden cursor-pointer"
+          >
+            <div class="w-16 h-16 flex-shrink-0">
+              <img
+                class="w-full h-full object-cover"
+                data-alt="dynamic concert crowd with hands raised and dramatic stage lighting silhouette effect"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuB919xlKhoiCIKStwWCi8HU4r6VkqR9YE29iD9a3vItYl8VDayhz7u4LO74uWJSJHNWSE71rozfilY3F8CyAhZ4O-GgV2LR-vh_pQ7TlIvbFuHE8_xCOnwM7BhisKXcE3c6Au9GWL_e6Ax3L2K9yN3o71h-zRu7a1ht9n3_CLID0LH7NwI6UV15ux-OgKQyW_wjCohRUuNYh-kPuiiz03r1Qp9k_RRFVENj9uTVQEmUzfEYuEvbO6BB5GYf-SmBULTK9zXJylv_j10"
+              />
+            </div>
+            <span class="px-3 font-semibold text-sm truncate"
+              >Top Hits 2024</span
+            >
+            <button
+              class="ml-auto mr-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 bg-primary-container p-2 rounded-full shadow-lg"
+            >
+              <span
+                class="material-symbols-outlined text-on-primary text-xl"
+                data-icon="play_arrow"
+                style="font-variation-settings: &quot;FILL&quot; 1"
+                >play_arrow</span
+              >
+            </button>
+          </div>
+        </div>
+      </section>
+      <!-- Made For You Section -->
+      <section>
+        <div class="flex justify-between items-end mb-6">
+          <h2 class="font-headline font-bold text-2xl tracking-tight">
+            Made for you
+          </h2>
+          <span
+            class="text-on-surface-variant font-semibold text-sm hover:underline cursor-pointer"
+            >Show all</span
+          >
+        </div>
+        <div class="flex gap-6 overflow-x-auto hide-scrollbar pb-2">
+          <!-- Music Card -->
+          <div class="w-40 flex-shrink-0 group cursor-pointer">
+            <div class="relative aspect-square mb-3">
+              <img
+                class="w-full h-full object-cover rounded-xl"
+                data-alt="overhead view of professional DJ equipment with glowing neon lights in a dark club setting"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDXlG7gm85XOEDeF_yieOFgVOPsBEp-cwC8cjscW556q3ddHUnf_FxklbwRbmB6G7MSUckaMhRNEbILdGQLNaJAJ70pFjuE5VLPeJqzjr_Tr1YJAot1UbF1CK9Q9x5_w7_QSRJNSor6dLSqJ13tXbRJlcs7ujYWrUjQprxf_sjsEM1GN5XB2vEmcjldQkoQW6-oBOdyuwRamUzZ6CzBXCQrZipCNLGUKwgcAOW39cF95ILW0-aMcO6u6TInb0xqcrUmTz8z1_6vGY"
+              />
+              <button
+                class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 bg-primary-container p-3 rounded-full shadow-2xl"
+              >
+                <span
+                  class="material-symbols-outlined text-on-primary text-2xl"
+                  data-icon="play_arrow"
+                  style="font-variation-settings: &quot;FILL&quot; 1"
+                  >play_arrow</span
+                >
+              </button>
+            </div>
+            <h3 class="font-bold text-sm truncate">Discover Weekly</h3>
+            <p class="text-on-surface-variant text-xs line-clamp-2 mt-1">
+              Your weekly mixtape of fresh music. Enjoy new tracks from artists
+              you love.
+            </p>
+          </div>
+          <!-- Music Card -->
+          <div class="w-40 flex-shrink-0 group cursor-pointer">
+            <div class="relative aspect-square mb-3">
+              <img
+                class="w-full h-full object-cover rounded-xl"
+                data-alt="colorful abstract lighting of a stage during a rock concert with bokeh effect"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvXPITwFYvQRkPibJb8XozPo2rShimSIzhjgpolkLXohGvTIX7QIPEfBEW9NO5ng0oG_t6C99fD0Kg3ByONJcv_DPnu1f--oeDz5e_PRYi0RCmowddoL8R4Gvy8N38FQXK42T_nwEnbUx53j70cCUAeJ2vMNzmQrOfQzgBkb9hK8daJkNP8llc1fL63jfJjpOsg2J1SBiLw8qFWVBmGy_1qjrbPQJVlFzX7e9ItXhwnfJXbdAVbz26HAfhqEOuqQM32OM6VZG0krE"
+              />
+              <button
+                class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 bg-primary-container p-3 rounded-full shadow-2xl"
+              >
+                <span
+                  class="material-symbols-outlined text-on-primary text-2xl"
+                  data-icon="play_arrow"
+                  style="font-variation-settings: &quot;FILL&quot; 1"
+                  >play_arrow</span
+                >
+              </button>
+            </div>
+            <h3 class="font-bold text-sm truncate">Daily Mix 2</h3>
+            <p class="text-on-surface-variant text-xs line-clamp-2 mt-1">
+              Arctic Monkeys, Tame Impala, and more.
+            </p>
+          </div>
+          <!-- Music Card -->
+          <div class="w-40 flex-shrink-0 group cursor-pointer">
+            <div class="relative aspect-square mb-3">
+              <img
+                class="w-full h-full object-cover rounded-xl"
+                data-alt="a minimalist vintage microphone on a stand with a soft dark grey background"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCf2NWcjpz0t-p_2aNDM4g1b5qIKrePLHCLEG1KBSQO1mqQ_Ht3HioYWmVSbUNkAvN-htjljXWCjB5ZOWU_ZvGUEGhUachUruCcbMqodWKWIICLsw7WiVENO7dDdDWltBC2x5Z0Y0d97mUAOSxBSdf7gv2kl-fIYtmjsbULoZeoALbBcRTX-WlyBOTZ-Fl40vQcZlMvgAQY262i_MlUdSZiyqDv5q3FZLPYhzoHcMP23CUoibxPvb0zKCLkfTp8aqHv5-hnS65qkpg"
+              />
+              <button
+                class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 bg-primary-container p-3 rounded-full shadow-2xl"
+              >
+                <span
+                  class="material-symbols-outlined text-on-primary text-2xl"
+                  data-icon="play_arrow"
+                  style="font-variation-settings: &quot;FILL&quot; 1"
+                  >play_arrow</span
+                >
+              </button>
+            </div>
+            <h3 class="font-bold text-sm truncate">Release Radar</h3>
+            <p class="text-on-surface-variant text-xs line-clamp-2 mt-1">
+              Catch up on the latest releases from artists you follow.
+            </p>
+          </div>
+        </div>
+      </section>
+      <!-- Recently Played -->
+      <section>
+        <div class="flex justify-between items-end mb-6">
+          <h2 class="font-headline font-bold text-2xl tracking-tight">
+            Recently played
+          </h2>
+        </div>
+        <div class="flex gap-6 overflow-x-auto hide-scrollbar pb-2">
+          <div class="w-32 flex-shrink-0 group cursor-pointer">
+            <img
+              class="w-full aspect-square object-cover rounded-xl mb-3"
+              data-alt="modern minimalist album cover featuring architectural shadows and a single desert plant"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuADNkagc16iH5maUJvV_rAkM7jY2lAHfgge5PXw8GIoRyJGpH_-7wUpo6kRYFo6f9gtHfRiqGfrqkWqLKat6AaM_nBQuebv82xTggQVXeyjRNVydOMUThlNpKTvNCh7yu3ub-IVTGF0nYTQH60fifkbAuCmRzUAzuujEM5vNgZNazcNAQr3pAs1tQA3oz8i3HMHUMgfNQbINj1YqNlSJsODnDNHsaNHQITHB8QVVbQhGrQAGGjRPBDR2zh75g3qX9viRPbrX1u1Hek"
+            />
+            <h3 class="font-bold text-xs truncate">Inner Speaker</h3>
+            <p class="text-on-surface-variant text-[10px] mt-1">
+              Album • Tame Impala
+            </p>
+          </div>
+          <div class="w-32 flex-shrink-0 group cursor-pointer">
+            <img
+              class="w-full aspect-square object-cover rounded-xl mb-3"
+              data-alt="colorful hand-drawn illustration style album art with celestial themes and stars"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfg2FYBbq5RrUAuLg7r5RGs4veBSnq4Sxm40xUC7mVEqDWbKkI0Vvw0esn0b0Soids783_KC70zfYdzrrGo6I1yBVosCvln0Wkpmo1bWQvjlABsOyc9BoGcv9ZZr7wvyp115PU734izSzKiEz-ZWsgTXEn3Cy7m2YMyEzg4SB58Qh-RDqXJlb5A5u9iezE1HT4KwxqZWjR-eYkZmi1naqyFqvDDsBLY03U-ZWP80CgxEeLBEJvh7X2CaV1Hn9dTes2iqqlfacAaVg"
+            />
+            <h3 class="font-bold text-xs truncate">Future Nostalgia</h3>
+            <p class="text-on-surface-variant text-[10px] mt-1">
+              Album • Dua Lipa
+            </p>
+          </div>
+          <div class="w-32 flex-shrink-0 group cursor-pointer">
+            <img
+              class="w-full aspect-square object-cover rounded-xl mb-3"
+              data-alt="grainy black and white portrait of a folk musician with a guitar against a brick wall"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMdKc3nAUWzU8TFd6DTew5qImVOTUbKk2gId1Ao-vpghgcHqD0gezG-SX8VoLgNG5kn7eFUw9lPOCcDDfxO8KAxr_cTDA_B9-9kaEO_KEuJvrVPAC5xwv53rjVf-daqFLhDZe2zcOjGA1cAJG0WDcf8ZZanRBXXBpWie1SM5vQr4_z4CA6NaX-wu1x21Mrnt-zqovgK7eLJod20sznxPw7YqzaSuG8Rs2PsWjBavt-JBB6cwjDGYC2YLEYRg1oAVB0wlZjyzHRcTc"
+            />
+            <h3 class="font-bold text-xs truncate">Coffee Shop Indie</h3>
+            <p class="text-on-surface-variant text-[10px] mt-1">Playlist</p>
+          </div>
+        </div>
+      </section>
+      <!-- Your Top Mixes -->
+      <section>
+        <div class="flex justify-between items-end mb-6">
+          <h2 class="font-headline font-bold text-2xl tracking-tight">
+            Your top mixes
+          </h2>
+        </div>
+        <div class="flex gap-6 overflow-x-auto hide-scrollbar pb-2">
+          <div
+            class="w-44 flex-shrink-0 group cursor-pointer bg-surface-container-low p-4 rounded-xl hover:bg-surface-container-high transition-colors"
+          >
+            <div class="relative aspect-square mb-4">
+              <img
+                class="w-full h-full object-cover rounded-lg shadow-xl"
+                data-alt="abstract liquid metal textures with green and silver reflections for a modern techno vibe"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwGCiDriY_63JcDKauLrb-3eKmY_SdMNKHdk2Z4YuXZvlfkUiK4KRWWsSKwCWjXD6_gw_DlalFbqf4AxMKaQUTPPyXEnBaNBI2jsBR80Yz_KmG2Wk_WQotobQmLkDiM_RsIlw386Sm6yLvjL-xIjHjb6Uq1tmis3-GHUZHMd_afcG-sMHd6L2aLFHcWs1oxSnFAaQp44y2t8Qjs6QfRjzBTjhfF1LJlw9L1zxzoK_EUGWQvoNRbqBcpATNCRy_XZlbxv6WS3TvMGY"
+              />
+              <div
+                class="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-full"
+              ></div>
+            </div>
+            <h3 class="font-bold text-sm truncate">Techno Mix</h3>
+            <p class="text-on-surface-variant text-xs mt-2">
+              Charlotte de Witte, Amelie Lens, Boris Brejcha...
+            </p>
+          </div>
+          <div
+            class="w-44 flex-shrink-0 group cursor-pointer bg-surface-container-low p-4 rounded-xl hover:bg-surface-container-high transition-colors"
+          >
+            <div class="relative aspect-square mb-4">
+              <img
+                class="w-full h-full object-cover rounded-lg shadow-xl"
+                data-alt="vibrant tropical sunset through palm tree leaves with warm orange and pink hues"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvuA342o_NgXvCFtqxegMDNMskAdaWeXx3Le16QHF1BcZlQFcb1ckXKvj6sQUJPxF6iVQipflWCYI2FgbB-w19cZKaZb0WQjxLf3LHdGIO0a1kyYuTGnohuuEnF5zwhL1oXcJIzKA9hH3O6SzN6fMeuyZQiuL5EyQ57O9acjjvX03w6SPp2wN9SrtzJwwe56ecgTLXrywrzMdKB7qb67m6faMRc-37-3gQcppjZLxbdnBxgWR3CFZOOk9zVgZ7MhbE6Y1SC1K80ns"
+              />
+            </div>
+            <h3 class="font-bold text-sm truncate">Summer Mix</h3>
+            <p class="text-on-surface-variant text-xs mt-2">
+              Kygo, Avicii, Calvin Harris and more hits.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <!-- Now Playing Mini Player -->
+    <div class="fixed bottom-[72px] left-2 right-2 md:left-4 md:right-4 z-50">
+      <div
+        class="glass-player h-16 rounded-xl flex items-center px-3 shadow-2xl relative overflow-hidden"
+      >
+        <!-- Progress Bar -->
+        <div class="absolute top-0 left-0 w-full h-[2px] bg-white/10">
+          <div class="h-full bg-primary w-1/3"></div>
+        </div>
+        <div class="flex items-center flex-1 gap-3">
+          <img
+            class="w-10 h-10 rounded-lg object-cover"
+            data-alt="vibrant album art with artistic paint splatters in green and black colors"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBY1-UtQH2XjfePw56ZzuYF8AeNzzwqFwC_XrsDdpjgh8fci9e39-coJdloa0nb5dCThKJ3P5Ed1tQQs3WTsYdGQD0uo264T0c7sRnVVmGhG6cQ7kumXpZpJuQzhM_IQ-X2dcda4T3VEbj3HKk9beMadtMWeA7ukGsVxJeMdlvFyQc4LTysq5tGIvoC3gvqthZTdeNMG3tX8-OuD-9fQAiKQIe7fWSO0u0GCL5cG1KPk9yA2BD_MQqyEjxYPhdu60WpLCGd3phUMKM"
+          />
+          <div class="flex flex-col">
+            <span class="text-sm font-bold truncate">Lost in Yesterday</span>
+            <span class="text-[10px] text-on-surface-variant">Tame Impala</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <button
+            class="material-symbols-outlined text-white text-2xl"
+            data-icon="devices"
+          >
+            devices
+          </button>
+          <button
+            class="material-symbols-outlined text-tertiary-container text-2xl"
+            data-icon="favorite"
+            style="font-variation-settings: &quot;FILL&quot; 1"
+          >
+            favorite
+          </button>
+          <button
+            class="bg-white rounded-full p-1.5 flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <span
+              class="material-symbols-outlined text-black text-xl"
+              data-icon="play_arrow"
+              style="font-variation-settings: &quot;FILL&quot; 1"
+              >play_arrow</span
+            >
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Bottom Navigation Bar -->
+    <nav
+      class="fixed bottom-0 left-0 w-full flex justify-around items-center pt-2 pb-6 px-4 backdrop-blur-md bg-[#201F1F]/70 z-50 rounded-t-xl shadow-2xl shadow-black"
+    >
+      <div
+        class="flex flex-col items-center justify-center text-white scale-105 active:scale-90 transition-all duration-200"
+      >
+        <span
+          class="material-symbols-outlined"
+          data-icon="home"
+          style="font-variation-settings: &quot;FILL&quot; 1"
+          >home</span
+        >
+        <span class="font-plus-jakarta-sans text-[10px] font-medium mt-1"
+          >Home</span
+        >
+      </div>
+      <div
+        class="flex flex-col items-center justify-center text-[#BCCBB9] opacity-70 hover:opacity-100 transition-opacity active:scale-90 transition-all duration-200"
+      >
+        <span class="material-symbols-outlined" data-icon="search">search</span>
+        <span class="font-plus-jakarta-sans text-[10px] font-medium mt-1"
+          >Search</span
+        >
+      </div>
+      <div
+        class="flex flex-col items-center justify-center text-[#BCCBB9] opacity-70 hover:opacity-100 transition-opacity active:scale-90 transition-all duration-200"
+      >
+        <span class="material-symbols-outlined" data-icon="library_music"
+          >library_music</span
+        >
+        <span class="font-plus-jakarta-sans text-[10px] font-medium mt-1"
+          >Your Library</span
+        >
+      </div>
+      <div
+        class="flex flex-col items-center justify-center text-[#BCCBB9] opacity-70 hover:opacity-100 transition-opacity active:scale-90 transition-all duration-200"
+      >
+        <span class="material-symbols-outlined" data-icon="workspace_premium"
+          >workspace_premium</span
+        >
+        <span class="font-plus-jakarta-sans text-[10px] font-medium mt-1"
+          >Premium</span
+        >
+      </div>
+    </nav>
+  </body>
+</html>

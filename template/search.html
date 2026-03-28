@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "secondary-container": "#1c5329",
+            "surface": "#131313",
+            "background": "#131313",
+            "tertiary-container": "#ff767b",
+            "on-secondary-fixed-variant": "#195127",
+            "on-error": "#690005",
+            "on-surface": "#e5e2e1",
+            "on-primary": "#003914",
+            "outline-variant": "#3d4a3d",
+            "on-tertiary-fixed": "#400009",
+            "inverse-primary": "#006e2d",
+            "surface-variant": "#353534",
+            "primary-fixed-dim": "#53e076",
+            "on-background": "#e5e2e1",
+            "primary-container": "#1db954",
+            "on-primary-fixed-variant": "#005320",
+            "primary": "#53e076",
+            "on-secondary": "#003914",
+            "surface-dim": "#131313",
+            "error-container": "#93000a",
+            "surface-tint": "#53e076",
+            "outline": "#869585",
+            "surface-container-highest": "#353534",
+            "tertiary-fixed-dim": "#ffb3b3",
+            "on-error-container": "#ffdad6",
+            "surface-container-low": "#1c1b1b",
+            "secondary-fixed": "#b5f1b8",
+            "primary-fixed": "#72fe8f",
+            "secondary-fixed-dim": "#99d59d",
+            "secondary": "#99d59d",
+            "on-tertiary-fixed-variant": "#881d28",
+            "inverse-surface": "#e5e2e1",
+            "surface-container-lowest": "#0e0e0e",
+            "inverse-on-surface": "#313030",
+            "on-primary-fixed": "#002108",
+            "tertiary-fixed": "#ffdad9",
+            "on-secondary-container": "#8cc690",
+            "surface-container": "#201f1f",
+            "surface-bright": "#393939",
+            "on-secondary-fixed": "#002108",
+            "surface-container-high": "#2a2a2a",
+            "on-surface-variant": "#bccbb9",
+            "on-tertiary": "#680114",
+            "on-primary-container": "#004118",
+            "tertiary": "#ffb3b3",
+            "on-tertiary-container": "#730a1b",
+            "error": "#ffb4ab"
+          },
+          fontFamily: {
+            "headline": ["Plus Jakarta Sans"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .glass-effect { backdrop-filter: blur(20px); }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary min-h-screen pb-32">
+<!-- Shared Component: TopAppBar -->
+<header class="w-full top-0 sticky flex justify-between items-center px-4 py-3 w-full bg-[#131313]/90 backdrop-blur-xl z-40">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="close-up portrait of a stylish young man with warm cinematic lighting and a soft blurred studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPAEFFlxHrZxIDqcgxEkLux4L8-dk5vfhoa0vIOMa1znVxfl0V4x1GHKnSvOdeBrs7TCgbAGgjlT5P1FBXdGXP_WwMcOqUXXZlPg87a_9AIRsfiA7bQtsSVLQJ4_ObWMcSOYq-rVQJ5_nM1O3NEw-zqVK-anHVV4i1U_iYzjX9WDM79ernFrU7B7ei69EFUussjMJ6bNlM_tGRc76mOxcfFOiO_XPw0PL5hgcJK6vI-uxawzM_EVVA5XDXE6c0vr3WFTIOEtlLqlE"/>
+</div>
+<h1 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Search</h1>
+</div>
+<div class="flex gap-4">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-white transition-colors">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-white transition-colors">settings</button>
+</div>
+</header>
+<main class="px-4 mt-4 space-y-8 max-w-7xl mx-auto">
+<!-- Search Bar Section -->
+<section class="relative">
+<div class="flex items-center bg-surface-container-lowest rounded-lg px-4 py-3 gap-3 focus-within:bg-surface-container-highest transition-all duration-300">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-on-surface-variant font-medium" placeholder="What do you want to listen to?" type="text"/>
+</div>
+</section>
+<!-- Recent Searches -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="font-headline text-lg font-bold tracking-tight">Recent searches</h2>
+<button class="text-label-sm font-semibold text-on-surface-variant hover:text-primary transition-colors">See all</button>
+</div>
+<div class="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+<!-- Recent Search Item 1 -->
+<div class="flex flex-col items-center gap-2 min-w-[100px] group transition-transform active:scale-95">
+<div class="relative w-24 h-24">
+<img class="w-full h-full rounded-full object-cover" data-alt="vibrant neon colored abstract geometric shapes with a high contrast dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWmuXF2XJABFSt_P_HTztxlDgZh_wVETOp-_-Bs0ygjWiCqMXv6dN8cQWJbFvsU7aC5_y5hZsqRwr11lEBt2RE-n-e7ok3gSA-LEKGgBWZszw3x7H8lnjpUZlHCckIXhji8exe9FROZjZFDrq4yE1oRF7F3LDJXuZe6vqGi0OQnHvNqr534L_HkLmavElN9u6gv1sL2E_LVL456lZxuQniNsYX6w6J5R0TBJ6WiO3_QM8l8ViELApE2WrzwqUsHbAy1c_35wGhnCs"/>
+<button class="absolute bottom-1 right-1 bg-surface-container-high rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-sm text-on-surface">close</span>
+</button>
+</div>
+<span class="text-xs font-semibold text-on-surface text-center truncate w-full">Techno Bunker</span>
+</div>
+<!-- Recent Search Item 2 -->
+<div class="flex flex-col items-center gap-2 min-w-[100px] group transition-transform active:scale-95">
+<div class="relative w-24 h-24">
+<img class="w-full h-full rounded-full object-cover" data-alt="moody black and white portrait of a jazz musician playing a saxophone under a single spotlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxk36CQXYYZ37HS3G8MnHsS1djVmESPuhfNZsLSB6vm5P3K5dVXzw5RFM5D8Fluv455kinOWUBk2UeNJ6n1HVTnrOMFzrIDp2V57TNr8-Of_e4OLKBSLkl781po8kRuZP_vdkSU5TyzvKuF7shhpzBa5dhkXg5zEvYA1jNCgYL9JzDi-lEY6MSQUlQgZEiPLEHJ978_DqOCqdbarllFc21nnRvJjTFUFOsOyvjTbfGpBC2Qrq4yJAHUe9s3u5ZO_dIgWf0n9itSFU"/>
+<button class="absolute bottom-1 right-1 bg-surface-container-high rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-sm text-on-surface">close</span>
+</button>
+</div>
+<span class="text-xs font-semibold text-on-surface text-center truncate w-full">Jazz Classics</span>
+</div>
+<!-- Recent Search Item 3 -->
+<div class="flex flex-col items-center gap-2 min-w-[100px] group transition-transform active:scale-95">
+<div class="relative w-24 h-24">
+<img class="w-full h-full rounded-full object-cover" data-alt="colorful concert stage lights flashing through a dense crowd at a night music festival" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaHVTbf4A59_WBcJEfQ7mInUT2GB92ChZtRFxiaHIH0MBTkXDFq5vgs6NGWQl6nnTAhljvqsW7PLOp52PR3NmPgGZsBWWyUEN7soLbOZ-nH9-TBTf8vr-ZMc8svIUB_1bX6_nYYmVqEvl7ykq8hdvuGW8fRHYcyBGLveu5W8lsXHrffwUvmz87gGe2mH-JXIKdjxUCK7KBKe9xRvEu31Ca4utynk6rINWnMbddbkkCo4-OeVamB6yRude-S-E3CSl5U4ygcprvkoU"/>
+<button class="absolute bottom-1 right-1 bg-surface-container-high rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-sm text-on-surface">close</span>
+</button>
+</div>
+<span class="text-xs font-semibold text-on-surface text-center truncate w-full">Dua Lipa</span>
+</div>
+</div>
+</section>
+<!-- Genre Grid: Asymmetric Bento Style -->
+<section>
+<h2 class="font-headline text-xl font-extrabold tracking-tight mb-6">Browse all</h2>
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+<!-- Pop -->
+<div class="relative overflow-hidden rounded-xl h-48 bg-[#8D67AB] p-4 group cursor-pointer active:scale-95 transition-transform">
+<span class="font-headline text-xl font-bold text-white relative z-10">Pop</span>
+<img class="absolute -right-4 -bottom-4 w-32 h-32 rotate-12 group-hover:scale-110 transition-transform duration-300" data-alt="dynamic close up of a retro pink turntable with a vinyl record spinning under soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-WsIioEdcZ6hL6gK-uarw5almCgfqoT6Yi683mr58BDF3i6Y9zEe75Kd30gtnzulXY45WVVcQkzC9vWKo4XY6ouK1YvO0VDpqObh67A7iN6wHoUqt0m0_MYuYRoQvkj2GJ_Owi4aLitpbqv2ut1Ati-n-OvdWNfn0e457J9V6Xb98nwSySqylhHWcl249tRnKYzPboz38TDQYrf1L4tPthS-V2K7p5CX3PM2_JeKYMhhKo2olxiz0qrhxyoIBX8iJvNbCpYctjXU"/>
+</div>
+<!-- Hip-Hop -->
+<div class="relative overflow-hidden rounded-xl h-48 bg-[#BA5D07] p-4 group cursor-pointer active:scale-95 transition-transform">
+<span class="font-headline text-xl font-bold text-white relative z-10">Hip-Hop</span>
+<img class="absolute -right-4 -bottom-4 w-32 h-32 rotate-12 group-hover:scale-110 transition-transform duration-300" data-alt="urban street scene with colorful graffiti wall and a person wearing headphones walking by at night" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAgXDRs6X2ikF8j66WzR-033t2j-sgVN7dNpNhYHW-FnEHDCyR_7xYN9Jji1q7sRYhwiYAU4j_0tbX7UTcib9ZWwVTcLsE601HywHJssmgTMAUe-AcuL20_tJVC-ozyoCT0si77jEzm4RwGYRZJLPMTg7jcDH1G1UEabUSiFlC7T3WdmPvrQVZxxloNVGF0z2JMLLLSLBAHVBS3avZg1KqSArEdxBfM9hcxEIIZDVfMTATyZGbo4eACs4bjf0-o9Mc7QWnkgXponU"/>
+</div>
+<!-- Rock -->
+<div class="relative overflow-hidden rounded-xl h-48 bg-[#E91429] p-4 group cursor-pointer active:scale-95 transition-transform">
+<span class="font-headline text-xl font-bold text-white relative z-10">Rock</span>
+<img class="absolute -right-4 -bottom-4 w-32 h-32 rotate-12 group-hover:scale-110 transition-transform duration-300" data-alt="close up of an electric guitar fretboard with blue stage light reflections on the strings" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-IJcQiTHUXIQY1mWGc9HYDfhg_YTz7qfYwiEzXUpwDRxeFHKnAIySmLDiLXSwEpZdvjkFe0_5F8TEVKgkrFzc3cz1l_pTNDBs0nV6ryUikbjr6YslL-kA03pKV51ejC-AtiJZobwzAqM_Hg-t5Ci1bw6iokI4lN68uvC99M_Pmcr3NbFFgKuASHATPGkKo_vGiYjbnigs2XYKWrYepIb3gZC5EA8EFfaNxCFHqixe7Rcy3sjgHtn6I0OS5qWsYkxwF-e8BOY0Tm8"/>
+</div>
+<!-- Mood -->
+<div class="relative overflow-hidden rounded-xl h-48 bg-[#E13300] p-4 group cursor-pointer active:scale-95 transition-transform">
+<span class="font-headline text-xl font-bold text-white relative z-10">Mood</span>
+<img class="absolute -right-4 -bottom-4 w-32 h-32 rotate-12 group-hover:scale-110 transition-transform duration-300" data-alt="calm aesthetic of rain drops on a window with city lights blurred into soft bokeh in the distance" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqgg2X4zOzxNewffjIE3oxPbkBUN1fgQnxYALWOMPIoTfk-qkqsBSv2dXUKD--TZQlHyJk1Le5sMS01PPiZ2Ztu5NKqLsuh8ta3bK9FjHJE7GmRwIVGym6sNCoypLNSp730uWX1zIqiGVssbeA1zmZEvVCHTSYbv1MCLYA9Q_yHQlGev75C-v5mi4OUe_PEZoeXPYo9qic12mLb3XKffg7rAwX_aLsds19vD9pv9kwt5MmWgSn7zysPqiAZ87whn6UykiMir4dUrs"/>
+</div>
+<!-- Podcasts -->
+<div class="relative overflow-hidden rounded-xl h-48 bg-[#27856A] p-4 group cursor-pointer active:scale-95 transition-transform">
+<span class="font-headline text-xl font-bold text-white relative z-10">Podcasts</span>
+<img class="absolute -right-4 -bottom-4 w-32 h-32 rotate-12 group-hover:scale-110 transition-transform duration-300" data-alt="professional silver studio microphone on a dark desk with soft warm backlighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBG68LJsrCEmRQURVLv47-cv0I5L3fy1titEgtXkbzXiUbF17gdglm4Ddo8QmGXwPXfOvCc1kRFNAbNCE_p3z8Pp5-hD-7sbZPg1wc7xsMvm-fCQNJPSqM_QRUR4q0uTFFXz4JkO4ZnxgS-I8ERuAcJquxL-gBJITG-mv63oQ6z9DnybhbHBO5qbTGbCmbJHGNz3oQU5z5lN80eeCMBTy__jE01j0oEZqCm-mKODmd5LNG__Rzo2IzD2_Xizohnv_UYZMN_zyOpLBE"/>
+</div>
+<!-- Made For You -->
+<div class="relative overflow-hidden rounded-xl h-48 bg-[#1E3264] p-4 group cursor-pointer active:scale-95 transition-transform">
+<span class="font-headline text-xl font-bold text-white relative z-10">Made For You</span>
+<img class="absolute -right-4 -bottom-4 w-32 h-32 rotate-12 group-hover:scale-110 transition-transform duration-300" data-alt="vibrant blue and purple light beams crossing in a dark atmospheric space with subtle dust particles" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzez9uiUd6g5emLhubigCowUCZc9BXkGfQDEu932G6wo7ec_Bwj5o-F7JymtSuXBInnpHt0cNXnOvJ9CSbkStNEu1oGwirQQUpgT6u-lCkznmgquFJkRQ8UCksm-67JEw3lc1tASuv-01yT5HHVTN78qdg3bbpY41uESQgWtMGFsHvVuESP3PUNYSgUjyBY1yEpRJl2pnJZl0NET2juOTkk4w3pFWWywi4l3BaEnTrTISBYRCYRYoMBxfHm5RU60VpvXX3zYuSV1o"/>
+</div>
+<!-- Electronic -->
+<div class="relative overflow-hidden rounded-xl h-48 bg-[#503750] p-4 group cursor-pointer active:scale-95 transition-transform">
+<span class="font-headline text-xl font-bold text-white relative z-10">Dance</span>
+<img class="absolute -right-4 -bottom-4 w-32 h-32 rotate-12 group-hover:scale-110 transition-transform duration-300" data-alt="overhead view of a DJ mixer with glowing neon faders and colorful indicator lights in the dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpRLhra_kgCACBLofwwK6lD6qnQrOzI1-zXlnZJjh0xObcHAanrx2_yXybGyIE_kyxOzPAHMUfrynTLNNMP9uGGEAk3y_zUpPnFPEteGvicWzA1jrSnDpO87JAas3XAJTAyy0a5680XP9HworRRnT2bebdhsIUKfRRJ18rE00isvwFu2GwP9Z_LMtDnNUv2t-xLOlVxG1jgajfBQ6MZPKu-vRKEL6fbReVrqtyf4R2WnvWqHKU7ZT46yEBSlDrcqNnej3PSxQu8vw"/>
+</div>
+<!-- Chill -->
+<div class="relative overflow-hidden rounded-xl h-48 bg-[#D84000] p-4 group cursor-pointer active:scale-95 transition-transform">
+<span class="font-headline text-xl font-bold text-white relative z-10">Chill</span>
+<img class="absolute -right-4 -bottom-4 w-32 h-32 rotate-12 group-hover:scale-110 transition-transform duration-300" data-alt="soft focus of coffee steam rising in front of a warm fireplace with cozy interior aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_x54K2wGqKWn0xUrInIyFYTJvgClSFksxDB0tQd0TTZVDMM3tA39DP7Reid9EHdsRY00Ehw9ihVUkbhaZIwd26qWhRaWgnF4RDy6PBJ-XUEBQsMwGrkV9fgGsFHDITTJufkmoMRmVHRBwZ76JqTjTjC56NDc0MTT737ilmLeoSVXJ_TBHpR7IDaW0gr1PG5-Dd2GiXGkh7AFeOlXaimo9vCQIw3e8A9o1NgIEysu5pCAb53bv0nVhJFcc_oLZmALwVSBqxzjOGRE"/>
+</div>
+</div>
+</section>
+</main>
+<!-- Mini Player Bar -->
+<div class="fixed bottom-20 left-2 right-2 md:left-4 md:right-4 z-50">
+<div class="bg-surface-container-highest/80 glass-effect rounded-lg p-2 flex items-center justify-between shadow-2xl overflow-hidden">
+<!-- Progress Bar -->
+<div class="absolute top-0 left-0 h-[2px] bg-primary w-[65%]"></div>
+<div class="flex items-center gap-3 overflow-hidden">
+<img class="w-10 h-10 rounded-lg flex-shrink-0" data-alt="minimalist album art with a soft pastel color gradient and a central abstract circular shape" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8vL0TXiLwSENgTdR-C5F8SJ_6U6XPKLzEXS7T5Jq8YLiJaKnffLPJl8hul8o7fim2q--xfHXjrB52LFfXCmPOTuyRL-b4r6indcoPCoBreg7g_Pb3vC767P3vHptVbWxiNy9mJggTFKNXL1OF8L93eiyi_ec8rh7-EN8S_5Fu1sfQ3qZJItefQG98Q_m9bOc39CAaLIbM8FZCkXN5CASRTlcOrYta_0aK_z409rVd5FSMgYaZIp5Fv4oG9OswYp5UYArBKPXpInY"/>
+<div class="flex flex-col truncate">
+<span class="text-sm font-bold text-white truncate">Levitating</span>
+<span class="text-xs text-on-surface-variant truncate">Dua Lipa</span>
+</div>
+</div>
+<div class="flex items-center gap-4 px-2">
+<button class="material-symbols-outlined text-on-surface hover:text-primary transition-colors">devices</button>
+<button class="material-symbols-outlined text-tertiary hover:scale-110 transition-transform" style="font-variation-settings: 'FILL' 1;">favorite</button>
+<button class="w-8 h-8 rounded-full bg-white flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-black" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Shared Component: BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center pt-2 pb-6 px-4 backdrop-blur-md bg-[#201F1F]/70 z-50 rounded-t-xl shadow-2xl shadow-black">
+<a class="flex flex-col items-center justify-center text-[#BCCBB9] opacity-70 hover:opacity-100 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-plus-jakarta-sans text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-white scale-105 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="search" style="font-variation-settings: 'FILL' 1;">search</span>
+<span class="font-plus-jakarta-sans text-[10px] font-medium">Search</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#BCCBB9] opacity-70 hover:opacity-100 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="library_music">library_music</span>
+<span class="font-plus-jakarta-sans text-[10px] font-medium">Your Library</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#BCCBB9] opacity-70 hover:opacity-100 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="workspace_premium">workspace_premium</span>
+<span class="font-plus-jakarta-sans text-[10px] font-medium">Premium</span>
+</a>
+</nav>
+</body></html>
