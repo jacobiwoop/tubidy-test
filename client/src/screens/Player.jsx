@@ -13,6 +13,7 @@ function PlayerScreen({
   onToggleLike,
   playlists = [],
   onAddToPlaylist,
+  isLoadingTrack,
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -278,14 +279,35 @@ function PlayerScreen({
                   skip_previous
                 </span>
               </button>
-              <button
-                className="w-16 h-16 md:w-20 md:h-20 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95 bg-gradient-to-br from-primary to-primary-container"
-                onClick={onTogglePlay}
-              >
-                <span className="material-symbols-outlined text-4xl md:text-5xl fill-icon">
-                  {isPlaying ? "pause" : "play_arrow"}
-                </span>
-              </button>
+              <div className="relative flex items-center justify-center">
+                {isLoadingTrack && (
+                  <svg
+                    className="absolute inset-0 w-full h-full animate-spin text-primary"
+                    viewBox="0 0 100 100"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="46"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      strokeDasharray="180 100"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+                <button
+                  className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-105 active:scale-95 bg-gradient-to-br from-primary to-primary-container ${isLoadingTrack ? "opacity-50 cursor-not-allowed" : "text-on-primary shadow-primary/20"}`}
+                  onClick={onTogglePlay}
+                  disabled={isLoadingTrack}
+                >
+                  <span className="material-symbols-outlined text-4xl md:text-5xl fill-icon">
+                    {isPlaying ? "pause" : "play_arrow"}
+                  </span>
+                </button>
+              </div>
               <button className="text-on-surface hover:text-primary transition-colors active:scale-90">
                 <span className="material-symbols-outlined text-4xl fill-icon">
                   skip_next

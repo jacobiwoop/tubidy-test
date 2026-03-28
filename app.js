@@ -11,6 +11,8 @@ const deezerRoute = require("./routes/deezer");
 const libraryRoute = require("./routes/library");
 const playlistRoute = require("./routes/playlists");
 
+const path = require("path");
+
 const app = express();
 app.use(express.json());
 
@@ -20,7 +22,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
+// Routes API
 app.use("/api/search", searchRoute);
 app.use("/api/stream", streamRoute);
 app.use("/api/download", downloadRoute);
@@ -33,8 +35,18 @@ app.use("/api/playlists", playlistRoute);
 // Health check
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
-// 404
-app.use((req, res) => res.status(404).json({ error: "Route not found" }));
+// Service des fichiers statiques du frontend
+app.use(express.static(path.join(__dirname, "client/dist")));
+
+// Route de secours pour le SPA (React)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "client/dist", "index.html"));
+});
+
+// 404 pour les routes API non trouvées (si besoin)
+app.use("/api/*", (req, res) =>
+  res.status(404).json({ error: "API Route not found" }),
+);
 
 // Error handler global
 app.use((err, req, res, next) => {

@@ -93,11 +93,13 @@ function App() {
   axios.defaults.timeout = 20000;
 
   const [currentTrack, setCurrentTrack] = useState(null);
+  const [isLoadingTrack, setIsLoadingTrack] = useState(false);
 
   const [likedTrackIds, setLikedTrackIds] = useState(new Set());
   const [playlists, setPlaylists] = useState([]);
 
   const audioRef = useRef(null);
+  const activeTrackIdRef = useRef(null); // tracks dernière demande de lecture
 
   // Fetch initial data (Likes and Playlists)
   useEffect(() => {
@@ -147,19 +149,6 @@ function App() {
     }
   }, [isPlaying]);
 
-  // Handle source switch (Preview -> Full)
-  useEffect(() => {
-    if (!audioRef.current || !currentTrack) return;
-    const wasPlaying = isPlaying;
-    const time = audioRef.current.currentTime;
-
-    // Si la source change mais que l'ID reste le même, on essaie de garder la position
-    if (wasPlaying && currentTrack.isFull) {
-      audioRef.current.currentTime = time;
-      audioRef.current.play().catch((e) => console.log(e));
-    }
-  }, [currentTrack?.preview]);
-
   const handleTimeUpdate = () => {
     setCurrentTime(audioRef.current.currentTime);
   };
@@ -169,19 +158,34 @@ function App() {
   };
 
   const handlePlayTrack = async (track) => {
+    const trackId = track.id.toString();
+    activeTrackIdRef.current = trackId; // marquer ce morceau comme "actif"
+
     // Afficher le morceau tout de suite dans l'UI (sans jouer)
     setCurrentTrack({ ...track, preview: null, isFull: false });
     setIsPlaying(false);
+    setIsLoadingTrack(true);
     setCurrentTime(0);
+
+    // Vider la source audio immédiatement pour couper le son précédent
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current.load();
+    }
 
     // Récupérer le lien complet Tubidy avant de jouer
     try {
-      console.log(`[player] Fetching full stream for ${track.id}...`);
-      const res = await axios.get(`/api/deezer/track/${track.id}/download`);
+      console.log(`[player] Fetching full stream for ${trackId}...`);
+      const res = await axios.get(`/api/deezer/track/${trackId}/download`);
+
+      // Si un autre morceau a été demandé entre temps, on abandonne
+      if (activeTrackIdRef.current !== trackId) return;
+
       if (res.data?.target?.link) {
         console.log(`[player] Full stream ready: ${res.data.target.link}`);
         setCurrentTrack((prev) => {
-          if (prev?.id?.toString() === track.id.toString()) {
+          if (prev?.id?.toString() === trackId) {
             return { ...prev, preview: res.data.target.link, isFull: true };
           }
           return prev;
@@ -189,7 +193,13 @@ function App() {
         setIsPlaying(true);
       }
     } catch (err) {
-      console.error("Failed to fetch full track link", err);
+      if (activeTrackIdRef.current === trackId) {
+        console.error("Failed to fetch full track link", err);
+      }
+    } finally {
+      if (activeTrackIdRef.current === trackId) {
+        setIsLoadingTrack(false);
+      }
     }
   };
 
@@ -205,6 +215,7 @@ function App() {
 
   const togglePlay = (e) => {
     if (e) e.stopPropagation();
+    if (isLoadingTrack) return; // bloquer pendant le chargement Tubidy
     setIsPlaying(!isPlaying);
   };
 
@@ -324,14 +335,36 @@ function App() {
               >
                 favorite
               </span>
-              <button
-                className="w-8 h-8 rounded-full bg-white flex items-center justify-center active:scale-90 transition-transform"
-                onClick={togglePlay}
-              >
-                <span className="material-symbols-outlined text-black fill-icon">
-                  {isPlaying ? "pause" : "play_arrow"}
-                </span>
-              </button>
+              <div className="relative flex items-center justify-center">
+                {/* Spinner ring - visible only while loading */}
+                {isLoadingTrack && (
+                  <svg
+                    className="absolute inset-0 w-full h-full animate-spin"
+                    viewBox="0 0 36 36"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="16"
+                      stroke="#1DB954"
+                      strokeWidth="3"
+                      strokeDasharray="60 40"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+                <button
+                  className={`w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition-all ${isLoadingTrack ? "bg-white/30" : "bg-white"}`}
+                  onClick={togglePlay}
+                  disabled={isLoadingTrack}
+                >
+                  <span className="material-symbols-outlined text-black fill-icon text-base">
+                    {isPlaying ? "pause" : "play_arrow"}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -344,6 +377,7 @@ function App() {
           isPlaying={isPlaying}
           isLiked={likedTrackIds.has(currentTrack.id?.toString())}
           playlists={playlists}
+          isLoadingTrack={isLoadingTrack}
           currentTime={currentTime}
           duration={duration}
           onTogglePlay={togglePlay}
