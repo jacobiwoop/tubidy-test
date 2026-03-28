@@ -2,7 +2,7 @@
 FROM node:20-slim AS build-stage
 WORKDIR /app/client
 COPY client/package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY client/ .
 RUN npm run build
 
