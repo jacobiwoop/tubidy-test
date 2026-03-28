@@ -37,6 +37,13 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Ne jamais intercepter les flux audio de streaming externe
+        runtimeCaching: [
+          {
+            urlPattern: /d2mefast\.net|\.mp3|\/api\/proxy-audio/,
+            handler: "NetworkOnly",
+          },
+        ],
       },
       devOptions: {
         enabled: true,
@@ -44,6 +51,7 @@ export default defineConfig({
     }),
   ],
   server: {
+    allowedHosts: true,
     proxy: {
       "/api": {
         target: "http://localhost:3000",

@@ -3,6 +3,8 @@ import axios from "axios";
 import SearchScreen from "./screens/Search";
 import LibraryScreen from "./screens/Library";
 import PlayerScreen from "./screens/Player";
+import AddToPlaylistModal from "./components/AddToPlaylistModal";
+import { getDownloadedTracks } from "./utils/offlineDb";
 
 // Temporary Mock Data for Home
 const SHORTCUTS = [
@@ -95,8 +97,21 @@ function App() {
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isLoadingTrack, setIsLoadingTrack] = useState(false);
 
+  // Queue State
+  const [queue, setQueue] = useState([]);
+  const [originalQueue, setOriginalQueue] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [repeatMode, setRepeatMode] = useState("off"); // "off", "all", "one"
+
   const [likedTrackIds, setLikedTrackIds] = useState(new Set());
   const [playlists, setPlaylists] = useState([]);
+
+  // Modal States
+  const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false);
+  const [trackToAdd, setTrackToAdd] = useState(null);
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
 
   const audioRef = useRef(null);
   const activeTrackIdRef = useRef(null); // tracks dernière demande de lecture
@@ -157,7 +172,8 @@ function App() {
     setDuration(audioRef.current.duration);
   };
 
-  const handlePlayTrack = async (track) => {
+  // Helper function to extract a single track's full audio stream
+  const loadTrackContent = async (track, newIndex = currentIndex) => {
     const trackId = track.id.toString();
     activeTrackIdRef.current = trackId; // marquer ce morceau comme "actif"
 
@@ -166,6 +182,7 @@ function App() {
     setIsPlaying(false);
     setIsLoadingTrack(true);
     setCurrentTime(0);
+    setCurrentIndex(newIndex);
 
     // Vider la source audio immédiatement pour couper le son précédent
     if (audioRef.current) {
@@ -173,6 +190,39 @@ function App() {
       audioRef.current.src = "";
       audioRef.current.load();
     }
+
+    // --- MODE HORS LIGNE (SMART SKIP) ---
+    if (!navigator.onLine) {
+      console.log(`[player-offline] Checking local db for ${trackId}...`);
+      try {
+        const localTracks = await getDownloadedTracks();
+        const cachedTrack = localTracks.find(
+          (t) => t.id?.toString() === trackId,
+        );
+
+        if (cachedTrack && cachedTrack.preview) {
+          console.log(`[player-offline] Found in cache!`);
+          if (activeTrackIdRef.current !== trackId) return;
+          setCurrentTrack({ ...cachedTrack, isFull: true });
+          setIsPlaying(true);
+          setIsLoadingTrack(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Offline DB error", err);
+      }
+
+      console.warn(`[player-offline] Not cached. Skipping ${trackId}...`);
+      if (activeTrackIdRef.current === trackId) {
+        if (newIndex < queue.length - 1) {
+          loadTrackContent(queue[newIndex + 1], newIndex + 1);
+        } else {
+          setIsLoadingTrack(false);
+        }
+      }
+      return;
+    }
+    // ------------------------------------
 
     // Récupérer le lien complet Spotiwoop avant de jouer
     try {
@@ -203,6 +253,101 @@ function App() {
     }
   };
 
+  // Legacy single track play (ex: from Home or Search)
+  const handlePlayTrack = (track) => {
+    setQueue([track]);
+    setOriginalQueue([track]);
+    loadTrackContent(track, 0);
+  };
+
+  // New Context Play (from Playlists or Library)
+  const handlePlayContext = (track, contextTracks) => {
+    setOriginalQueue(contextTracks);
+
+    if (isShuffle) {
+      // Create shuffled queue but put clicked track first
+      const otherTracks = contextTracks.filter((t) => t.id !== track.id);
+      for (let i = otherTracks.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]];
+      }
+      const newQueue = [track, ...otherTracks];
+      setQueue(newQueue);
+      loadTrackContent(track, 0);
+    } else {
+      setQueue(contextTracks);
+      const index = contextTracks.findIndex((t) => t.id === track.id);
+      loadTrackContent(track, index);
+    }
+  };
+
+  const playNext = () => {
+    if (queue.length === 0) return;
+
+    // Repeat One logic
+    if (repeatMode === "one" && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+      return;
+    }
+
+    if (currentIndex < queue.length - 1) {
+      loadTrackContent(queue[currentIndex + 1], currentIndex + 1);
+    } else if (repeatMode === "all") {
+      loadTrackContent(queue[0], 0); // loop back
+    } else {
+      setIsPlaying(false); // End of queue
+    }
+  };
+
+  const playPrevious = () => {
+    if (queue.length === 0) return;
+    if (currentTime > 3 || currentIndex === 0) {
+      // restart track
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    } else {
+      // Go back 1 track
+      loadTrackContent(queue[currentIndex - 1], currentIndex - 1);
+    }
+  };
+
+  const toggleShuffle = () => {
+    if (!isShuffle) {
+      setIsShuffle(true);
+      if (queue.length > 0 && currentTrack) {
+        // Keep current track first, shuffle rest
+        const otherTracks = originalQueue.filter(
+          (t) => t.id !== currentTrack.id,
+        );
+        for (let i = otherTracks.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]];
+        }
+        setQueue([currentTrack, ...otherTracks]);
+        setCurrentIndex(0);
+      }
+    } else {
+      setIsShuffle(false);
+      setQueue(originalQueue);
+      if (currentTrack) {
+        const newIndex = originalQueue.findIndex(
+          (t) => t.id === currentTrack.id,
+        );
+        setCurrentIndex(newIndex);
+      }
+    }
+  };
+
+  const toggleRepeat = () => {
+    if (repeatMode === "off") setRepeatMode("all");
+    else if (repeatMode === "all") setRepeatMode("one");
+    else setRepeatMode("off");
+  };
+
   const handleAddToPlaylist = async (playlistId, track) => {
     try {
       await axios.post(`/api/playlists/${playlistId}/tracks`, track);
@@ -210,6 +355,28 @@ function App() {
     } catch (err) {
       console.error("Failed to add to playlist", err);
       alert("Error adding to playlist.");
+    }
+  };
+
+  const openAddToPlaylistModal = (track) => {
+    setTrackToAdd(track);
+    setShowAddToPlaylistModal(true);
+  };
+
+  const handleCreatePlaylist = async (e) => {
+    if (e) e.preventDefault();
+    if (newPlaylistName && newPlaylistName.trim() !== "") {
+      try {
+        const res = await axios.post("/api/playlists", {
+          name: newPlaylistName.trim(),
+        });
+        setPlaylists([...playlists, res.data]);
+        setIsCreatingPlaylist(false);
+        setNewPlaylistName("");
+      } catch (err) {
+        console.error("Failed to create playlist", err);
+        alert("Erreur lors de la création de la playlist.");
+      }
     }
   };
 
@@ -233,7 +400,15 @@ function App() {
       case "search":
         return <SearchScreen onPlayTrack={handlePlayTrack} />;
       case "library":
-        return <LibraryScreen />;
+        return (
+          <LibraryScreen
+            onPlayTrack={handlePlayTrack}
+            handlePlayContext={handlePlayContext}
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            openCreatePlaylistModal={() => setIsCreatingPlaylist(true)}
+          />
+        );
       default:
         return <HomeScreen />;
     }
@@ -290,7 +465,7 @@ function App() {
         src={currentTrack?.preview}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={playNext}
       />
 
       {/* Mini Player - Only shown when a track is selected */}
@@ -306,12 +481,18 @@ function App() {
             ></div>
             <div className="flex items-center gap-3 overflow-hidden">
               <img
-                className="w-10 h-10 rounded-lg flex-shrink-0"
+                className="w-10 h-10 rounded-lg flex-shrink-0 bg-surface-container-high object-cover"
                 src={
                   currentTrack.album?.cover_medium ||
-                  currentTrack.album?.cover_small
+                  currentTrack.album?.cover_small ||
+                  currentTrack.cover_url ||
+                  "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg"
                 }
                 alt={currentTrack.title}
+                onError={(e) => {
+                  e.target.src =
+                    "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg";
+                }}
               />
               <div className="flex flex-col truncate">
                 <span className="text-sm font-bold text-white truncate">
@@ -330,8 +511,8 @@ function App() {
                 devices
               </span>
               <span
-                className={`material-symbols-outlined transition-all cursor-pointer ${likedTrackIds.has(currentTrack.id?.toString()) ? "text-primary fill-icon scale-110" : "text-on-surface-variant"}`}
-                onClick={() => toggleLike(currentTrack)}
+                className={`material-symbols-outlined transition-all cursor-pointer ${likedTrackIds.has(currentTrack.id?.toString()) ? "text-primary fill-icon scale-110" : "text-on-surface"}`}
+                onClick={() => openAddToPlaylistModal(currentTrack)}
               >
                 favorite
               </span>
@@ -380,11 +561,20 @@ function App() {
           isLoadingTrack={isLoadingTrack}
           currentTime={currentTime}
           duration={duration}
+          isShuffle={isShuffle}
+          repeatMode={repeatMode}
           onTogglePlay={togglePlay}
           onToggleLike={() => toggleLike(currentTrack)}
           onAddToPlaylist={handleAddToPlaylist}
           onSeek={handleSeek}
           onClose={() => setShowFullPlayer(false)}
+          onNext={playNext}
+          onPrev={playPrevious}
+          onToggleShuffle={toggleShuffle}
+          onToggleRepeat={toggleRepeat}
+          onOpenPlaylistModal={() => openAddToPlaylistModal(currentTrack)}
+          hasNext={currentIndex < queue.length - 1 || repeatMode === "all"}
+          hasPrev={currentIndex > 0 || currentTime > 3 || repeatMode === "all"}
         />
       )}
 
@@ -394,11 +584,10 @@ function App() {
           { id: "home", label: "Home", icon: "home" },
           { id: "search", label: "Search", icon: "search" },
           { id: "library", label: "Your Library", icon: "library_music" },
-          { id: "premium", label: "Premium", icon: "workspace_premium" },
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => tab.id !== "premium" && setActiveTab(tab.id)}
+            onClick={() => setActiveTab(tab.id)}
             className={`flex flex-col items-center justify-center transition-all duration-200 ${activeTab === tab.id ? "text-white scale-105" : "text-[#BCCBB9] opacity-70 hover:opacity-100 active:scale-90"}`}
           >
             <span
@@ -412,6 +601,64 @@ function App() {
           </button>
         ))}
       </nav>
+
+      {/* Add To Playlist Modal */}
+      {showAddToPlaylistModal && trackToAdd && (
+        <AddToPlaylistModal
+          track={trackToAdd}
+          playlists={playlists}
+          isLiked={likedTrackIds.has(trackToAdd.id?.toString())}
+          onClose={() => setShowAddToPlaylistModal(false)}
+          onToggleLike={toggleLike}
+          onAddToPlaylist={handleAddToPlaylist}
+          onCreatePlaylist={() => setIsCreatingPlaylist(true)}
+        />
+      )}
+
+      {/* Create Playlist Modal (Global) */}
+      {isCreatingPlaylist && (
+        <div
+          className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200"
+          onClick={() => setIsCreatingPlaylist(false)}
+        >
+          <div
+            className="bg-[#282828] w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-headline text-xl font-bold mb-6 text-center text-white">
+              Name your playlist
+            </h2>
+            <form onSubmit={handleCreatePlaylist}>
+              <div className="relative mb-8">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="My awesome playlist"
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  className="w-full bg-surface-container-high/50 text-white font-headline text-lg px-4 py-4 rounded-xl outline-none focus:ring-2 focus:ring-primary border border-white/5 transition-all"
+                />
+              </div>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingPlaylist(false)}
+                  className="flex-1 py-3 font-semibold text-on-surface-variant hover:text-white transition-colors tracking-wide"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newPlaylistName.trim()}
+                  className="flex-1 bg-primary text-on-primary py-3 rounded-full font-bold active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 tracking-wide"
+                >
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

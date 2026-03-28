@@ -1,5 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import {
+  saveTrackMetadata,
+  removeTrackMetadata,
+  isTrackDownloaded,
+} from "../utils/offlineDb";
+import {
+  cacheAudioFile,
+  removeCachedAudio,
+  isAudioCached,
+} from "../utils/audioCache";
 
 function PlayerScreen({
   track,
@@ -14,10 +24,57 @@ function PlayerScreen({
   playlists = [],
   onAddToPlaylist,
   isLoadingTrack,
+  isShuffle,
+  repeatMode,
+  onNext,
+  onPrev,
+  onToggleShuffle,
+  onToggleRepeat,
+  onOpenPlaylistModal,
+  hasNext,
+  hasPrev,
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [showPlaylists, setShowPlaylists] = useState(false);
+
+  // States pour le téléchargement hors-ligne (PWA Cache)
+  const [isOfflineSaved, setIsOfflineSaved] = useState(false);
+  const [isSavingOffline, setIsSavingOffline] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    if (track) {
+      Promise.all([
+        isTrackDownloaded(track.id),
+        isAudioCached(track.preview),
+      ]).then(([inDb, inCache]) => {
+        if (mounted) setIsOfflineSaved(inDb && inCache);
+      });
+    }
+    return () => (mounted = false);
+  }, [track]);
+
+  const handleOfflineAction = async () => {
+    setIsSavingOffline(true);
+    try {
+      if (isOfflineSaved) {
+        await removeTrackMetadata(track.id);
+        await removeCachedAudio(track.preview);
+        setIsOfflineSaved(false);
+      } else {
+        const success = await cacheAudioFile(track.preview);
+        if (success) {
+          await saveTrackMetadata(track);
+          setIsOfflineSaved(true);
+        } else {
+          alert("Erreur lors du téléchargement de l'audio.");
+        }
+      }
+    } finally {
+      setIsSavingOffline(false);
+    }
+  };
 
   if (!track) return null;
 
@@ -216,9 +273,18 @@ function PlayerScreen({
         <section className="flex-grow flex items-center justify-center mb-6 md:mb-0">
           <div className="relative w-full aspect-square max-w-[320px] md:max-w-[400px] group">
             <img
-              className="w-full h-full object-cover rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02]"
-              src={track.album?.cover_big || track.album?.cover_medium}
+              className="w-full h-full object-cover rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02] bg-surface-container-high"
+              src={
+                track.album?.cover_big ||
+                track.album?.cover_medium ||
+                track.cover_url ||
+                "https://e-cdns-images.dzcdn.net/images/cover//500x500-000000-80-0-0.jpg"
+              }
               alt={track.title}
+              onError={(e) => {
+                e.target.src =
+                  "https://e-cdns-images.dzcdn.net/images/cover//500x500-000000-80-0-0.jpg";
+              }}
             />
             <div className="absolute inset-0 rounded-xl ring-1 ring-white/10 pointer-events-none"></div>
           </div>
@@ -227,7 +293,7 @@ function PlayerScreen({
         {/* Controls & Metadata */}
         <section className="flex-shrink-0 flex flex-col justify-center w-full">
           <div className="flex justify-between items-end mb-4">
-            <div className="space-y-0.5 overflow-hidden">
+            <div className="space-y-0.5 overflow-hidden flex-1">
               <h2 className="font-headline text-2xl md:text-4xl font-extrabold tracking-tight truncate">
                 {track.title}
               </h2>
@@ -235,16 +301,28 @@ function PlayerScreen({
                 {track.artist?.name || track.artist}
               </p>
             </div>
-            <button
-              className={`transition-all active:scale-125 p-2 ${isLiked ? "text-primary" : "text-on-surface-variant"}`}
-              onClick={onToggleLike}
-            >
-              <span
-                className={`material-symbols-outlined text-3xl ${isLiked ? "fill-icon" : ""}`}
+            <div className="flex items-center gap-1">
+              <button
+                className={`transition-all active:scale-125 p-2 ${isOfflineSaved ? "text-[#1DB954]" : "text-on-surface-variant"}`}
+                onClick={handleOfflineAction}
               >
-                favorite
-              </span>
-            </button>
+                <span
+                  className={`material-symbols-outlined text-3xl ${isSavingOffline ? "animate-pulse" : ""} ${isOfflineSaved ? "fill-icon" : ""}`}
+                >
+                  {isSavingOffline ? "downloading" : "download_for_offline"}
+                </span>
+              </button>
+              <button
+                className={`transition-all active:scale-125 p-2 ${isLiked ? "text-primary" : "text-on-surface-variant"}`}
+                onClick={onOpenPlaylistModal}
+              >
+                <span
+                  className={`material-symbols-outlined text-3xl ${isLiked ? "fill-icon" : ""}`}
+                >
+                  favorite
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Progress Bar */}
@@ -268,13 +346,20 @@ function PlayerScreen({
 
           {/* Playback Controls */}
           <div className="flex items-center justify-between mb-8 px-2">
-            <button className="text-on-surface-variant hover:text-primary transition-colors">
+            <button
+              className={`transition-colors active:scale-95 ${isShuffle ? "text-primary" : "text-on-surface-variant hover:text-white"}`}
+              onClick={onToggleShuffle}
+            >
               <span className="material-symbols-outlined text-2xl">
                 shuffle
               </span>
             </button>
             <div className="flex items-center gap-6 md:gap-12">
-              <button className="text-on-surface hover:text-primary transition-colors active:scale-90">
+              <button
+                className={`transition-colors active:scale-90 ${hasPrev ? "text-on-surface hover:text-primary" : "text-on-surface-variant/50 cursor-not-allowed"}`}
+                onClick={onPrev}
+                disabled={!hasPrev}
+              >
                 <span className="material-symbols-outlined text-4xl fill-icon">
                   skip_previous
                 </span>
@@ -308,14 +393,26 @@ function PlayerScreen({
                   </span>
                 </button>
               </div>
-              <button className="text-on-surface hover:text-primary transition-colors active:scale-90">
+              <button
+                className={`transition-colors active:scale-90 ${hasNext ? "text-on-surface hover:text-primary" : "text-on-surface-variant/50 cursor-not-allowed"}`}
+                onClick={onNext}
+                disabled={!hasNext}
+              >
                 <span className="material-symbols-outlined text-4xl fill-icon">
                   skip_next
                 </span>
               </button>
             </div>
-            <button className="text-primary">
-              <span className="material-symbols-outlined text-2xl">repeat</span>
+            <button
+              className={`transition-colors active:scale-95 flex items-center justify-center relative ${repeatMode !== "off" ? "text-primary" : "text-on-surface-variant hover:text-white"}`}
+              onClick={onToggleRepeat}
+            >
+              <span className="material-symbols-outlined text-2xl">
+                {repeatMode === "one" ? "repeat_one" : "repeat"}
+              </span>
+              {repeatMode !== "off" && (
+                <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full"></div>
+              )}
             </button>
           </div>
 

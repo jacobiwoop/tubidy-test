@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import PlaylistView from "./PlaylistView";
 
-function LibraryScreen() {
+function LibraryScreen({
+  onPlayTrack,
+  handlePlayContext,
+  currentTrack,
+  isPlaying,
+  openCreatePlaylistModal,
+}) {
   const [playlists, setPlaylists] = useState([]);
   const [likedCount, setLikedCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [activePlaylist, setActivePlaylist] = useState(null);
 
   useEffect(() => {
     const fetchLibrary = async () => {
@@ -22,10 +30,23 @@ function LibraryScreen() {
       }
     };
     fetchLibrary();
-  }, []);
+  }, [activePlaylist]); // Re-fetch quand on revient pour maj les compteurs
+
+  if (activePlaylist) {
+    return (
+      <PlaylistView
+        playlist={activePlaylist}
+        onBack={() => setActivePlaylist(null)}
+        onPlayTrack={onPlayTrack}
+        handlePlayContext={handlePlayContext}
+        currentTrack={currentTrack}
+        isPlaying={isPlaying}
+      />
+    );
+  }
 
   return (
-    <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+    <div className="animate-in fade-in slide-in-from-left-4 duration-500 pb-20">
       {/* Filter Chips */}
       <div className="sticky top-[60px] bg-surface/90 backdrop-blur-md z-30 flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-4">
         <button className="px-4 py-1.5 rounded-full bg-primary text-on-primary font-body font-semibold text-sm whitespace-nowrap active:scale-95 transition-all">
@@ -53,9 +74,14 @@ function LibraryScreen() {
       </div>
 
       {/* Library List */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-2">
         {/* Liked Songs Card */}
-        <div className="flex items-center gap-4 group cursor-pointer active:opacity-80 transition-opacity">
+        <div
+          onClick={() =>
+            setActivePlaylist({ id: "liked", name: "Liked Songs" })
+          }
+          className="flex items-center gap-4 group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-all active:scale-95"
+        >
           <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[#450af5] to-[#c4efd9] flex items-center justify-center relative shadow-lg overflow-hidden">
             <span className="material-symbols-outlined text-white text-3xl fill-icon">
               favorite
@@ -76,11 +102,39 @@ function LibraryScreen() {
           </div>
         </div>
 
+        {/* Offline Downloads Card */}
+        <div
+          onClick={() =>
+            setActivePlaylist({ id: "downloads", name: "Offline Downloads" })
+          }
+          className="flex items-center gap-4 group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-all active:scale-95"
+        >
+          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[#1DB954] to-[#450af5] flex items-center justify-center relative shadow-lg overflow-hidden">
+            <span className="material-symbols-outlined text-white text-3xl fill-icon">
+              download_done
+            </span>
+          </div>
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <h3 className="font-body font-semibold text-base text-white truncate">
+              Offline Downloads
+            </h3>
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-primary text-xs fill-icon">
+                offline_pin
+              </span>
+              <p className="font-label text-sm text-on-surface-variant truncate">
+                Local Storage
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Real Playlists from BDD */}
         {playlists.map((playlist) => (
           <div
             key={playlist.id}
-            className="flex items-center gap-4 group cursor-pointer hover:bg-surface-container-low/50 p-2 -mx-2 rounded-xl transition-all"
+            onClick={() => setActivePlaylist(playlist)}
+            className="flex items-center gap-4 group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-all active:scale-95"
           >
             <div className="w-16 h-16 rounded-lg bg-surface-container-high flex items-center justify-center shadow-md">
               <span className="material-symbols-outlined text-on-surface-variant text-3xl">
@@ -113,15 +167,18 @@ function LibraryScreen() {
         )}
 
         {/* Add Button */}
-        <div className="flex items-center gap-4 group cursor-pointer py-2 active:opacity-70 transition-opacity">
+        <div
+          onClick={openCreatePlaylistModal}
+          className="flex items-center gap-4 group cursor-pointer py-2 hover:bg-white/5 p-2 -mx-2 rounded-xl active:scale-95 transition-all"
+        >
           <div className="w-16 h-16 rounded-lg bg-surface-container-high flex items-center justify-center">
-            <span className="material-symbols-outlined text-on-surface-variant text-3xl">
+            <span className="material-symbols-outlined text-on-surface-variant text-3xl group-hover:text-white transition-colors">
               add
             </span>
           </div>
           <div className="flex flex-col flex-1">
-            <h3 className="font-body font-semibold text-base text-on-surface">
-              Add Artists
+            <h3 className="font-body font-semibold text-base text-on-surface group-hover:text-white transition-colors">
+              Create Playlist
             </h3>
           </div>
         </div>

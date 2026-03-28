@@ -64,6 +64,18 @@ function initDB() {
   `,
   ).run();
 
+  // Table de cache des flux audio (Spotiwoop / Tubidy)
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS stream_cache (
+      deezer_id TEXT PRIMARY KEY,
+      stream_url TEXT NOT NULL,
+      title TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
+  ).run();
+
   console.log("[db] Database initialized successfully.");
 }
 

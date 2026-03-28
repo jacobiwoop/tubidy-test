@@ -1,5 +1,7 @@
 require("dotenv").config();
 const express = require("express");
+const https = require("https");
+const http = require("http");
 const { port } = require("./config/apis.config");
 
 const searchRoute = require("./routes/search");
@@ -22,7 +24,43 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes API
+// Proxy audio : suit les redirections et retransmet le flux MP3
+function proxyAudio(url, res, redirectCount = 0) {
+  if (redirectCount > 5) return res.status(500).send("Too many redirects");
+
+  const client = url.startsWith("https") ? https : http;
+  client
+    .get(url, (upstream) => {
+      const { statusCode, headers } = upstream;
+
+      // Suivre les redirections 301/302
+      if (
+        (statusCode === 301 || statusCode === 302 || statusCode === 307) &&
+        headers.location
+      ) {
+        upstream.resume(); // vider le body pour libérer la connexion
+        return proxyAudio(headers.location, res, redirectCount + 1);
+      }
+
+      res.setHeader("Content-Type", headers["content-type"] || "audio/mpeg");
+      res.setHeader("Accept-Ranges", "bytes");
+      if (headers["content-length"]) {
+        res.setHeader("Content-Length", headers["content-length"]);
+      }
+      upstream.pipe(res);
+    })
+    .on("error", (err) => {
+      console.error("[proxy-audio] Error:", err.message);
+      if (!res.headersSent) res.status(500).send("Proxy error");
+    });
+}
+
+app.get("/api/proxy-audio", (req, res) => {
+  const targetUrl = req.query.url;
+  if (!targetUrl) return res.status(400).send("Missing url param");
+  proxyAudio(targetUrl, res);
+});
+
 app.use("/api/search", searchRoute);
 app.use("/api/stream", streamRoute);
 app.use("/api/download", downloadRoute);
