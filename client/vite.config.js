@@ -40,7 +40,14 @@ export default defineConfig({
         // Ne jamais intercepter les flux audio de streaming externe
         runtimeCaching: [
           {
-            urlPattern: /d2mefast\.net|\.mp3|\/api\/proxy-audio/,
+            // Match audio files and the proxy route
+            urlPattern: ({ url }) => {
+              return (
+                url.origin.includes("d2mefast.net") ||
+                url.pathname.endsWith(".mp3") ||
+                url.pathname.includes("/api/proxy-audio")
+              );
+            },
             handler: "NetworkOnly",
           },
         ],

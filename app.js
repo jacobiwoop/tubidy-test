@@ -26,33 +26,39 @@ app.use((req, res, next) => {
 
 // Proxy audio : suit les redirections et retransmet le flux MP3
 function proxyAudio(url, res, redirectCount = 0) {
-  if (redirectCount > 5) return res.status(500).send("Too many redirects");
+  if (redirectCount > 10) return res.status(500).send("Too many redirects");
 
-  const client = url.startsWith("https") ? https : http;
-  client
-    .get(url, (upstream) => {
-      const { statusCode, headers } = upstream;
+  try {
+    const parsedUrl = new URL(url);
+    const client = parsedUrl.protocol === "https:" ? https : http;
 
-      // Suivre les redirections 301/302
-      if (
-        (statusCode === 301 || statusCode === 302 || statusCode === 307) &&
-        headers.location
-      ) {
-        upstream.resume(); // vider le body pour libérer la connexion
-        return proxyAudio(headers.location, res, redirectCount + 1);
-      }
+    client
+      .get(url, (upstream) => {
+        const { statusCode, headers } = upstream;
 
-      res.setHeader("Content-Type", headers["content-type"] || "audio/mpeg");
-      res.setHeader("Accept-Ranges", "bytes");
-      if (headers["content-length"]) {
-        res.setHeader("Content-Length", headers["content-length"]);
-      }
-      upstream.pipe(res);
-    })
-    .on("error", (err) => {
-      console.error("[proxy-audio] Error:", err.message);
-      if (!res.headersSent) res.status(500).send("Proxy error");
-    });
+        // Suivre les redirections 301/302/307/308
+        if ([301, 302, 307, 308].includes(statusCode) && headers.location) {
+          upstream.resume();
+          // Résoudre l'URL de redirection (gère les chemins relatifs)
+          const resolvedUrl = new URL(headers.location, url).href;
+          return proxyAudio(resolvedUrl, res, redirectCount + 1);
+        }
+
+        res.setHeader("Content-Type", headers["content-type"] || "audio/mpeg");
+        res.setHeader("Accept-Ranges", "bytes");
+        if (headers["content-length"]) {
+          res.setHeader("Content-Length", headers["content-length"]);
+        }
+        upstream.pipe(res);
+      })
+      .on("error", (err) => {
+        console.error("[proxy-audio] Error:", err.message);
+        if (!res.headersSent) res.status(500).send("Proxy error");
+      });
+  } catch (err) {
+    console.error("[proxy-audio] URL Error:", err.message, "URL:", url);
+    if (!res.headersSent) res.status(500).send("Invalid URL");
+  }
 }
 
 app.get("/api/proxy-audio", (req, res) => {
