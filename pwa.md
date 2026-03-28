@@ -1,5 +1,5 @@
 PWA — Configurée 📱
-Tubidy est maintenant une Progressive Web App installable :
+Spotiwoop est maintenant une Progressive Web App installable :
 
 Icône personnalisée générée (play vert + waveform)
 Manifest complet (nom, couleurs, orientation)

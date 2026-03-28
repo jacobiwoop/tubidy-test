@@ -89,7 +89,7 @@ function App() {
   const [showFullPlayer, setShowFullPlayer] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  // Global Axios Configuration for timeouts (Tubidy scraping can take time)
+  // Global Axios Configuration for timeouts (Spotiwoop scraping can take time)
   axios.defaults.timeout = 20000;
 
   const [currentTrack, setCurrentTrack] = useState(null);
@@ -174,7 +174,7 @@ function App() {
       audioRef.current.load();
     }
 
-    // Récupérer le lien complet Tubidy avant de jouer
+    // Récupérer le lien complet Spotiwoop avant de jouer
     try {
       console.log(`[player] Fetching full stream for ${trackId}...`);
       const res = await axios.get(`/api/deezer/track/${trackId}/download`);
@@ -215,7 +215,7 @@ function App() {
 
   const togglePlay = (e) => {
     if (e) e.stopPropagation();
-    if (isLoadingTrack) return; // bloquer pendant le chargement Tubidy
+    if (isLoadingTrack) return; // bloquer pendant le chargement Spotiwoop
     setIsPlaying(!isPlaying);
   };
 

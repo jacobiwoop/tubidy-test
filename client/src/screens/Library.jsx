@@ -92,7 +92,7 @@ function LibraryScreen() {
                 {playlist.name}
               </h3>
               <p className="font-label text-sm text-on-surface-variant truncate">
-                Playlist • Tubidy
+                Playlist • Spotiwoop
               </p>
             </div>
           </div>

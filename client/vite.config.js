@@ -11,9 +11,9 @@ export default defineConfig({
       manifestFilename: "manifest.webmanifest",
       includeAssets: ["icon-192.png", "icon-512.png"],
       manifest: {
-        name: "Tubidy Music",
-        short_name: "Tubidy",
-        description: "Stream music directly from Tubidy",
+        name: "Spotiwoop Music",
+        short_name: "Spotiwoop",
+        description: "Stream music directly from Spotiwoop",
         theme_color: "#121212",
         background_color: "#121212",
         display: "standalone",
