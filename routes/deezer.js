@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const deezerService = require("../services/deezer.service");
+const mappingService = require("../services/mapping.service");
 
 router.get("/search", async (req, res, next) => {
   try {
@@ -35,6 +36,19 @@ router.get("/album", async (req, res, next) => {
       return res.status(400).json({ error: "Missing query parameter: q" });
 
     const result = await deezerService.searchAlbum(q, { index, limit });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/track/:id/download", async (req, res, next) => {
+  try {
+    const { format = "mp3" } = req.query;
+    const result = await mappingService.getTubidyDownloadByDeezerId(
+      req.params.id,
+      format,
+    );
     res.json(result);
   } catch (err) {
     next(err);
