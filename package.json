@@ -1,5 +1,5 @@
 {
-  "name": "music-api",
+  "name": "spotiwoop-api",
   "version": "1.0.0",
   "description": "Music streaming & download API backend",
   "main": "app.js",
