@@ -1,0 +1,20 @@
+{
+  "name": "music-api",
+  "version": "1.0.0",
+  "description": "Music streaming & download API backend",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.3.0",
+    "express": "^4.18.0",
+    "express-rate-limit": "^7.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  }
+}
