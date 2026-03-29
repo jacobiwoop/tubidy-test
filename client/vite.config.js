@@ -50,6 +50,18 @@ export default defineConfig({
             },
             handler: "NetworkOnly",
           },
+          {
+            // Cache Deezer images (covers)
+            urlPattern: ({ url }) => url.origin.includes("dzcdn.net"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "deezer-images-cache",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+              },
+            },
+          },
         ],
       },
       devOptions: {

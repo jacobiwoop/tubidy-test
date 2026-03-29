@@ -62,4 +62,21 @@ router.post("/:id/tracks", async (req, res, next) => {
   }
 });
 
+// Supprimer des titres d'une playlist (Vrac)
+router.delete("/:id/tracks", async (req, res, next) => {
+  try {
+    const { trackIds } = req.body;
+    if (!trackIds || !Array.isArray(trackIds)) {
+      return res.status(400).json({ error: "Missing or invalid trackIds" });
+    }
+    const result = await playlistService.deleteTracksFromPlaylist(
+      req.params.id,
+      trackIds,
+    );
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

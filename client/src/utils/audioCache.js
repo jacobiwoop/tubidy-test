@@ -5,22 +5,48 @@ export const AUDIO_CACHE_NAME = "spotiwoop-audio-cache-v1";
  * @param {string} previewUrl - L'url du fichier audio/MP3
  * @returns {Promise<boolean>} - True si sauvegardé avec succès
  */
-export async function cacheAudioFile(previewUrl) {
+export async function cacheAudioFile(previewUrl, onProgress) {
   if (!previewUrl) return false;
 
   try {
     const cache = await caches.open(AUDIO_CACHE_NAME);
 
-    // On passe par notre propre backend pour esquiver les restrictions CORS
-    const proxyUrl = `/api/proxy-audio?url=${encodeURIComponent(previewUrl)}`;
-    const response = await fetch(proxyUrl);
+    const proxyUrl = previewUrl.startsWith("/api/proxy-audio")
+      ? previewUrl
+      : `/api/proxy-audio?url=${encodeURIComponent(previewUrl)}`;
 
-    if (response.ok) {
-      // On sauvegarde dans le CacheStorage avec l'URL originale comme clé
+    const response = await fetch(proxyUrl);
+    if (!response.ok) return false;
+
+    // Pour le suivi de la progression
+    const contentLength = +(response.headers.get("Content-Length") || 0);
+    if (!contentLength || !onProgress) {
       await cache.put(previewUrl, response);
       return true;
     }
-    return false;
+
+    // Lecture par flux pour suivre la progression
+    const reader = response.body.getReader();
+    let receivedLength = 0;
+    const chunks = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      receivedLength += value.length;
+      onProgress(Math.round((receivedLength / contentLength) * 100));
+    }
+
+    const blob = new Blob(chunks);
+    await cache.put(
+      previewUrl,
+      new Response(blob, {
+        headers: response.headers,
+      }),
+    );
+
+    return true;
   } catch (error) {
     console.error("Failed to cache audio blob:", error);
     return false;

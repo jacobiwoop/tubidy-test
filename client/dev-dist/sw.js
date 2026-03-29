@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-38bb0eb2'], (function (workbox) { 'use strict';
+define(['./workbox-8839f217'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -82,12 +82,25 @@ define(['./workbox-38bb0eb2'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.ep2boidqb5g"
+    "revision": "0.paogmpvjr2g"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
     allowlist: [/^\/$/]
   }));
-  workbox.registerRoute(/d2mefast\.net|\.mp3|\/api\/proxy-audio/, new workbox.NetworkOnly(), 'GET');
+  workbox.registerRoute(({
+    url
+  }) => {
+    return url.origin.includes("d2mefast.net") || url.pathname.endsWith(".mp3") || url.pathname.includes("/api/proxy-audio");
+  }, new workbox.NetworkOnly(), 'GET');
+  workbox.registerRoute(({
+    url
+  }) => url.origin.includes("dzcdn.net"), new workbox.CacheFirst({
+    "cacheName": "deezer-images-cache",
+    plugins: [new workbox.ExpirationPlugin({
+      maxEntries: 100,
+      maxAgeSeconds: 2592000
+    })]
+  }), 'GET');
 
 }));

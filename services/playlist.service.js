@@ -104,10 +104,35 @@ async function getPlaylistWithTracks(id) {
   }
 }
 
+/**
+ * Supprime des titres d'une playlist
+ * @param {string} playlistId
+ * @param {string[]} trackIds
+ */
+async function deleteTracksFromPlaylist(playlistId, trackIds) {
+  try {
+    const stmt = db.prepare(
+      "DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?",
+    );
+    const deleteMany = db.transaction((id, ids) => {
+      for (const tId of ids) stmt.run(id, tId.toString());
+    });
+    deleteMany(playlistId, trackIds);
+    return { success: true, count: trackIds.length };
+  } catch (error) {
+    console.error(
+      "[playlist] Error in deleteTracksFromPlaylist:",
+      error.message,
+    );
+    throw error;
+  }
+}
+
 module.exports = {
   createPlaylist,
   deletePlaylist,
   getAllPlaylists,
   addTrackToPlaylist,
   getPlaylistWithTracks,
+  deleteTracksFromPlaylist,
 };

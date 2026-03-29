@@ -41,6 +41,7 @@ function PlayerScreen({
   // States pour le téléchargement hors-ligne (PWA Cache)
   const [isOfflineSaved, setIsOfflineSaved] = useState(false);
   const [isSavingOffline, setIsSavingOffline] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -56,14 +57,22 @@ function PlayerScreen({
   }, [track]);
 
   const handleOfflineAction = async () => {
+    if (!track.preview) {
+      alert("Le flux audio n'est pas encore prêt. Patiente une seconde...");
+      return;
+    }
+
     setIsSavingOffline(true);
+    setDownloadProgress(0);
     try {
       if (isOfflineSaved) {
         await removeTrackMetadata(track.id);
         await removeCachedAudio(track.preview);
         setIsOfflineSaved(false);
       } else {
-        const success = await cacheAudioFile(track.preview);
+        const success = await cacheAudioFile(track.preview, (progress) => {
+          setDownloadProgress(progress);
+        });
         if (success) {
           await saveTrackMetadata(track);
           setIsOfflineSaved(true);
@@ -73,6 +82,7 @@ function PlayerScreen({
       }
     } finally {
       setIsSavingOffline(false);
+      setDownloadProgress(0);
     }
   };
 
@@ -303,7 +313,7 @@ function PlayerScreen({
             </div>
             <div className="flex items-center gap-1">
               <button
-                className={`transition-all active:scale-125 p-2 ${isOfflineSaved ? "text-[#1DB954]" : "text-on-surface-variant"}`}
+                className={`transition-all active:scale-125 p-2 relative ${isOfflineSaved ? "text-[#1DB954]" : "text-on-surface-variant"}`}
                 onClick={handleOfflineAction}
               >
                 <span
@@ -311,6 +321,11 @@ function PlayerScreen({
                 >
                   {isSavingOffline ? "downloading" : "download_for_offline"}
                 </span>
+                {isSavingOffline && downloadProgress > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-black text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg animate-in zoom-in duration-300">
+                    {downloadProgress}
+                  </span>
+                )}
               </button>
               <button
                 className={`transition-all active:scale-125 p-2 ${isLiked ? "text-primary" : "text-on-surface-variant"}`}

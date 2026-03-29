@@ -96,6 +96,8 @@ function App() {
 
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isLoadingTrack, setIsLoadingTrack] = useState(false);
+  const [activePlaylist, setActivePlaylist] = useState(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   // Queue State
   const [queue, setQueue] = useState([]);
@@ -233,10 +235,17 @@ function App() {
       if (activeTrackIdRef.current !== trackId) return;
 
       if (res.data?.target?.link) {
-        console.log(`[player] Full stream ready: ${res.data.target.link}`);
+        const rawLink = res.data.target.link;
+        // Si c'est un lien Tubidy, on passe par le proxy.
+        // Note: encodeURIComponent est nécessaire car rawLink contient des ? et des =
+        const finalLink = rawLink.includes("d2mefast.net")
+          ? `/api/proxy-audio?url=${encodeURIComponent(rawLink)}`
+          : rawLink;
+
+        console.log(`[player] Full stream ready: ${finalLink}`);
         setCurrentTrack((prev) => {
           if (prev?.id?.toString() === trackId) {
-            return { ...prev, preview: res.data.target.link, isFull: true };
+            return { ...prev, preview: finalLink, isFull: true };
           }
           return prev;
         });
@@ -407,6 +416,13 @@ function App() {
             currentTrack={currentTrack}
             isPlaying={isPlaying}
             openCreatePlaylistModal={() => setIsCreatingPlaylist(true)}
+            activePlaylist={activePlaylist}
+            setActivePlaylist={(p) => {
+              setActivePlaylist(p);
+              setIsSelectionMode(false); // Reset selection mode when changing playlist
+            }}
+            isSelectionMode={isSelectionMode}
+            setIsSelectionMode={setIsSelectionMode}
           />
         );
       default:
@@ -433,12 +449,26 @@ function App() {
           </h1>
         </div>
         <div className="flex items-center gap-4">
-          <span className="material-symbols-outlined text-on-surface text-2xl clickable">
-            notifications
-          </span>
-          <span className="material-symbols-outlined text-on-surface text-2xl clickable">
-            settings
-          </span>
+          {activeTab === "library" && activePlaylist && (
+            <button
+              onClick={() => setIsSelectionMode(!isSelectionMode)}
+              className={`p-2 rounded-full transition-all active:scale-90 ${isSelectionMode ? "bg-primary text-black" : "text-on-surface hover:bg-white/10"}`}
+            >
+              <span className="material-symbols-outlined text-2xl">
+                {isSelectionMode ? "close" : "delete"}
+              </span>
+            </button>
+          )}
+          {!isSelectionMode && (
+            <>
+              <span className="material-symbols-outlined text-on-surface text-2xl clickable">
+                notifications
+              </span>
+              <span className="material-symbols-outlined text-on-surface text-2xl clickable">
+                settings
+              </span>
+            </>
+          )}
         </div>
       </header>
 

@@ -24,47 +24,131 @@ app.use((req, res, next) => {
   next();
 });
 
+// Cache simple pour les redirections (mémoire vive uniquement)
+const redirectCache = new Map();
+
 // Proxy audio : suit les redirections et retransmet le flux MP3
-function proxyAudio(url, res, redirectCount = 0) {
+function proxyAudio(url, res, req, redirectCount = 0) {
   if (redirectCount > 10) return res.status(500).send("Too many redirects");
+
+  const isInitialUrl = redirectCount === 0;
+
+  // 1. Vérifier le cache de redirections
+  if (isInitialUrl && redirectCache.has(url)) {
+    const { target, expires } = redirectCache.get(url);
+    if (Date.now() < expires) {
+      // console.log(`[proxy-audio] Cache hit: ${url.substring(0, 50)}...`);
+      return proxyAudio(target, res, req, 1);
+    }
+  }
 
   try {
     const parsedUrl = new URL(url);
     const client = parsedUrl.protocol === "https:" ? https : http;
 
-    client
-      .get(url, (upstream) => {
+    const requestHeaders = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      Referer: "https://tubidy.com/",
+    };
+
+    // 2. Transmettre le Range UNIQUEMENT si on n'est PAS sur l'URL de redirection initiale
+    // Certains serveurs (c.php) n'aiment pas le Range s'ils ne servent pas directement le fichier.
+    if (req.headers.range && !url.includes("c.php")) {
+      requestHeaders["Range"] = req.headers.range;
+    }
+
+    if (isInitialUrl) {
+      console.log(`[proxy-audio] Resolving: ${url.substring(0, 60)}...`);
+    }
+
+    const proxyReq = client.get(
+      url,
+      {
+        headers: requestHeaders,
+        timeout: 15000, // 15 secondes max pour répondre
+      },
+      (upstream) => {
         const { statusCode, headers } = upstream;
 
-        // Suivre les redirections 301/302/307/308
+        // Suivre les redirections
         if ([301, 302, 307, 308].includes(statusCode) && headers.location) {
           upstream.resume();
-          // Résoudre l'URL de redirection (gère les chemins relatifs)
           const resolvedUrl = new URL(headers.location, url).href;
-          return proxyAudio(resolvedUrl, res, redirectCount + 1);
+
+          if (isInitialUrl) {
+            redirectCache.set(url, {
+              target: resolvedUrl,
+              expires: Date.now() + 600000,
+            });
+          }
+
+          console.log(
+            `[proxy-audio] Redirect (${statusCode}) to: ...${resolvedUrl.substring(resolvedUrl.length - 30)}`,
+          );
+          return proxyAudio(resolvedUrl, res, req, redirectCount + 1);
         }
 
-        res.setHeader("Content-Type", headers["content-type"] || "audio/mpeg");
-        res.setHeader("Accept-Ranges", "bytes");
-        if (headers["content-length"]) {
-          res.setHeader("Content-Length", headers["content-length"]);
+        // Si erreur amont
+        if (statusCode >= 400) {
+          console.error(
+            `[proxy-audio] Upstream Error ${statusCode} for ${url.substring(0, 40)}...`,
+          );
+          upstream.resume();
+          return res.status(statusCode).send(`Upstream Error: ${statusCode}`);
         }
+
+        // Transmettre le status et les headers
+        res.status(statusCode);
+
+        const headersToPass = [
+          "content-type",
+          "content-length",
+          "content-range",
+          "accept-ranges",
+          "cache-control",
+        ];
+
+        headersToPass.forEach((h) => {
+          if (headers[h]) res.setHeader(h, headers[h]);
+        });
+
+        if (!res.getHeader("Content-Type")) {
+          res.setHeader("Content-Type", "audio/mpeg");
+        }
+
         upstream.pipe(res);
-      })
-      .on("error", (err) => {
-        console.error("[proxy-audio] Error:", err.message);
-        if (!res.headersSent) res.status(500).send("Proxy error");
-      });
+      },
+    );
+
+    proxyReq.on("timeout", () => {
+      console.error("[proxy-audio] Upstream Timeout");
+      proxyReq.destroy();
+      if (!res.headersSent) res.status(504).send("Upstream Timeout");
+    });
+
+    proxyReq.on("error", (err) => {
+      console.error(`[proxy-audio] Request Error: ${err.code || err.message}`);
+      if (!res.headersSent) res.status(500).send("Proxy error");
+    });
   } catch (err) {
-    console.error("[proxy-audio] URL Error:", err.message, "URL:", url);
+    console.error("[proxy-audio] Fatal Error:", err.message);
     if (!res.headersSent) res.status(500).send("Invalid URL");
   }
 }
 
 app.get("/api/proxy-audio", (req, res) => {
-  const targetUrl = req.query.url;
+  let targetUrl = req.query.url;
+  console.log(`[api] Received proxy request for: ${targetUrl}`);
+
   if (!targetUrl) return res.status(400).send("Missing url param");
-  proxyAudio(targetUrl, res);
+
+  // Si l'URL est encore encodée (contient des %25), on la décode une fois de plus
+  if (targetUrl.includes("%25")) {
+    targetUrl = decodeURIComponent(targetUrl);
+  }
+
+  proxyAudio(targetUrl, res, req);
 });
 
 app.use("/api/search", searchRoute);

@@ -8,11 +8,14 @@ function LibraryScreen({
   currentTrack,
   isPlaying,
   openCreatePlaylistModal,
+  activePlaylist,
+  setActivePlaylist,
+  isSelectionMode,
+  setIsSelectionMode,
 }) {
   const [playlists, setPlaylists] = useState([]);
   const [likedCount, setLikedCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [activePlaylist, setActivePlaylist] = useState(null);
 
   useEffect(() => {
     const fetchLibrary = async () => {
@@ -41,6 +44,8 @@ function LibraryScreen({
         handlePlayContext={handlePlayContext}
         currentTrack={currentTrack}
         isPlaying={isPlaying}
+        isSelectionMode={isSelectionMode}
+        setIsSelectionMode={setIsSelectionMode}
       />
     );
   }

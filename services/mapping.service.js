@@ -13,29 +13,6 @@ const db = require("../config/database");
  */
 async function getTubidyDownloadByDeezerId(deezerId, format = "mp3") {
   try {
-    // 0. Vérifier le cache local (valide pour 24 heures)
-    const cached = db
-      .prepare(
-        `
-      SELECT * FROM stream_cache 
-      WHERE deezer_id = ? AND created_at > datetime('now', '-1 day')
-    `,
-      )
-      .get(deezerId);
-
-    if (cached) {
-      console.log(`[mapping] Cache hit pour Deezer ID: ${deezerId}`);
-      return {
-        source: { id: deezerId }, // Infos source minimales ok pour le lecteur
-        target: {
-          title: cached.title,
-          link: cached.stream_url,
-          format: format === "video" ? "MP4 video" : "MP3 audio",
-          cached: true,
-        },
-      };
-    }
-
     // 1. Récupérer les infos du titre sur Deezer
     console.log(`[mapping] Récupération infos Deezer pour ID: ${deezerId}`);
     const track = await deezerService.getTrack(deezerId);
@@ -65,13 +42,19 @@ async function getTubidyDownloadByDeezerId(deezerId, format = "mp3") {
       format,
     );
 
-    // 5. Sauvegarder dans le cache
-    db.prepare(
-      `
-      INSERT OR REPLACE INTO stream_cache (deezer_id, stream_url, title)
-      VALUES (?, ?, ?)
-    `,
-    ).run(deezerId, downloadData.link, bestMatch.title);
+    return {
+      source: {
+        id: deezerId,
+        title: track.title,
+        artist: track.artist.name,
+        thumbnail: track.album.cover_medium,
+      },
+      target: {
+        title: bestMatch.title,
+        link: downloadData.link,
+        format: format === "video" ? "MP4 video" : "MP3 audio",
+      },
+    };
 
     return {
       source: {
