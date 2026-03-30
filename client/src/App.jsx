@@ -3,6 +3,7 @@ import axios from "axios";
 import SearchScreen from "./screens/Search";
 import LibraryScreen from "./screens/Library";
 import PlayerScreen from "./screens/Player";
+import GenreView from "./screens/GenreView";
 import AddToPlaylistModal from "./components/AddToPlaylistModal";
 import { getDownloadedTracks } from "./utils/offlineDb";
 
@@ -91,12 +92,13 @@ function App() {
   const [showFullPlayer, setShowFullPlayer] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  // Global Axios Configuration for timeouts (Spotiwoop scraping can take time)
-  axios.defaults.timeout = 20000;
+  // Global Axios Configuration for timeouts (Spotiwoop scraping and YTMusic can take time)
+  axios.defaults.timeout = 60000;
 
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isLoadingTrack, setIsLoadingTrack] = useState(false);
   const [activePlaylist, setActivePlaylist] = useState(null);
+  const [activeGenre, setActiveGenre] = useState(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   // Queue State
@@ -407,7 +409,12 @@ function App() {
       case "home":
         return <HomeScreen />;
       case "search":
-        return <SearchScreen onPlayTrack={handlePlayTrack} />;
+        return (
+          <SearchScreen
+            onPlayTrack={handlePlayTrack}
+            onSelectGenre={(genre) => setActiveGenre(genre)}
+          />
+        );
       case "library":
         return (
           <LibraryScreen
@@ -487,6 +494,13 @@ function App() {
           </div>
         )}
         {renderContent()}
+        {activeGenre && (
+          <GenreView
+            genre={activeGenre}
+            onClose={() => setActiveGenre(null)}
+            onPlayTrack={handlePlayTrack}
+          />
+        )}
       </main>
 
       {/* Global Audio Element */}

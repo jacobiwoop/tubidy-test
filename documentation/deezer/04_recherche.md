@@ -12,46 +12,46 @@ GET https://api.deezer.com/search?q={query}
 
 ## Endpoints de recherche par type
 
-| Endpoint | Type de résultat |
-|---|---|
-| `/search` | Titres (par défaut) |
-| `/search/track` | Titres |
-| `/search/artist` | Artistes |
-| `/search/album` | Albums |
-| `/search/playlist` | Playlists |
-| `/search/podcast` | Podcasts |
-| `/search/radio` | Radios / Mixes |
-| `/search/user` | Utilisateurs |
+| Endpoint           | Type de résultat     |
+| ------------------ | -------------------- |
+| `/search`          | Titres (pa r défaut) |
+| `/search/track`    | Titres               |
+| `/search/artist`   | Artistes             |
+| `/search/album`    | Albums               |
+| `/search/playlist` | Playlists            |
+| `/search/podcast`  | Podcasts             |
+| `/search/radio`    | Radios / Mixes       |
+| `/search/user`     | Utilisateurs         |
 
 ---
 
 ## Paramètres disponibles
 
-| Paramètre | Type | Description |
-|---|---|---|
-| `q` | string | **Obligatoire.** Terme de recherche |
-| `order` | string | Tri des résultats (voir liste ci-dessous) |
-| `index` | integer | Index de départ pour la pagination (défaut: 0) |
-| `limit` | integer | Nombre de résultats (défaut: 25) |
-| `strict` | boolean | Mode strict (`on`) — ne retourne que des correspondances exactes |
+| Paramètre | Type    | Description                                                      |
+| --------- | ------- | ---------------------------------------------------------------- |
+| `q`       | string  | **Obligatoire.** Terme de recherche                              |
+| `order`   | string  | Tri des résultats (voir liste ci-dessous)                        |
+| `index`   | integer | Index de départ pour la pagination (défaut: 0)                   |
+| `limit`   | integer | Nombre de résultats (défaut: 25)                                 |
+| `strict`  | boolean | Mode strict (`on`) — ne retourne que des correspondances exactes |
 
 ---
 
 ## Valeurs d'ordre disponibles (`order=`)
 
-| Valeur | Description |
-|---|---|
-| `RANKING` | Par pertinence (défaut) |
-| `TRACK_ASC` | Titre A → Z |
-| `TRACK_DESC` | Titre Z → A |
-| `ARTIST_ASC` | Artiste A → Z |
-| `ARTIST_DESC` | Artiste Z → A |
-| `ALBUM_ASC` | Album A → Z |
-| `ALBUM_DESC` | Album Z → A |
-| `RATING_ASC` | Note croissante |
-| `RATING_DESC` | Note décroissante |
-| `DURATION_ASC` | Durée croissante |
-| `DURATION_DESC` | Durée décroissante |
+| Valeur          | Description             |
+| --------------- | ----------------------- |
+| `RANKING`       | Par pertinence (défaut) |
+| `TRACK_ASC`     | Titre A → Z             |
+| `TRACK_DESC`    | Titre Z → A             |
+| `ARTIST_ASC`    | Artiste A → Z           |
+| `ARTIST_DESC`   | Artiste Z → A           |
+| `ALBUM_ASC`     | Album A → Z             |
+| `ALBUM_DESC`    | Album Z → A             |
+| `RATING_ASC`    | Note croissante         |
+| `RATING_DESC`   | Note décroissante       |
+| `DURATION_ASC`  | Durée croissante        |
+| `DURATION_DESC` | Durée décroissante      |
 
 ### Exemple d'utilisation du tri
 
@@ -65,16 +65,16 @@ GET https://api.deezer.com/search?q=eminem&order=DURATION_DESC
 
 Vous pouvez affiner la recherche en utilisant des **mots-clés spéciaux** dans le paramètre `q` :
 
-| Mot-clé | Description | Exemple |
-|---|---|---|
-| `artist:` | Filtrer par artiste | `artist:"Daft Punk"` |
-| `album:` | Filtrer par album | `album:"Discovery"` |
-| `track:` | Filtrer par titre | `track:"Harder Better"` |
-| `label:` | Filtrer par label | `label:"Columbia"` |
-| `dur_min:` | Durée minimale (en secondes) | `dur_min:120` |
-| `dur_max:` | Durée maximale (en secondes) | `dur_max:300` |
-| `bpm_min:` | BPM minimum | `bpm_min:120` |
-| `bpm_max:` | BPM maximum | `bpm_max:140` |
+| Mot-clé    | Description                  | Exemple                 |
+| ---------- | ---------------------------- | ----------------------- |
+| `artist:`  | Filtrer par artiste          | `artist:"Daft Punk"`    |
+| `album:`   | Filtrer par album            | `album:"Discovery"`     |
+| `track:`   | Filtrer par titre            | `track:"Harder Better"` |
+| `label:`   | Filtrer par label            | `label:"Columbia"`      |
+| `dur_min:` | Durée minimale (en secondes) | `dur_min:120`           |
+| `dur_max:` | Durée maximale (en secondes) | `dur_max:300`           |
+| `bpm_min:` | BPM minimum                  | `bpm_min:120`           |
+| `bpm_max:` | BPM maximum                  | `bpm_max:140`           |
 
 ### Exemples de recherche avancée
 
@@ -123,12 +123,12 @@ GET https://api.deezer.com/search?q=daft punk&strict=on
 
 ### Champs de la réponse
 
-| Champ | Description |
-|---|---|
-| `data` | Tableau des résultats |
-| `total` | Nombre total de résultats |
-| `next` | URL de la page suivante (pagination) |
-| `prev` | URL de la page précédente |
+| Champ   | Description                          |
+| ------- | ------------------------------------ |
+| `data`  | Tableau des résultats                |
+| `total` | Nombre total de résultats            |
+| `next`  | URL de la page suivante (pagination) |
+| `prev`  | URL de la page précédente            |
 
 ---
 
@@ -137,11 +137,13 @@ GET https://api.deezer.com/search?q=daft punk&strict=on
 ### JavaScript (Fetch)
 
 ```javascript
-const query = 'daft punk';
-const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=10`);
+const query = "daft punk";
+const response = await fetch(
+  `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=10`,
+);
 const data = await response.json();
 
-data.data.forEach(track => {
+data.data.forEach((track) => {
   console.log(`${track.title} — ${track.artist.name}`);
 });
 ```
@@ -150,15 +152,15 @@ data.data.forEach(track => {
 
 ```javascript
 // Chercher des artistes
-const artists = await fetch('https://api.deezer.com/search/artist?q=radiohead');
+const artists = await fetch("https://api.deezer.com/search/artist?q=radiohead");
 const artistData = await artists.json();
 
 // Chercher des albums
-const albums = await fetch('https://api.deezer.com/search/album?q=ok+computer');
+const albums = await fetch("https://api.deezer.com/search/album?q=ok+computer");
 const albumData = await albums.json();
 
 // Chercher des playlists
-const playlists = await fetch('https://api.deezer.com/search/playlist?q=chill');
+const playlists = await fetch("https://api.deezer.com/search/playlist?q=chill");
 const playlistData = await playlists.json();
 ```
 

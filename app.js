@@ -12,6 +12,7 @@ const recommendRoute = require("./routes/recommend");
 const deezerRoute = require("./routes/deezer");
 const libraryRoute = require("./routes/library");
 const playlistRoute = require("./routes/playlists");
+const ytmusicRoute = require("./routes/ytmusic");
 
 const path = require("path");
 
@@ -159,6 +160,7 @@ app.use("/api/recommend", recommendRoute);
 app.use("/api/deezer", deezerRoute);
 app.use("/api/me/library", libraryRoute);
 app.use("/api/playlists", playlistRoute);
+app.use("/api/ytmusic", ytmusicRoute);
 
 // Health check
 app.get("/health", (req, res) => res.json({ status: "ok" }));

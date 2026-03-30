@@ -75,9 +75,97 @@ async function getTrack(id) {
   }
 }
 
+/**
+ * Récupère les détails d'un genre.
+ */
+async function getGenre(id) {
+  try {
+    const response = await axios.get(`${BASE_URL}/genre/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`[deezer] Error in getGenre for ID ${id}:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Récupère les artistes d'un genre.
+ */
+async function getGenreArtists(id) {
+  try {
+    const response = await axios.get(`${BASE_URL}/genre/${id}/artists`);
+    return response.data;
+  } catch (error) {
+    console.error(
+      `[deezer] Error in getGenreArtists for ID ${id}:`,
+      error.message,
+    );
+    throw error;
+  }
+}
+
+/**
+ * Récupère les playlists populaires pour un certain genre en utilisant les charts.
+ */
+async function getGenrePlaylists(id, { limit = 10 } = {}) {
+  try {
+    const response = await axios.get(`${BASE_URL}/chart/${id}/playlists`, {
+      params: { limit },
+    });
+    return response.data;
+  } catch (error) {
+    console.error(
+      `[deezer] Error in getGenrePlaylists for ID ${id}:`,
+      error.message,
+    );
+    throw error;
+  }
+}
+
+/**
+ * Récupère le "Top" (chart) des titres d'un genre.
+ */
+async function getGenreTracks(id, { limit = 20 } = {}) {
+  try {
+    const response = await axios.get(`${BASE_URL}/chart/${id}/tracks`, {
+      params: { limit },
+    });
+    return response.data;
+  } catch (error) {
+    console.error(
+      `[deezer] Error in getGenreTracks for ID ${id}:`,
+      error.message,
+    );
+    return { data: [] };
+  }
+}
+
+/**
+ * Récupère les nouveautés d'un genre (editorial).
+ */
+async function getGenreReleases(id, { limit = 10 } = {}) {
+  try {
+    const response = await axios.get(`${BASE_URL}/editorial/${id}/releases`, {
+      params: { limit },
+    });
+    return response.data;
+  } catch (error) {
+    console.error(
+      `[deezer] Error in getGenreReleases for ID ${id}:`,
+      error.message,
+    );
+    return { data: [] };
+  }
+}
+
 module.exports = {
   search,
   searchArtist,
   searchAlbum,
   getTrack,
+  getGenre,
+  getGenreArtists,
+  getGenrePlaylists,
+  getGenreTracks,
+  getGenreReleases,
 };

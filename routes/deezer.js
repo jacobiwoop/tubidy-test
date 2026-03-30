@@ -64,4 +64,49 @@ router.get("/track/:id", async (req, res, next) => {
   }
 });
 
+router.get("/genre/:id", async (req, res, next) => {
+  try {
+    const result = await deezerService.getGenre(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/genre/:id/artists", async (req, res, next) => {
+  try {
+    const result = await deezerService.getGenreArtists(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/genre/:id/playlists", async (req, res, next) => {
+  try {
+    const result = await deezerService.getGenrePlaylists(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/genre/:id/tracks", async (req, res, next) => {
+  try {
+    const result = await deezerService.getGenreTracks(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/genre/:id/releases", async (req, res, next) => {
+  try {
+    const result = await deezerService.getGenreReleases(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
