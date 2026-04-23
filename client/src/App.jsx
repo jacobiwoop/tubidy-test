@@ -171,6 +171,68 @@ function App() {
     }
   }, [isPlaying]);
 
+  // Media Session API Integration (Lock screen controls)
+  useEffect(() => {
+    if (currentTrack && "mediaSession" in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.artist?.name || currentTrack.artist,
+        album: currentTrack.album?.title || "Spotiwoop Mix",
+        artwork: [
+          {
+            src:
+              currentTrack.album?.cover_medium ||
+              currentTrack.cover_url ||
+              "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg",
+            sizes: "96x96",
+            type: "image/jpeg",
+          },
+          {
+            src:
+              currentTrack.album?.cover_medium ||
+              currentTrack.cover_url ||
+              "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg",
+            sizes: "512x512",
+            type: "image/jpeg",
+          },
+        ],
+      });
+
+      // Handlers for native controls
+      navigator.mediaSession.setActionHandler("play", () => setIsPlaying(true));
+      navigator.mediaSession.setActionHandler("pause", () =>
+        setIsPlaying(false),
+      );
+      navigator.mediaSession.setActionHandler("previoustrack", playPrevious);
+      navigator.mediaSession.setActionHandler("nexttrack", playNext);
+
+      // Seek handlers
+      navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+        handleSeek(
+          Math.max(
+            audioRef.current.currentTime - (details.seekOffset || 10),
+            0,
+          ),
+        );
+      });
+      navigator.mediaSession.setActionHandler("seekforward", (details) => {
+        handleSeek(
+          Math.min(
+            audioRef.current.currentTime + (details.seekOffset || 10),
+            audioRef.current.duration,
+          ),
+        );
+      });
+    }
+  }, [currentTrack]);
+
+  // Update Media Session Playback State
+  useEffect(() => {
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    }
+  }, [isPlaying]);
+
   const handleTimeUpdate = () => {
     setCurrentTime(audioRef.current.currentTime);
   };
