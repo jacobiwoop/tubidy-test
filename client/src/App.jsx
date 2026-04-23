@@ -6,6 +6,7 @@ import PlayerScreen from "./screens/Player";
 import GenreView from "./screens/GenreView";
 import AddToPlaylistModal from "./components/AddToPlaylistModal";
 import { getDownloadedTracks } from "./utils/offlineDb";
+import { getVibrantColorFromImage } from "./utils/vibrant-color";
 
 // Temporary Mock Data for Home
 const SHORTCUTS = [
@@ -93,6 +94,7 @@ function App() {
   const [activeTab, setActiveTab] = useState("home");
   const [isPlaying, setIsPlaying] = useState(false);
   const [showFullPlayer, setShowFullPlayer] = useState(false);
+  const [vibrantColor, setVibrantColor] = useState(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   // Global Axios Configuration for timeouts (Spotiwoop scraping and YTMusic can take time)
@@ -122,6 +124,7 @@ function App() {
 
   const audioRef = useRef(null);
   const activeTrackIdRef = useRef(null); // tracks dernière demande de lecture
+  const abortControllerRef = useRef(null); // permet d'annuler la requête axios en cours
 
   // Fetch initial data (Likes and Playlists)
   useEffect(() => {
@@ -260,6 +263,13 @@ function App() {
       audioRef.current.load();
     }
 
+    // Annuler la requête axios précédente s'il y en a une en cours
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    // Créer un nouveau contrôleur pour la requête courante
+    abortControllerRef.current = new AbortController();
+
     // --- MODE HORS LIGNE (SMART SKIP) ---
     if (!navigator.onLine) {
       console.log(`[player-offline] Checking local db for ${trackId}...`);
@@ -296,7 +306,9 @@ function App() {
     // Récupérer le lien complet Spotiwoop avant de jouer
     try {
       console.log(`[player] Fetching full stream for ${trackId}...`);
-      const res = await axios.get(`/api/deezer/track/${trackId}/download`);
+      const res = await axios.get(`/api/deezer/track/${trackId}/download`, {
+        signal: abortControllerRef.current.signal,
+      });
 
       // Si un autre morceau a été demandé entre temps, on abandonne
       if (activeTrackIdRef.current !== trackId) return;
@@ -319,7 +331,9 @@ function App() {
         setIsPlaying(true);
       }
     } catch (err) {
-      if (activeTrackIdRef.current === trackId) {
+      if (axios.isCancel(err)) {
+        console.log(`[player] Request canceled for ${trackId}`);
+      } else if (activeTrackIdRef.current === trackId) {
         console.error("Failed to fetch full track link", err);
       }
     } finally {
@@ -583,13 +597,20 @@ function App() {
         >
           <div className="glass-effect rounded-lg px-4 py-3 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 relative overflow-hidden group">
             <div
-              className="absolute top-0 left-0 h-[1.5px] bg-primary transition-all duration-300 shadow-[0_0_10px_#fff]"
-              style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+              className="absolute top-0 left-0 h-[1.5px] bg-primary transition-all duration-300"
+              style={{
+                width: `${(currentTime / duration) * 100 || 0}%`,
+                boxShadow: vibrantColor
+                  ? `0 0 15px ${vibrantColor}`
+                  : "0 0 10px #fff",
+                backgroundColor: vibrantColor || "var(--primary)",
+              }}
             ></div>
             <div className="flex items-center gap-4 overflow-hidden">
               <div className="relative w-12 h-12 flex-shrink-0">
                 <img
                   className="w-full h-full rounded-md object-cover shadow-lg transition-transform duration-500 group-hover:scale-105"
+                  crossOrigin="anonymous"
                   src={
                     currentTrack.album?.cover_medium ||
                     currentTrack.album?.cover_small ||
@@ -597,6 +618,10 @@ function App() {
                     "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg"
                   }
                   alt={currentTrack.title}
+                  onLoad={(e) => {
+                    const color = getVibrantColorFromImage(e.target);
+                    setVibrantColor(color);
+                  }}
                   onError={(e) => {
                     e.target.src =
                       "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg";

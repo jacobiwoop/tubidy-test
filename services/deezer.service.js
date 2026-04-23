@@ -1,125 +1,171 @@
 const axios = require("axios");
+const db = require("../config/database");
 
 /**
  * Service pour interagir avec l'API Deezer.
- * Se base sur la documentation officielle (documentation/deezer/)
  */
 
 const BASE_URL = "https://api.deezer.com";
 
 /**
+ * Helper pour retenter une requête en cas d'erreur réseau (EAI_AGAIN, ETIMEDOUT).
+ * Utilise désormais un backoff exponentiel (1s, 2s, 4s, 8s...).
+ */
+async function withRetry(fn, retries = 5) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isNetworkError =
+        err.code === "EAI_AGAIN" ||
+        err.code === "ETIMEDOUT" ||
+        err.code === "ECONNRESET" ||
+        err.code === "ENOTFOUND" ||
+        !err.response;
+
+      if (isNetworkError && i < retries - 1) {
+        // Backoff exponentiel : 1s, 2s, 4s, 8s...
+        const delay = Math.pow(2, i) * 1000;
+        console.warn(
+          `[deezer] Network error (${err.code}). Retrying in ${delay}ms... (${i + 1}/${retries})`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+/**
  * Recherche globale sur Deezer (titres par défaut).
- * @param {string} query - Terme de recherche
- * @param {object} options - index, limit, order
  */
 async function search(
   query,
   { index = 0, limit = 25, order = "RANKING" } = {},
+  signal = null,
 ) {
-  try {
+  return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/search`, {
       params: { q: query, index, limit, order },
+      signal,
     });
     return response.data;
-  } catch (error) {
-    console.error("[deezer] Error in search:", error.message);
-    throw error;
-  }
+  });
 }
 
 /**
  * Recherche spécifique d'artistes.
  */
 async function searchArtist(query, { index = 0, limit = 25 } = {}) {
-  try {
+  return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/search/artist`, {
       params: { q: query, index, limit },
     });
     return response.data;
-  } catch (error) {
-    console.error("[deezer] Error in searchArtist:", error.message);
-    throw error;
-  }
+  });
 }
 
 /**
  * Recherche spécifique d'albums.
  */
 async function searchAlbum(query, { index = 0, limit = 25 } = {}) {
-  try {
+  return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/search/album`, {
       params: { q: query, index, limit },
     });
     return response.data;
-  } catch (error) {
-    console.error("[deezer] Error in searchAlbum:", error.message);
-    throw error;
-  }
+  });
 }
 
 /**
  * Récupère les détails d'un titre par son ID.
+ * Utilise le cache SQLite pour éviter les requêtes inutiles.
  */
-async function getTrack(id) {
+async function getTrack(id, signal = null) {
+  // 1. Vérifier le cache SQLite
   try {
-    const response = await axios.get(`${BASE_URL}/track/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error(
-      `[deezer] Error in getTrack for ID ${id}:`,
-      error.response ? error.response.status : error.message,
-    );
-    if (error.response)
-      console.error("[deezer] Error data:", error.response.data);
-    throw error;
+    const cached = db.prepare("SELECT * FROM tracks WHERE id = ?").get(id);
+    if (cached) {
+      console.log(`[deezer-cache] Hit for ID: ${id}`);
+      return {
+        id: cached.id,
+        title: cached.title,
+        artist: { name: cached.artist },
+        album: {
+          title: cached.album,
+          cover_medium: cached.cover_url,
+          cover_big: cached.cover_url,
+        },
+        preview: cached.preview_url,
+        duration: cached.duration,
+      };
+    }
+  } catch (dbErr) {
+    console.error("[deezer-cache] Read error:", dbErr.message);
   }
+
+  // 2. Si pas en cache, appeler l'API avec retry
+  return withRetry(async () => {
+    const response = await axios.get(`${BASE_URL}/track/${id}`, { signal });
+    const track = response.data;
+
+    if (track && !track.error) {
+      // 3. Sauvegarder dans le cache pour la prochaine fois
+      try {
+        db.prepare(
+          `
+          INSERT OR REPLACE INTO tracks (id, title, artist, album, cover_url, preview_url, duration)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+        ).run(
+          String(track.id),
+          track.title,
+          track.artist.name,
+          track.album.title,
+          track.album.cover_medium,
+          track.preview,
+          track.duration,
+        );
+      } catch (dbErr) {
+        console.error("[deezer-cache] Write error:", dbErr.message);
+      }
+    }
+
+    return track;
+  });
 }
 
 /**
  * Récupère les détails d'un genre.
  */
 async function getGenre(id) {
-  try {
+  return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/genre/${id}`);
     return response.data;
-  } catch (error) {
-    console.error(`[deezer] Error in getGenre for ID ${id}:`, error.message);
-    throw error;
-  }
+  });
 }
 
 /**
  * Récupère les artistes d'un genre.
  */
 async function getGenreArtists(id) {
-  try {
+  return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/genre/${id}/artists`);
     return response.data;
-  } catch (error) {
-    console.error(
-      `[deezer] Error in getGenreArtists for ID ${id}:`,
-      error.message,
-    );
-    throw error;
-  }
+  });
 }
 
 /**
  * Récupère les playlists populaires pour un certain genre en utilisant les charts.
  */
 async function getGenrePlaylists(id, { limit = 10 } = {}) {
-  try {
+  return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/chart/${id}/playlists`, {
       params: { limit },
     });
     return response.data;
-  } catch (error) {
-    console.error(
-      `[deezer] Error in getGenrePlaylists for ID ${id}:`,
-      error.message,
-    );
-    throw error;
-  }
+  });
 }
 
 /**
@@ -127,15 +173,13 @@ async function getGenrePlaylists(id, { limit = 10 } = {}) {
  */
 async function getGenreTracks(id, { limit = 20 } = {}) {
   try {
-    const response = await axios.get(`${BASE_URL}/chart/${id}/tracks`, {
-      params: { limit },
+    return await withRetry(async () => {
+      const response = await axios.get(`${BASE_URL}/chart/${id}/tracks`, {
+        params: { limit },
+      });
+      return response.data;
     });
-    return response.data;
-  } catch (error) {
-    console.error(
-      `[deezer] Error in getGenreTracks for ID ${id}:`,
-      error.message,
-    );
+  } catch (err) {
     return { data: [] };
   }
 }
@@ -145,15 +189,13 @@ async function getGenreTracks(id, { limit = 20 } = {}) {
  */
 async function getGenreReleases(id, { limit = 10 } = {}) {
   try {
-    const response = await axios.get(`${BASE_URL}/editorial/${id}/releases`, {
-      params: { limit },
+    return await withRetry(async () => {
+      const response = await axios.get(`${BASE_URL}/editorial/${id}/releases`, {
+        params: { limit },
+      });
+      return response.data;
     });
-    return response.data;
-  } catch (error) {
-    console.error(
-      `[deezer] Error in getGenreReleases for ID ${id}:`,
-      error.message,
-    );
+  } catch (err) {
     return { data: [] };
   }
 }

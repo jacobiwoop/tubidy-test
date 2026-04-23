@@ -49,6 +49,7 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const obsRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -76,8 +77,13 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
   }, [searchSource]);
 
   const performSearch = async (currentOffset = 0, isNew = false) => {
-    if (isNew) setIsSearching(true);
-    else setIsFetchingMore(true);
+    if (isNew) {
+      setIsSearching(true);
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      abortControllerRef.current = new AbortController();
+    } else {
+      setIsFetchingMore(true);
+    }
 
     const limit = 15;
     const endpoint =
@@ -86,7 +92,9 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
         : `/api/deezer/search?q=${encodeURIComponent(query)}&limit=${limit}&index=${currentOffset}`;
 
     try {
-      const resp = await axios.get(endpoint);
+      const resp = await axios.get(endpoint, {
+        signal: isNew ? abortControllerRef.current.signal : undefined,
+      });
       const newItems = resp.data.data || [];
 
       if (searchSource === "ytmusic") {
@@ -109,10 +117,14 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
         setHasMore(newItems.length === limit);
       }
     } catch (err) {
-      console.error("Search failed:", err);
+      if (axios.isCancel(err)) {
+        console.log("Search request canceled", query);
+      } else {
+        console.error("Search failed:", err);
+      }
     } finally {
-      setIsSearching(false);
-      setIsFetchingMore(false);
+      if (isNew) setIsSearching(false);
+      else setIsFetchingMore(false);
     }
   };
 

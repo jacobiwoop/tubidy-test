@@ -18,5 +18,11 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.0"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "music.db*",
+      "client/*"
+    ]
   }
 }

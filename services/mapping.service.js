@@ -27,10 +27,10 @@ function cleanQuery(text) {
 /**
  * Vérifie rapidement si un lien est "vivant" (timeout 2.5s)
  */
-async function isLinkReachable(url) {
+async function isLinkReachable(url, signal = null) {
   try {
     // On fait un HEAD pour gagner du temps
-    await axios.head(url, { timeout: 2500 });
+    await axios.head(url, { timeout: 2500, signal });
     return true;
   } catch (err) {
     // Si HEAD échoue, on tente un GET partiel au cas où HEAD soit bloqué
@@ -38,6 +38,7 @@ async function isLinkReachable(url) {
       await axios.get(url, {
         timeout: 2500,
         headers: { Range: "bytes=0-0" },
+        signal,
       });
       return true;
     } catch (e) {
@@ -51,11 +52,15 @@ async function isLinkReachable(url) {
  * @param {string} deezerId
  * @param {string} format - 'mp3' ou 'video'
  */
-async function getTubidyDownloadByDeezerId(deezerId, format = "mp3") {
+async function getTubidyDownloadByDeezerId(
+  deezerId,
+  format = "mp3",
+  signal = null,
+) {
   try {
     // 1. Récupérer les infos du titre sur Deezer
     console.log(`[mapping] Récupération infos Deezer pour ID: ${deezerId}`);
-    const track = await deezerService.getTrack(deezerId);
+    const track = await deezerService.getTrack(deezerId, signal);
     if (!track || track.error) {
       throw new Error("Titre introuvable sur Deezer");
     }
@@ -67,7 +72,7 @@ async function getTubidyDownloadByDeezerId(deezerId, format = "mp3") {
     console.log(`[mapping] Recherche Tubidy pour: "${query}"`);
 
     // 3. Chercher sur Tubidy
-    const { results } = await tubidyService.search(query, { page: 1 });
+    const { results } = await tubidyService.search(query, { page: 1 }, signal);
 
     if (!results || results.length === 0) {
       throw new Error(
@@ -86,13 +91,14 @@ async function getTubidyDownloadByDeezerId(deezerId, format = "mp3") {
         const downloadData = await tubidyService.getDownloadLink(
           match.download_page,
           format,
+          signal,
         );
 
         if (!downloadData.link) continue;
 
         // Vérification de connectivité
         console.log(`[mapping] Vérification connectivité pour: ${match.title}`);
-        const alive = await isLinkReachable(downloadData.link);
+        const alive = await isLinkReachable(downloadData.link, signal);
 
         if (alive) {
           console.log(`[mapping] Link ${i + 1} est OK!`);

@@ -4,14 +4,27 @@ const deezerService = require("../services/deezer.service");
 const mappingService = require("../services/mapping.service");
 
 router.get("/search", async (req, res, next) => {
+  const controller = new AbortController();
+  req.on("close", () => controller.abort());
+
   try {
     const { q, index = 0, limit = 25, order = "RANKING" } = req.query;
     if (!q)
       return res.status(400).json({ error: "Missing query parameter: q" });
 
-    const result = await deezerService.search(q, { index, limit, order });
+    const result = await deezerService.search(
+      q,
+      { index, limit, order },
+      controller.signal,
+    );
     res.json(result);
   } catch (err) {
+    if (controller.signal.aborted) {
+      console.log(
+        `[api] Search request aborted by client for query: ${req.query.q}`,
+      );
+      return;
+    }
     next(err);
   }
 });
@@ -43,14 +56,24 @@ router.get("/album", async (req, res, next) => {
 });
 
 router.get("/track/:id/download", async (req, res, next) => {
+  const controller = new AbortController();
+  req.on("close", () => controller.abort());
+
   try {
     const { format = "mp3" } = req.query;
     const result = await mappingService.getTubidyDownloadByDeezerId(
       req.params.id,
       format,
+      controller.signal,
     );
     res.json(result);
   } catch (err) {
+    if (controller.signal.aborted) {
+      console.log(
+        `[api] Download request aborted by client for ID: ${req.params.id}`,
+      );
+      return;
+    }
     next(err);
   }
 });

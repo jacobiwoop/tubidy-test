@@ -33,6 +33,7 @@ function PlayerScreen({
   onOpenPlaylistModal,
   hasNext,
   hasPrev,
+  vibrantColor,
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -320,10 +321,19 @@ function PlayerScreen({
               onClick={handleProgressClick}
             >
               <div
-                className="absolute top-0 left-0 h-full bg-primary shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-all duration-300"
-                style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+                className="absolute top-0 left-0 h-full bg-primary transition-all duration-300"
+                style={{
+                  width: `${(currentTime / duration) * 100 || 0}%`,
+                  backgroundColor: vibrantColor || "var(--primary)",
+                  boxShadow: vibrantColor
+                    ? `0 0 15px ${vibrantColor}`
+                    : "0 0 15px rgba(255,255,255,0.5)",
+                }}
               >
-                <div className="absolute -right-2 -top-[6px] w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_#fff] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div
+                  className="absolute -right-2 -top-[6px] w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_#fff] opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ backgroundColor: vibrantColor || "var(--primary)" }}
+                ></div>
               </div>
             </div>
             <div className="flex justify-between text-[10px] uppercase font-black tracking-[0.2em] text-secondary opacity-60">
@@ -359,7 +369,13 @@ function PlayerScreen({
                   <div className="absolute inset-[-10px] border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                 )}
                 <button
-                  className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center transition-all duration-500 active:scale-95 bg-primary text-background ${isLoadingTrack ? "opacity-40 animate-pulse" : "shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:scale-105"}`}
+                  className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center transition-all duration-500 active:scale-95 bg-primary text-background ${isLoadingTrack ? "opacity-40 animate-pulse" : "hover:scale-105"}`}
+                  style={{
+                    backgroundColor: vibrantColor || "var(--primary)",
+                    boxShadow: !vibrantColor
+                      ? "0 20px 50px rgba(255,255,255,0.1)"
+                      : `0 20px 50px ${vibrantColor}33`, // 33 is ~20% opacity in hex
+                  }}
                   onClick={onTogglePlay}
                   disabled={isLoadingTrack}
                 >
