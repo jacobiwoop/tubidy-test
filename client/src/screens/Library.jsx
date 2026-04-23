@@ -51,16 +51,16 @@ function LibraryScreen({
   }
 
   return (
-    <div className="animate-in fade-in slide-in-from-left-4 duration-500 pb-20">
+    <div className="animate-in fade-in duration-700 pb-20">
       {/* Filter Chips */}
-      <div className="sticky top-[60px] bg-surface/90 backdrop-blur-md z-30 flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-4">
-        <button className="px-4 py-1.5 rounded-full bg-primary text-on-primary font-body font-semibold text-sm whitespace-nowrap active:scale-95 transition-all">
+      <div className="sticky top-[72px] bg-background/80 backdrop-blur-xl z-30 flex gap-3 overflow-x-auto no-scrollbar pb-6 mb-6">
+        <button className="px-5 py-2 rounded-md bg-primary text-background font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">
           Playlists
         </button>
         {["Artists", "Albums", "Podcasts"].map((filter) => (
           <button
             key={filter}
-            className="px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface font-body font-medium text-sm whitespace-nowrap hover:bg-surface-bright active:scale-95 transition-all"
+            className="px-5 py-2 rounded-md bg-surface text-secondary border border-white/5 font-black text-[10px] uppercase tracking-widest hover:border-white/20 hover:text-primary active:scale-95 transition-all"
           >
             {filter}
           </button>
@@ -68,40 +68,42 @@ function LibraryScreen({
       </div>
 
       {/* Sorting */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2 text-on-surface-variant">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center gap-3 text-secondary opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
           <span className="material-symbols-outlined text-lg">swap_vert</span>
-          <span className="font-label text-sm font-medium">Recents</span>
+          <span className="font-black text-[10px] uppercase tracking-[0.2em]">
+            Recents
+          </span>
         </div>
-        <button className="text-on-surface-variant">
-          <span className="material-symbols-outlined text-lg">grid_view</span>
+        <button className="text-secondary opacity-60 hover:opacity-100">
+          <span className="material-symbols-outlined text-xl">grid_view</span>
         </button>
       </div>
 
       {/* Library List */}
-      <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-1 gap-2">
         {/* Liked Songs Card */}
         <div
           onClick={() =>
             setActivePlaylist({ id: "liked", name: "Liked Songs" })
           }
-          className="flex items-center gap-4 group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-all active:scale-95"
+          className="flex items-center gap-5 group cursor-pointer hover:bg-white/5 p-3 -mx-3 rounded-md transition-all duration-300"
         >
-          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[#450af5] to-[#c4efd9] flex items-center justify-center relative shadow-lg overflow-hidden">
-            <span className="material-symbols-outlined text-white text-3xl fill-icon">
+          <div className="w-16 h-16 rounded-sm bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] border border-white/10 flex items-center justify-center relative shadow-xl overflow-hidden shadow-black">
+            <span className="material-symbols-outlined text-primary text-3xl fill-icon">
               favorite
             </span>
           </div>
           <div className="flex flex-col flex-1 overflow-hidden">
-            <h3 className="font-body font-semibold text-base text-white truncate">
+            <h3 className="font-bold text-base text-primary truncate tracking-tight">
               Liked Songs
             </h3>
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-primary text-xs fill-icon">
+            <div className="flex items-center gap-2 mt-1">
+              <span className="material-symbols-outlined text-primary text-[10px] opacity-70">
                 push_pin
               </span>
-              <p className="font-label text-sm text-on-surface-variant truncate">
-                Playlist • {likedCount} songs
+              <p className="font-black text-[10px] opacity-60 uppercase tracking-widest text-secondary truncate">
+                Playlist • {likedCount} tracks
               </p>
             </div>
           </div>
@@ -112,23 +114,23 @@ function LibraryScreen({
           onClick={() =>
             setActivePlaylist({ id: "downloads", name: "Offline Downloads" })
           }
-          className="flex items-center gap-4 group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-all active:scale-95"
+          className="flex items-center gap-5 group cursor-pointer hover:bg-white/5 p-3 -mx-3 rounded-md transition-all duration-300"
         >
-          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[#1DB954] to-[#450af5] flex items-center justify-center relative shadow-lg overflow-hidden">
-            <span className="material-symbols-outlined text-white text-3xl fill-icon">
+          <div className="w-16 h-16 rounded-sm bg-background border border-white/10 flex items-center justify-center relative shadow-xl overflow-hidden shadow-black">
+            <span className="material-symbols-outlined text-primary text-3xl">
               download_done
             </span>
           </div>
           <div className="flex flex-col flex-1 overflow-hidden">
-            <h3 className="font-body font-semibold text-base text-white truncate">
+            <h3 className="font-bold text-base text-primary truncate tracking-tight">
               Offline Downloads
             </h3>
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-primary text-xs fill-icon">
+            <div className="flex items-center gap-2 mt-1">
+              <span className="material-symbols-outlined text-primary text-[10px] opacity-70">
                 offline_pin
               </span>
-              <p className="font-label text-sm text-on-surface-variant truncate">
-                Local Storage
+              <p className="font-black text-[10px] opacity-60 uppercase tracking-widest text-secondary truncate">
+                Local Archive
               </p>
             </div>
           </div>
@@ -139,18 +141,18 @@ function LibraryScreen({
           <div
             key={playlist.id}
             onClick={() => setActivePlaylist(playlist)}
-            className="flex items-center gap-4 group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-all active:scale-95"
+            className="flex items-center gap-5 group cursor-pointer hover:bg-white/5 p-3 -mx-3 rounded-md transition-all duration-300"
           >
-            <div className="w-16 h-16 rounded-lg bg-surface-container-high flex items-center justify-center shadow-md">
-              <span className="material-symbols-outlined text-on-surface-variant text-3xl">
+            <div className="w-16 h-16 rounded-sm bg-surface border border-white/5 flex items-center justify-center shadow-lg shadow-black/40">
+              <span className="material-symbols-outlined text-secondary text-3xl">
                 music_note
               </span>
             </div>
             <div className="flex flex-col flex-1 overflow-hidden">
-              <h3 className="font-body font-semibold text-base text-on-surface truncate">
+              <h3 className="font-bold text-base text-primary truncate tracking-tight">
                 {playlist.name}
               </h3>
-              <p className="font-label text-sm text-on-surface-variant truncate">
+              <p className="font-black text-[10px] opacity-60 uppercase tracking-widest text-secondary truncate mt-1">
                 Playlist • Spotiwoop
               </p>
             </div>
@@ -158,15 +160,15 @@ function LibraryScreen({
         ))}
 
         {loading && (
-          <div className="text-center py-4 text-on-surface-variant">
-            Loading library...
+          <div className="text-center py-10">
+            <div className="inline-block w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
           </div>
         )}
 
         {!loading && playlists.length === 0 && (
-          <div className="text-center py-8 px-4 bg-surface-container-low rounded-2xl border border-dashed border-outline-variant">
-            <p className="text-on-surface-variant text-sm italic">
-              No playlists yet. Create one to start your collection!
+          <div className="text-center py-12 px-6 bg-surface border border-dashed border-white/10 rounded-md">
+            <p className="text-secondary text-[10px] uppercase font-black tracking-[0.2em] opacity-50">
+              Collection is empty
             </p>
           </div>
         )}
@@ -174,15 +176,15 @@ function LibraryScreen({
         {/* Add Button */}
         <div
           onClick={openCreatePlaylistModal}
-          className="flex items-center gap-4 group cursor-pointer py-2 hover:bg-white/5 p-2 -mx-2 rounded-xl active:scale-95 transition-all"
+          className="flex items-center gap-5 group cursor-pointer p-3 -mx-3 rounded-md hover:bg-white/5 transition-all duration-300"
         >
-          <div className="w-16 h-16 rounded-lg bg-surface-container-high flex items-center justify-center">
-            <span className="material-symbols-outlined text-on-surface-variant text-3xl group-hover:text-white transition-colors">
+          <div className="w-16 h-16 rounded-sm bg-surface border border-dashed border-white/10 flex items-center justify-center group-hover:border-primary/50 transition-colors">
+            <span className="material-symbols-outlined text-secondary text-3xl group-hover:text-primary transition-colors">
               add
             </span>
           </div>
           <div className="flex flex-col flex-1">
-            <h3 className="font-body font-semibold text-base text-on-surface group-hover:text-white transition-colors">
+            <h3 className="font-black text-[10px] uppercase tracking-[0.4em] text-secondary group-hover:text-primary transition-colors">
               Create Playlist
             </h3>
           </div>

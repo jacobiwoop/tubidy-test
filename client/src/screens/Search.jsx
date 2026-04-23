@@ -142,23 +142,23 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
   }, [handleObserver]);
 
   return (
-    <div className="animate-in slide-in-from-bottom-4 duration-500">
+    <div className="animate-in fade-in duration-700">
       {/* Search Bar Section */}
-      <section className="mb-8">
-        <div className="flex items-center bg-surface-container-lowest rounded-lg px-4 py-3 gap-3 focus-within:bg-surface-container-highest transition-all duration-300">
-          <span className="material-symbols-outlined text-on-surface-variant">
+      <section className="mb-10">
+        <div className="flex items-center bg-surface border border-white/5 rounded-md px-5 py-4 gap-4 focus-within:border-white/20 transition-all duration-300 shadow-2xl">
+          <span className="material-symbols-outlined text-secondary">
             search
           </span>
           <input
-            className="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-on-surface-variant font-medium outline-none"
-            placeholder="What do you want to listen to?"
+            className="bg-transparent border-none focus:ring-0 w-full text-primary placeholder:text-secondary font-bold text-lg outline-none uppercase tracking-tighter"
+            placeholder="Search for tracks or artists"
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
           {query && (
             <span
-              className="material-symbols-outlined text-on-surface-variant cursor-pointer"
+              className="material-symbols-outlined text-secondary cursor-pointer hover:text-primary transition-colors"
               onClick={() => setQuery("")}
             >
               close
@@ -168,23 +168,23 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
       </section>
 
       {/* Source Selector Chips */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-3 mb-10">
         <button
           onClick={() => setSearchSource("ytmusic")}
-          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+          className={`px-5 py-2 rounded-md text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 border ${
             searchSource === "ytmusic"
-              ? "bg-primary text-on-primary shadow-lg scale-105"
-              : "bg-surface-container-highest text-on-surface-variant hover:bg-surface-container-high"
+              ? "bg-primary text-background border-primary shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+              : "bg-surface text-secondary border-white/5 hover:border-white/20 hover:text-primary"
           }`}
         >
           YouTube Music
         </button>
         <button
           onClick={() => setSearchSource("deezer")}
-          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+          className={`px-5 py-2 rounded-md text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 border ${
             searchSource === "deezer"
-              ? "bg-[#00C7F2] text-white shadow-lg scale-105"
-              : "bg-surface-container-highest text-on-surface-variant hover:bg-surface-container-high"
+              ? "bg-primary text-background border-primary shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+              : "bg-surface text-secondary border-white/5 hover:border-white/20 hover:text-primary"
           }`}
         >
           Deezer
@@ -192,40 +192,41 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
       </div>
 
       {query.length > 2 ? (
-        <div className="space-y-4">
-          <h2 className="font-headline text-lg font-bold tracking-tight">
+        <div className="space-y-6">
+          <h2 className="font-headline text-xs font-black uppercase tracking-[0.3em] text-secondary mb-4">
             Search results
           </h2>
           {isSearching ? (
-            <div className="grid grid-cols-1 gap-1">
+            <div className="space-y-1">
               {[...Array(6)].map((_, i) => (
                 <TrackSkeleton key={i} />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-1">
+            <div className="space-y-1">
               {results.map((track) => (
                 <div
                   key={track.id}
-                  className="flex items-center gap-4 group cursor-pointer hover:bg-surface-container-low/50 p-2 -mx-2 rounded-xl transition-all"
+                  className="flex items-center gap-5 group cursor-pointer hover:bg-white/5 p-3 -mx-3 rounded-md transition-all duration-300"
                   onClick={() => onPlayTrack(track)}
                 >
                   <div className="relative w-12 h-12 flex-shrink-0">
                     <img
-                      className="w-full h-full rounded-md object-cover shadow-md"
+                      className="w-full h-full rounded-sm object-cover shadow-lg group-hover:scale-105 transition-transform duration-500"
                       src={track.album.cover_small}
                       alt={track.title}
                     />
+                    <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
                   </div>
                   <div className="flex flex-col flex-1 overflow-hidden">
-                    <h3 className="font-body font-semibold text-sm text-on-surface truncate">
+                    <h3 className="font-bold text-sm text-primary truncate tracking-tight">
                       {track.title}
                     </h3>
-                    <p className="font-label text-xs text-on-surface-variant truncate">
+                    <p className="text-[10px] uppercase font-black tracking-widest text-secondary truncate mt-1 opacity-70">
                       {track.artist.name}
                     </p>
                   </div>
-                  <span className="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="material-symbols-outlined text-secondary opacity-0 group-hover:opacity-100 transition-all duration-300 hover:text-primary">
                     more_vert
                   </span>
                 </div>
@@ -234,18 +235,18 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
           )}
 
           {/* Infinite Scroll Sentinel & Loader */}
-          <div ref={obsRef} className="pb-10 pt-2 min-h-[100px]">
+          <div ref={obsRef} className="pb-20 pt-4 min-h-[150px]">
             {isFetchingMore && (
-              <div className="grid grid-cols-1 gap-1">
+              <div className="space-y-1">
                 {[...Array(3)].map((_, i) => (
                   <TrackSkeleton key={i} />
                 ))}
               </div>
             )}
             {!hasMore && results.length > 0 && (
-              <div className="flex justify-center py-8">
-                <span className="text-xs text-on-surface-variant/50 font-medium italic">
-                  You've reached the end
+              <div className="flex justify-center py-10">
+                <span className="text-[10px] uppercase font-black tracking-[0.4em] text-white/20">
+                  End of results
                 </span>
               </div>
             )}
@@ -253,48 +254,25 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
         </div>
       ) : (
         <>
-          {/* Recent Searches (Mock) */}
-          <section className="mb-10">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-headline text-lg font-bold tracking-tight">
-                Recent searches
-              </h2>
-            </div>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-              <div className="flex flex-col items-center gap-2 min-w-[100px] group transition-transform active:scale-95">
-                <div className="relative w-20 h-20">
-                  <img
-                    className="w-full h-full rounded-full object-cover"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWmuXF2XJABFSt_P_HTztxlDgZh_wVETOp-_-Bs0ygjWiCqMXv6dN8cQWJbFvsU7aC5_y5hZsqRwr11lEBt2RE-n-e7ok3gSA-LEKGgBWZszw3x7H8lnjpUZlHCckIXhji8exe9FROZjZFDrq4yE1oRF7F3LDJXuZe6vqGi0OQnHvNqr534L_HkLmavElN9u6gv1sL2E_LVL456lZxuQniNsYX6w6J5R0TBJ6WiO3_QM8l8ViELApE2WrzwqUsHbAy1c_35wGhnCs"
-                    alt="Recent"
-                  />
-                </div>
-                <span className="text-xs font-semibold text-on-surface text-center truncate w-full">
-                  Techno Mix
-                </span>
-              </div>
-              {/* Add more recent items here if needed */}
-            </div>
-          </section>
-
           {/* Genre Grid */}
-          <section>
-            <h2 className="font-headline text-xl font-extrabold tracking-tight mb-6">
-              Browse all
+          <section className="animate-in fade-in slide-in-from-bottom-2 duration-1000">
+            <h2 className="font-headline text-xs font-black uppercase tracking-[0.3em] text-secondary mb-8">
+              Browse Categories
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {GENRES.map((genre) => (
                 <div
                   key={genre.id}
-                  className="relative overflow-hidden rounded-xl h-40 md:h-48 p-4 group cursor-pointer active:scale-95 transition-transform"
+                  className="relative overflow-hidden rounded-md h-44 md:h-52 group cursor-pointer active:scale-[0.98] transition-all duration-500 border border-white/5"
                   style={{ backgroundColor: genre.color }}
                   onClick={() => onSelectGenre && onSelectGenre(genre)}
                 >
-                  <span className="font-headline text-xl font-bold text-white relative z-10">
+                  <div className="absolute inset-0 bg-gradient-to-br from-black/20 to-transparent opacity-60 group-hover:opacity-20 transition-opacity" />
+                  <span className="absolute top-4 left-4 font-black text-2xl uppercase tracking-tighter text-white z-10 drop-shadow-2xl">
                     {genre.title}
                   </span>
                   <img
-                    className="absolute -right-4 -bottom-4 w-24 h-24 rotate-12 group-hover:scale-110 transition-transform duration-300 shadow-xl"
+                    className="absolute -right-6 -bottom-6 w-32 h-32 rotate-[15deg] group-hover:scale-125 group-hover:rotate-[25deg] transition-all duration-700 shadow-[0_20px_50px_rgba(0,0,0,0.4)]"
                     src={genre.img}
                     alt={genre.title}
                   />
@@ -310,11 +288,11 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
 
 function TrackSkeleton() {
   return (
-    <div className="flex items-center gap-4 p-2 -mx-2 rounded-xl animate-pulse">
-      <div className="w-12 h-12 bg-surface-container-high rounded-md flex-shrink-0"></div>
-      <div className="flex flex-col flex-1 gap-2">
-        <div className="h-4 bg-surface-container-high rounded-full w-3/4"></div>
-        <div className="h-3 bg-surface-container-high/50 rounded-full w-1/2"></div>
+    <div className="flex items-center gap-5 p-3 -mx-3 rounded-md animate-pulse">
+      <div className="w-12 h-12 bg-white/5 rounded-sm flex-shrink-0"></div>
+      <div className="flex flex-col flex-1 gap-3">
+        <div className="h-4 bg-white/5 rounded-full w-3/4"></div>
+        <div className="h-2 bg-white/5 rounded-full w-1/4"></div>
       </div>
     </div>
   );

@@ -80,13 +80,13 @@ async function getDownloadLink(videoUrl, formatType = "mp3") {
 
   // 4. POST pour obtenir les formats
   const formatsRes = await axios.post(
-    "https://mp3.tubidy.com/api/video/formats",
+    "https://songs.tubidy.com/api/video/formats",
     new URLSearchParams({ payload: token }).toString(),
     {
       headers: {
         "User-Agent": "Mozilla/5.0",
         "X-CSRF-TOKEN": csrf,
-        Referer: "https://mp3.tubidy.com/",
+        Referer: "https://songs.tubidy.com/",
         "Content-Type": "application/x-www-form-urlencoded",
       },
     },
@@ -109,13 +109,13 @@ async function getDownloadLink(videoUrl, formatType = "mp3") {
 
   // 5. POST pour obtenir le lien final
   const downloadRes = await axios.post(
-    "https://mp3.tubidy.com/api/video/download",
+    "https://songs.tubidy.com/api/video/download",
     new URLSearchParams({ payload: newPayload }).toString(),
     {
       headers: {
         "User-Agent": "Mozilla/5.0",
         "X-CSRF-TOKEN": csrf,
-        Referer: "https://mp3.tubidy.com/",
+        Referer: "https://songs.tubidy.com/",
         "Content-Type": "application/x-www-form-urlencoded",
       },
     },
