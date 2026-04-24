@@ -42,6 +42,7 @@ function PlayerScreen({
   const [downloading, setDownloading] = useState(false);
   const [showPlaylists, setShowPlaylists] = useState(false);
   const [showLyrics, setShowLyrics] = useState(true);
+  const [mobileView, setMobileView] = useState("controls"); // 'controls' or 'lyrics'
   const [parsedLyrics, setParsedLyrics] = useState([]);
   const [lyricsLoading, setLyricsLoading] = useState(false);
   const lyricsScrollRef = React.useRef(null);
@@ -212,14 +213,41 @@ function PlayerScreen({
         </button>
       </div>
 
-      {/* Combined Main Content: Dual-Column Layout */}
-      <main className="relative z-20 flex-1 overflow-hidden flex flex-col lg:flex-row max-w-[1500px] mx-auto w-full px-6 lg:px-12 py-10">
-        {/* Left Column: Redesigned Side Panel (Matches Source Image) */}
+      {/* Combined Main Content: Responsive Layout */}
+      <main className="relative z-20 flex-1 overflow-hidden flex flex-col lg:flex-row max-w-[1500px] mx-auto w-full px-6 lg:px-12 py-6 lg:py-10">
+        {/* Mobile-Mode Mini Header (Only in Lyrics View) */}
+        {mobileView === "lyrics" && (
+          <div className="lg:hidden flex items-center gap-4 mb-6 animate-in slide-in-from-top duration-500">
+            <div className="w-14 h-14 rounded-lg overflow-hidden shadow-lg shadow-black/40">
+              <img
+                src={track.album?.cover_medium || track.cover_url}
+                className="w-full h-full object-cover"
+                alt=""
+              />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-black text-white truncate">
+                  {track.title}
+                </span>
+                <span className="px-1 py-0.5 rounded text-[8px] font-black bg-white/10 text-secondary border border-white/5 uppercase">
+                  HD
+                </span>
+              </div>
+              <span className="text-xs text-secondary font-bold truncate opacity-70 italic uppercase tracking-widest">
+                {track.artist?.name || track.artist}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* 1. LEFT / CONTROL VIEW */}
         <section
-          className={`flex-1 flex flex-col justify-center items-center transition-all duration-700 ${showLyrics ? "hidden lg:flex lg:w-1/2" : "w-full lg:max-w-xl mx-auto"}`}
+          className={`flex-1 flex flex-col justify-center items-center transition-all duration-700 
+          ${mobileView === "lyrics" ? "hidden lg:flex lg:w-1/2" : "w-full lg:max-w-xl mx-auto"}`}
         >
           {/* 1. Large Album Cover */}
-          <div className="relative w-full aspect-square max-w-[320px] md:max-w-[420px] shadow-[0_50px_100px_rgba(0,0,0,0.8)] rounded-[32px] overflow-hidden mb-8 group">
+          <div className="relative w-full aspect-square max-w-[320px] md:max-w-[420px] shadow-[0_50px_100px_rgba(0,0,0,0.8)] rounded-[32px] overflow-hidden mb-6 lg:mb-8 group">
             <img
               className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
               src={track.album?.cover_big || track.cover_url}
@@ -228,22 +256,22 @@ function PlayerScreen({
           </div>
 
           {/* 2. Metadata: Title & Artist */}
-          <div className="w-full max-w-[420px] space-y-1 mb-8">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+          <div className="w-full max-w-[420px] space-y-1 mb-6 lg:mb-8 text-center lg:text-left">
+            <div className="flex items-center justify-center lg:justify-start gap-3">
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white truncate">
                 {track.title}
               </h1>
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-white/10 text-white/40 border border-white/5 uppercase">
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-white/10 text-white/40 border border-white/5 uppercase flex-shrink-0">
                 HD
               </span>
             </div>
-            <p className="text-white/60 font-medium text-sm md:text-base">
+            <p className="text-white/60 font-medium text-sm md:text-base opacity-80 italic tracking-widest uppercase truncate">
               {track.artist?.name || track.artist}
             </p>
           </div>
 
           {/* 3. Actions Row */}
-          <div className="w-full max-w-[420px] flex items-center justify-between mb-8 px-2 text-white/60">
+          <div className="w-full max-w-[420px] flex items-center justify-between mb-6 lg:mb-8 px-2 text-white/60">
             <button
               className={`p-2 transition-all hover:text-white hover:scale-110 active:scale-95 ${isLiked ? "text-primary" : ""}`}
               onClick={onToggleLike}
@@ -281,108 +309,67 @@ function PlayerScreen({
             </button>
           </div>
 
-          {/* 4. Up Next / Lyric Section */}
-          <div className="w-full max-w-[420px] flex flex-col items-center mb-8 gap-1">
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
-              Up Next
+          {/* 4. Up Next / Lyric Section (THE TOGGLE TRIGGER) */}
+          <div
+            className="w-full max-w-[420px] flex flex-col items-center mb-6 lg:mb-8 gap-1 cursor-pointer group"
+            onClick={() => window.innerWidth < 1024 && setMobileView("lyrics")}
+          >
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 group-hover:text-primary transition-colors duration-300">
+              {activeLyricIndex !== -1 ? "Lyrics" : "Up Next"}
             </span>
-            <p className="text-[11px] font-bold text-white/50 text-center truncate w-full px-4 italic">
+            <p className="text-[11px] font-bold text-white/50 text-center truncate w-full px-4 italic group-hover:text-white transition-colors duration-300">
               {activeLyricIndex !== -1
                 ? parsedLyrics[activeLyricIndex].text
                 : nextTrack
                   ? `${nextTrack.title} • ${nextTrack.artist?.name || nextTrack.artist}`
                   : "End of Queue"}
             </p>
+            <span className="lg:hidden material-symbols-outlined text-white/10 text-xs animate-bounce mt-1">
+              expand_more
+            </span>
           </div>
 
-          {/* 5. Progress Section: Horizontal Layout */}
-          <div className="w-full max-w-[420px] mb-8 px-2">
-            <div className="flex items-center gap-4">
-              <span className="text-[10px] font-bold text-white/30 tabular-nums w-8 text-right">
-                {formatTime(currentTime)}
-              </span>
-              <div
-                className="flex-1 relative h-4 flex items-center group/progress cursor-pointer"
-                onClick={handleProgressClick}
-              >
-                <div className="w-full h-[3px] bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full transition-all duration-300"
-                    style={{
-                      width: `${(currentTime / duration) * 100 || 0}%`,
-                      backgroundColor: vibrantColor || "white",
-                    }}
-                  />
-                </div>
-                <div
-                  className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity ring-4 ring-black/20"
-                  style={{
-                    left: `calc(${(currentTime / duration) * 100 || 0}% - 6px)`,
-                  }}
-                />
-              </div>
-              <span className="text-[10px] font-bold text-white/30 tabular-nums w-8">
-                {formatTime(duration)}
-              </span>
-            </div>
-          </div>
-
-          {/* 6. Playback Controls */}
-          <div className="w-full max-w-[420px] flex items-center justify-between">
-            <button
-              className={`p-2 transition-all hover:text-white active:scale-75 ${isShuffle ? "text-primary" : "text-white/30"}`}
-              onClick={onToggleShuffle}
-            >
-              <span className="material-symbols-outlined text-2xl">
-                shuffle
-              </span>
-            </button>
-            <button
-              className={`p-2 transition-all hover:text-white active:scale-75 ${hasPrev ? "text-white" : "text-white/10"}`}
-              onClick={onPrev}
-              disabled={!hasPrev}
-            >
-              <span className="material-symbols-outlined text-3xl">
-                skip_previous
-              </span>
-            </button>
-
-            <button
-              className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-black transition-all hover:scale-105 active:scale-95 shadow-2xl"
-              onClick={onTogglePlay}
-            >
-              <span className="material-symbols-outlined text-4xl fill-icon">
-                {isPlaying ? "pause" : "play_arrow"}
-              </span>
-            </button>
-
-            <button
-              className={`p-2 transition-all hover:text-white active:scale-75 ${hasNext ? "text-white" : "text-white/10"}`}
-              onClick={onNext}
-              disabled={!hasNext}
-            >
-              <span className="material-symbols-outlined text-3xl">
-                skip_next
-              </span>
-            </button>
-            <button
-              className={`p-2 transition-all hover:text-white active:scale-75 ${repeatMode !== "off" ? "text-primary" : "text-white/30"}`}
-              onClick={onToggleRepeat}
-            >
-              <span className="material-symbols-outlined text-2xl">
-                {repeatMode === "one" ? "repeat_one" : "repeat"}
-              </span>
-            </button>
+          {/* Persistent Footer Component (Visible only on Desktop here) */}
+          <div className="hidden lg:block w-full">
+            <PlayerFooter
+              currentTime={currentTime}
+              duration={duration}
+              vibrantColor={vibrantColor}
+              formatTime={formatTime}
+              handleProgressClick={handleProgressClick}
+              onToggleShuffle={onToggleShuffle}
+              isShuffle={isShuffle}
+              onPrev={onPrev}
+              hasPrev={hasPrev}
+              isPlaying={isPlaying}
+              onTogglePlay={onTogglePlay}
+              onNext={onNext}
+              hasNext={hasNext}
+              repeatMode={repeatMode}
+              onToggleRepeat={onToggleRepeat}
+              isLoadingTrack={isLoadingTrack}
+            />
           </div>
         </section>
 
-        {/* Right Column: Scrolling Lyrics */}
+        {/* 2. RIGHT / LYRICS VIEW */}
         <section
-          className={`flex-1 relative transition-all duration-700 min-h-0 ${showLyrics ? "flex flex-col w-full h-full lg:w-1/2" : "hidden lg:flex lg:w-1/2 opacity-10 blur-md pointer-events-none"}`}
+          className={`flex-1 relative transition-all duration-700 min-h-0 flex flex-col
+          ${mobileView === "controls" ? "hidden lg:flex lg:w-1/2" : "w-full lg:w-1/2"}`}
         >
+          {/* Back to Controls (Mobile Only) */}
+          {mobileView === "lyrics" && (
+            <button
+              className="lg:hidden absolute top-0 right-0 p-2 text-white/20 hover:text-white z-50"
+              onClick={() => setMobileView("controls")}
+            >
+              <span className="material-symbols-outlined text-3xl">close</span>
+            </button>
+          )}
+
           <div
             ref={lyricsScrollRef}
-            className="flex-1 overflow-y-auto no-scrollbar mask-vertical-fade py-[35vh]"
+            className="flex-1 overflow-y-auto no-scrollbar mask-vertical-fade py-[30vh]"
           >
             {lyricsLoading ? (
               <div className="h-full flex items-center justify-center">
@@ -409,7 +396,53 @@ function PlayerScreen({
               </div>
             )}
           </div>
+
+          {/* Persistent Footer Component (Visible only on Mobile here when in lyrics view) */}
+          <div className="lg:hidden w-full pt-4">
+            <PlayerFooter
+              currentTime={currentTime}
+              duration={duration}
+              vibrantColor={vibrantColor}
+              formatTime={formatTime}
+              handleProgressClick={handleProgressClick}
+              onToggleShuffle={onToggleShuffle}
+              isShuffle={isShuffle}
+              onPrev={onPrev}
+              hasPrev={hasPrev}
+              isPlaying={isPlaying}
+              onTogglePlay={onTogglePlay}
+              onNext={onNext}
+              hasNext={hasNext}
+              repeatMode={repeatMode}
+              onToggleRepeat={onToggleRepeat}
+              isLoadingTrack={isLoadingTrack}
+            />
+          </div>
         </section>
+
+        {/* Global Mobile Footer (Always visible in Controls view on Mobile) */}
+        {mobileView === "controls" && (
+          <div className="lg:hidden w-full">
+            <PlayerFooter
+              currentTime={currentTime}
+              duration={duration}
+              vibrantColor={vibrantColor}
+              formatTime={formatTime}
+              handleProgressClick={handleProgressClick}
+              onToggleShuffle={onToggleShuffle}
+              isShuffle={isShuffle}
+              onPrev={onPrev}
+              hasPrev={hasPrev}
+              isPlaying={isPlaying}
+              onTogglePlay={onTogglePlay}
+              onNext={onNext}
+              hasNext={hasNext}
+              repeatMode={repeatMode}
+              onToggleRepeat={onToggleRepeat}
+              isLoadingTrack={isLoadingTrack}
+            />
+          </div>
+        )}
       </main>
 
       {/* Menu Overlay (Z-Index Fix) */}
@@ -456,6 +489,109 @@ function PlayerScreen({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Sub-component for the Footer controls to keep code DRY and manageable
+function PlayerFooter({
+  currentTime,
+  duration,
+  vibrantColor,
+  formatTime,
+  handleProgressClick,
+  onToggleShuffle,
+  isShuffle,
+  onPrev,
+  hasPrev,
+  isPlaying,
+  onTogglePlay,
+  onNext,
+  hasNext,
+  repeatMode,
+  onToggleRepeat,
+  isLoadingTrack,
+}) {
+  return (
+    <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
+      {/* Progress Bar */}
+      <div className="w-full px-2">
+        <div className="flex items-center gap-4">
+          <span className="text-[10px] font-bold text-white/30 tabular-nums w-8 text-right">
+            {formatTime(currentTime)}
+          </span>
+          <div
+            className="flex-1 relative h-4 flex items-center group/progress cursor-pointer"
+            onClick={handleProgressClick}
+          >
+            <div className="w-full h-[3px] bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full transition-all duration-300"
+                style={{
+                  width: `${(currentTime / duration) * 100 || 0}%`,
+                  backgroundColor: vibrantColor || "white",
+                }}
+              />
+            </div>
+            <div
+              className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity ring-4 ring-black/20"
+              style={{
+                left: `calc(${(currentTime / duration) * 100 || 0}% - 6px)`,
+              }}
+            />
+          </div>
+          <span className="text-[10px] font-bold text-white/30 tabular-nums w-8">
+            {formatTime(duration)}
+          </span>
+        </div>
+      </div>
+
+      {/* Playback Controls */}
+      <div className="flex items-center justify-between max-w-[420px] mx-auto w-full">
+        <button
+          className={`p-2 transition-all hover:text-white active:scale-75 ${isShuffle ? "text-primary" : "text-white/30"}`}
+          onClick={onToggleShuffle}
+        >
+          <span className="material-symbols-outlined text-2xl">shuffle</span>
+        </button>
+        <button
+          className={`p-2 transition-all hover:text-white active:scale-75 ${hasPrev ? "text-white" : "text-white/10"}`}
+          onClick={onPrev}
+          disabled={!hasPrev}
+        >
+          <span className="material-symbols-outlined text-3xl">
+            skip_previous
+          </span>
+        </button>
+
+        <button
+          className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-black transition-all hover:scale-105 active:scale-95 shadow-2xl relative"
+          onClick={onTogglePlay}
+        >
+          {isLoadingTrack && (
+            <div className="absolute inset-[-4px] border-2 border-t-black rounded-full animate-spin opacity-20"></div>
+          )}
+          <span className="material-symbols-outlined text-4xl fill-icon">
+            {isPlaying ? "pause" : "play_arrow"}
+          </span>
+        </button>
+
+        <button
+          className={`p-2 transition-all hover:text-white active:scale-75 ${hasNext ? "text-white" : "text-white/10"}`}
+          onClick={onNext}
+          disabled={!hasNext}
+        >
+          <span className="material-symbols-outlined text-3xl">skip_next</span>
+        </button>
+        <button
+          className={`p-2 transition-all hover:text-white active:scale-75 ${repeatMode !== "off" ? "text-primary" : "text-white/30"}`}
+          onClick={onToggleRepeat}
+        >
+          <span className="material-symbols-outlined text-2xl">
+            {repeatMode === "one" ? "repeat_one" : "repeat"}
+          </span>
+        </button>
+      </div>
     </div>
   );
 }
