@@ -614,7 +614,14 @@ function App() {
                   <span className="text-sm font-bold text-primary truncate tracking-tight">
                     {currentTrack.title}
                   </span>
-                  <span className="text-xs text-secondary truncate uppercase tracking-widest opacity-80 mt-0.5">
+                  <span
+                    className="text-xs text-secondary truncate uppercase tracking-widest opacity-80 mt-0.5 hover:text-primary transition-colors hover:underline cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (currentTrack.artist?.id)
+                        navigateToArtist(currentTrack.artist.id);
+                    }}
+                  >
                     {currentTrack.artist?.name || currentTrack.artist}
                   </span>
                 </div>

@@ -34,6 +34,7 @@ function PlayerScreen({
   hasNext,
   hasPrev,
   vibrantColor,
+  onNavigateToArtist,
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -296,7 +297,16 @@ function PlayerScreen({
                 <h2 className="font-headline text-4xl md:text-6xl font-black tracking-tighter uppercase italic leading-[0.9] truncate">
                   {track.title}
                 </h2>
-                <p className="text-sm md:text-lg text-secondary uppercase font-black tracking-[0.3em] opacity-80 truncate">
+                <p
+                  className="text-sm md:text-lg text-secondary uppercase font-black tracking-[0.3em] opacity-80 truncate hover:text-primary transition-colors hover:underline cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (track.artist?.id && onNavigateToArtist) {
+                      onNavigateToArtist(track.artist.id);
+                      onClose();
+                    }
+                  }}
+                >
                   {track.artist?.name || track.artist}
                 </p>
               </div>
