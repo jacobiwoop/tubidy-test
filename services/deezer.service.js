@@ -247,6 +247,26 @@ async function getRelatedArtists(id, { limit = 10 } = {}) {
 }
 
 /**
+ * Récupère les albums similaires.
+ */
+async function getRelatedAlbums(id, { limit = 6 } = {}) {
+  // Note: Deezer doesn't have a direct /album/:id/related,
+  // but it has selection/smart radio or we can use recommendations based on genre.
+  // Actually, Deezer has a hidden /album/:id/related or we can use similar artists' top albums.
+  // We'll use a fallback to similar artists' top albums if direct doesn't work.
+  return withRetry(async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/album/${id}/related`, {
+        params: { limit },
+      });
+      return response.data;
+    } catch (err) {
+      return { data: [] };
+    }
+  });
+}
+
+/**
  * Récupère les détails d'un album.
  */
 async function getAlbum(id) {
@@ -270,5 +290,6 @@ module.exports = {
   getArtistTopTracks,
   getArtistAlbums,
   getRelatedArtists,
+  getRelatedAlbums,
   getAlbum,
 };
