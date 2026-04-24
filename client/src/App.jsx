@@ -68,7 +68,77 @@ function App() {
       }
     };
     fetchInitialData();
+
+    // Push initial state to history for back button support
+    window.history.replaceState({ activeTab: "home" }, "");
   }, []);
+
+  // Handle Back Button (Popstate)
+  useEffect(() => {
+    const handlePopState = (event) => {
+      if (event.state) {
+        const {
+          activeTab,
+          activeArtistId,
+          activeAlbumId,
+          activePlaylist,
+          activeGenre,
+          showFullPlayer,
+        } = event.state;
+
+        // Restore all navigation states
+        setActiveTab(activeTab || "home");
+        setActiveArtistId(activeArtistId || null);
+        setActiveAlbumId(activeAlbumId || null);
+        setActivePlaylist(activePlaylist || null);
+        setActiveGenre(activeGenre || null);
+        setShowFullPlayer(showFullPlayer || false);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // Centralized Navigation Helper
+  const navigate = (updates) => {
+    const nextState = {
+      activeTab: updates.activeTab || activeTab,
+      activeArtistId:
+        updates.activeArtistId !== undefined
+          ? updates.activeArtistId
+          : activeArtistId,
+      activeAlbumId:
+        updates.activeAlbumId !== undefined
+          ? updates.activeAlbumId
+          : activeAlbumId,
+      activePlaylist:
+        updates.activePlaylist !== undefined
+          ? updates.activePlaylist
+          : activePlaylist,
+      activeGenre:
+        updates.activeGenre !== undefined ? updates.activeGenre : activeGenre,
+      showFullPlayer:
+        updates.showFullPlayer !== undefined
+          ? updates.showFullPlayer
+          : showFullPlayer,
+    };
+
+    // Only actual navigation changes should push state
+    window.history.pushState(nextState, "");
+
+    // Apply updates locally
+    if (updates.activeTab) setActiveTab(updates.activeTab);
+    if (updates.activeArtistId !== undefined)
+      setActiveArtistId(updates.activeArtistId);
+    if (updates.activeAlbumId !== undefined)
+      setActiveAlbumId(updates.activeAlbumId);
+    if (updates.activePlaylist !== undefined)
+      setActivePlaylist(updates.activePlaylist);
+    if (updates.activeGenre !== undefined) setActiveGenre(updates.activeGenre);
+    if (updates.showFullPlayer !== undefined)
+      setShowFullPlayer(updates.showFullPlayer);
+  };
 
   const toggleLike = async (track) => {
     const trackId = track.id.toString();
@@ -411,15 +481,21 @@ function App() {
   };
 
   const navigateToArtist = (artistId) => {
-    setActiveArtistId(artistId);
-    setActiveTab("artist");
-    window.scrollTo(0, 0);
+    navigate({
+      activeTab: "artist",
+      activeArtistId: artistId,
+      activeAlbumId: null,
+      activeGenre: null,
+    });
   };
 
   const navigateToAlbum = (albumId) => {
-    setActiveAlbumId(albumId);
-    setActiveTab("album");
-    window.scrollTo(0, 0);
+    navigate({
+      activeTab: "album",
+      activeAlbumId: albumId,
+      activeArtistId: null,
+      activeGenre: null,
+    });
   };
 
   const renderContent = () => {
@@ -438,7 +514,9 @@ function App() {
             query={searchQuery}
             setQuery={setSearchQuery}
             onPlayTrack={handlePlayTrack}
-            onSelectGenre={(genre) => setActiveGenre(genre)}
+            onSelectGenre={(genre) =>
+              navigate({ activeTab: "search", activeGenre: genre })
+            }
             onNavigateToArtist={navigateToArtist}
             onNavigateToAlbum={navigateToAlbum}
           />
@@ -473,7 +551,7 @@ function App() {
             openCreatePlaylistModal={() => setIsCreatingPlaylist(true)}
             activePlaylist={activePlaylist}
             setActivePlaylist={(p) => {
-              setActivePlaylist(p);
+              navigate({ activeTab: "library", activePlaylist: p });
               setIsSelectionMode(false);
             }}
             isSelectionMode={isSelectionMode}
@@ -498,7 +576,13 @@ function App() {
       <Sidebar
         activeTab={activeTab}
         setActiveTab={(tab) => {
-          setActiveTab(tab);
+          navigate({
+            activeTab: tab,
+            activeArtistId: null,
+            activeAlbumId: null,
+            activeGenre: null,
+            activePlaylist: null,
+          });
           setIsSidebarOpen(false);
           setIsSearchVisible(false);
         }}
@@ -556,11 +640,11 @@ function App() {
                   placeholder="Search for tracks, artists, albums..."
                   className="w-full bg-[#1A1A1A] text-sm py-3 pl-12 pr-10 rounded-full border border-white/5 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
                   value={searchQuery}
-                  onFocus={() => setActiveTab("search")}
+                  onFocus={() => navigate({ activeTab: "search" })}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     if (e.target.value.trim().length > 0)
-                      setActiveTab("search");
+                      navigate({ activeTab: "search" });
                   }}
                 />
                 {searchQuery && (
@@ -568,7 +652,7 @@ function App() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-primary transition-colors"
                     onClick={() => {
                       setSearchQuery("");
-                      setActiveTab("home");
+                      navigate({ activeTab: "home" });
                     }}
                   >
                     <span className="material-symbols-outlined text-lg">
@@ -618,7 +702,8 @@ function App() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  if (e.target.value.trim().length > 0) setActiveTab("search");
+                  if (e.target.value.trim().length > 0)
+                    navigate({ activeTab: "search" });
                 }}
               />
               {searchQuery && (
@@ -626,7 +711,7 @@ function App() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary"
                   onClick={() => {
                     setSearchQuery("");
-                    setActiveTab("home");
+                    navigate({ activeTab: "home" });
                   }}
                 >
                   <span className="material-symbols-outlined text-lg">
@@ -675,7 +760,7 @@ function App() {
         {currentTrack && (
           <div
             className="fixed bottom-24 left-3 right-3 md:left-6 md:right-6 z-50 transition-all duration-500 cursor-pointer"
-            onClick={() => setShowFullPlayer(true)}
+            onClick={() => navigate({ showFullPlayer: true })}
           >
             <div className="glass-effect rounded-lg px-4 py-3 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 relative overflow-hidden group">
               <div
@@ -775,7 +860,7 @@ function App() {
             onToggleLike={() => toggleLike(currentTrack)}
             onAddToPlaylist={handleAddToPlaylist}
             onSeek={handleSeek}
-            onClose={() => setShowFullPlayer(false)}
+            onClose={() => navigate({ showFullPlayer: false })}
             onNext={playNext}
             onPrev={playPrevious}
             onToggleShuffle={toggleShuffle}
