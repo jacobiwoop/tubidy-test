@@ -454,34 +454,6 @@ function App() {
     }
   };
 
-  // Legacy single track play (ex: from Home or Search)
-  const handlePlayTrack = (track) => {
-    setQueue([track]);
-    setOriginalQueue([track]);
-    loadTrackContent(track, 0);
-  };
-
-  // New Context Play (from Playlists or Library)
-  const handlePlayContext = (track, contextTracks) => {
-    setOriginalQueue(contextTracks);
-
-    if (isShuffle) {
-      // Create shuffled queue but put clicked track first
-      const otherTracks = contextTracks.filter((t) => t.id !== track.id);
-      for (let i = otherTracks.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]];
-      }
-      const newQueue = [track, ...otherTracks];
-      setQueue(newQueue);
-      loadTrackContent(track, 0);
-    } else {
-      setQueue(contextTracks);
-      const index = contextTracks.findIndex((t) => t.id === track.id);
-      loadTrackContent(track, index);
-    }
-  };
-
   const playNext = () => {
     if (queue.length === 0) return;
 
@@ -659,7 +631,6 @@ function App() {
         return (
           <LibraryScreen
             onPlayTrack={handlePlayTrack}
-            handlePlayContext={handlePlayContext}
             currentTrack={currentTrack}
             isPlaying={isPlaying}
             openCreatePlaylistModal={() => setIsCreatingPlaylist(true)}
@@ -940,30 +911,32 @@ function App() {
                   favorite
                 </span>
                 <div className="relative flex items-center justify-center">
-              <div className="flex items-center gap-3 ml-2">
-                <button
-                  className="w-10 h-10 flex items-center justify-center text-primary group-hover:scale-110 active:scale-95 transition-all"
-                  onClick={togglePlay}
-                >
-                  <span className="material-symbols-outlined text-[32px]">
-                    {isLoadingTrack
-                      ? "sync"
-                      : isPlaying
-                        ? "pause_circle"
-                        : "play_circle"}
-                  </span>
-                </button>
-                <button
-                  className="w-10 h-10 flex items-center justify-center text-secondary hover:text-primary transition-all md:flex hidden"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate({ isQueueVisible: true });
-                  }}
-                >
-                  <span className="material-symbols-outlined text-2xl">
-                    queue_music
-                  </span>
-                </button>
+                  <div className="flex items-center gap-3 ml-2">
+                    <button
+                      className="w-10 h-10 flex items-center justify-center text-primary group-hover:scale-110 active:scale-95 transition-all"
+                      onClick={togglePlay}
+                    >
+                      <span className="material-symbols-outlined text-[32px]">
+                        {isLoadingTrack
+                          ? "sync"
+                          : isPlaying
+                            ? "pause_circle"
+                            : "play_circle"}
+                      </span>
+                    </button>
+                    <button
+                      className="w-10 h-10 flex items-center justify-center text-secondary hover:text-primary transition-all md:flex hidden"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate({ isQueueVisible: true });
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-2xl">
+                        queue_music
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
