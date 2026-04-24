@@ -14,13 +14,13 @@ const QueueSidebar = ({
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] animate-in fade-in duration-300"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[2000] animate-in fade-in duration-300"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed right-0 top-0 h-screen w-full md:w-[450px] bg-[#0A0A0A]/95 border-l border-white/5 z-[110] flex flex-col transition-transform duration-500 ease-in-out shadow-2xl ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed right-0 top-0 h-screen w-full md:w-[450px] bg-[#0A0A0A]/95 border-l border-white/5 z-[2100] flex flex-col transition-transform duration-500 ease-in-out shadow-2xl ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/5">

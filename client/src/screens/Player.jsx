@@ -192,7 +192,7 @@ function PlayerScreen({
   if (!track) return null;
 
   return (
-    <div className="fixed inset-0 h-[100dvh] w-full bg-black z-[999] flex flex-col overflow-hidden select-none">
+    <div className="fixed inset-0 h-[100dvh] w-full bg-black z-[1000] flex flex-col overflow-hidden select-none">
       {/* Immersive Background */}
       <div className="absolute inset-0 z-0">
         <img
@@ -481,7 +481,7 @@ function PlayerScreen({
       {/* Menu Overlay (Z-Index Fix) */}
       {showMenu && (
         <div
-          className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-md p-6 flex flex-col justify-end"
+          className="fixed inset-0 z-[1100] bg-black/80 backdrop-blur-md p-6 flex flex-col justify-end"
           onClick={() => setShowMenu(false)}
         >
           <div

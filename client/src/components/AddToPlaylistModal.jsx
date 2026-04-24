@@ -13,7 +13,7 @@ function AddToPlaylistModal({
 
   return (
     <div
-      className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end justify-center sm:items-center animate-in fade-in duration-200"
+      className="fixed inset-0 z-[2200] bg-black/60 backdrop-blur-sm flex items-end justify-center sm:items-center animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div

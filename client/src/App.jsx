@@ -1228,7 +1228,7 @@ function App() {
       {/* Create Playlist Modal (Global) */}
       {isCreatingPlaylist && (
         <div
-          className="fixed inset-0 z-[1200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[2300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200"
           onClick={() => setIsCreatingPlaylist(false)}
         >
           <div
