@@ -515,46 +515,107 @@ function App() {
           }}
         />
 
-        {/* Top AppBar */}
-        <header className="flex justify-between items-center px-6 py-4 w-full glass-effect z-[45] top-0 sticky">
-          <div className="flex items-center gap-2 md:gap-5 flex-1">
-            <button
-              className="p-2 -ml-2 md:hidden transition-all active:scale-75"
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <span className="material-symbols-outlined text-primary text-3xl">
-                menu
-              </span>
-            </button>
-            <h1 className="font-headline text-2xl font-black tracking-tighter uppercase italic md:hidden truncate max-w-[180px] transition-all">
-              {activeTab === "home" ? "Spotiwoop" : activeTab}
-            </h1>
+        {/* Fixed Top Section (Header + Mobile Search) */}
+        <div className="sticky top-0 z-[45] w-full glass-effect">
+          {/* Top AppBar */}
+          <header className="flex justify-between items-center px-6 py-4 w-full">
+            <div className="flex items-center gap-2 md:gap-5 flex-1">
+              <button
+                className="p-2 -ml-2 md:hidden transition-all active:scale-75"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <span className="material-symbols-outlined text-primary text-3xl">
+                  menu
+                </span>
+              </button>
+              <h1 className="font-headline text-2xl font-black tracking-tighter uppercase italic md:hidden truncate max-w-[180px] transition-all">
+                {activeTab === "home" ? "Spotiwoop" : activeTab}
+              </h1>
 
-            {/* Desktop Navigation Arrows (Monochrome Style) */}
-            <div className="hidden md:flex items-center gap-3 mr-4">
-              <button className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors">
-                <span className="material-symbols-outlined text-xl">
-                  chevron_left
+              {/* Desktop Navigation Arrows (Monochrome Style) */}
+              <div className="hidden md:flex items-center gap-3 mr-4">
+                <button className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors">
+                  <span className="material-symbols-outlined text-xl">
+                    chevron_left
+                  </span>
+                </button>
+                <button className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors">
+                  <span className="material-symbols-outlined text-xl">
+                    chevron_right
+                  </span>
+                </button>
+              </div>
+
+              {/* Desktop Search Bar (Pill shape) */}
+              <div className="hidden md:flex relative w-[400px]">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-xl">
+                  search
                 </span>
-              </button>
-              <button className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors">
-                <span className="material-symbols-outlined text-xl">
-                  chevron_right
-                </span>
-              </button>
+                <input
+                  type="text"
+                  placeholder="Search for tracks, artists, albums..."
+                  className="w-full bg-[#1A1A1A] text-sm py-3 pl-12 pr-10 rounded-full border border-white/5 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                  value={searchQuery}
+                  onFocus={() => setActiveTab("search")}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (e.target.value.trim().length > 0)
+                      setActiveTab("search");
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-primary transition-colors"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setActiveTab("home");
+                    }}
+                  >
+                    <span className="material-symbols-outlined text-lg">
+                      close
+                    </span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Desktop Search Bar (Pill shape) */}
-            <div className="hidden md:flex relative w-[400px]">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-xl">
+            <div className="flex items-center gap-4">
+              {/* Mobile Search Toggle */}
+              <button
+                className="p-2 md:hidden transition-all active:scale-75 text-primary"
+                onClick={() => setIsSearchVisible(!isSearchVisible)}
+              >
+                <span className="material-symbols-outlined text-2xl">
+                  {isSearchVisible ? "close" : "search"}
+                </span>
+              </button>
+
+              <span className="material-symbols-outlined text-primary text-xl opacity-60 hover:opacity-100 transition-opacity clickable hidden md:block">
+                help_outline
+              </span>
+              <div className="w-9 h-9 rounded-full overflow-hidden border border-white/10 clickable">
+                <img
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRogVdKoRnL9eXji2r65cXf8amitFG0mGjp-nzL8HgNGdAJcMidAlyCWHKRfnluU88XmE4vu80oF9G5EIg6A5nnM-4PqZQvMOd-j2tnUipBK_Pk0svmKGhnxc4iDtJgokLHrEFR94rATG2FyE_IHO5OYWwBhNACiO1hgiOAdvhBLiCIzGcZult4LsA7pDTX2mOTe6KsHB5Rhn4wAfd5COQ4rMAeTwKpRVL-t_LNPh1YLDERa4ia6G3mYGtLsMC6wW-MJV5TGMk6UA"
+                  alt="Avatar"
+                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                />
+              </div>
+            </div>
+          </header>
+
+          {/* Mobile Search Bar (Appears below header) */}
+          <div
+            className={`md:hidden px-4 overflow-hidden transition-all duration-300 ease-in-out ${isSearchVisible ? "max-h-20 pb-4 opacity-100" : "max-h-0 pb-0 opacity-0"}`}
+          >
+            <div className="relative group">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-lg">
                 search
               </span>
               <input
                 type="text"
-                placeholder="Search for tracks, artists, albums..."
-                className="w-full bg-[#1A1A1A] text-sm py-3 pl-12 pr-10 rounded-full border border-white/5 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                placeholder="Search music..."
+                className="w-full bg-white/5 text-sm py-3 pl-11 pr-10 rounded-xl border border-white/10 focus:ring-1 focus:ring-primary/20 outline-none transition-all shadow-xl"
                 value={searchQuery}
-                onFocus={() => setActiveTab("search")}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   if (e.target.value.trim().length > 0) setActiveTab("search");
@@ -562,7 +623,7 @@ function App() {
               />
               {searchQuery && (
                 <button
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-primary transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary"
                   onClick={() => {
                     setSearchQuery("");
                     setActiveTab("home");
@@ -574,61 +635,6 @@ function App() {
                 </button>
               )}
             </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Mobile Search Toggle */}
-            <button
-              className="p-2 md:hidden transition-all active:scale-75 text-primary"
-              onClick={() => setIsSearchVisible(!isSearchVisible)}
-            >
-              <span className="material-symbols-outlined text-2xl">
-                {isSearchVisible ? "close" : "search"}
-              </span>
-            </button>
-
-            <span className="material-symbols-outlined text-primary text-xl opacity-60 hover:opacity-100 transition-opacity clickable hidden md:block">
-              help_outline
-            </span>
-            <div className="w-9 h-9 rounded-full overflow-hidden border border-white/10 clickable">
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRogVdKoRnL9eXji2r65cXf8amitFG0mGjp-nzL8HgNGdAJcMidAlyCWHKRfnluU88XmE4vu80oF9G5EIg6A5nnM-4PqZQvMOd-j2tnUipBK_Pk0svmKGhnxc4iDtJgokLHrEFR94rATG2FyE_IHO5OYWwBhNACiO1hgiOAdvhBLiCIzGcZult4LsA7pDTX2mOTe6KsHB5Rhn4wAfd5COQ4rMAeTwKpRVL-t_LNPh1YLDERa4ia6G3mYGtLsMC6wW-MJV5TGMk6UA"
-                alt="Avatar"
-                className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
-              />
-            </div>
-          </div>
-        </header>
-
-        {/* Mobile Search Bar (Appears below header) */}
-        <div
-          className={`md:hidden px-4 overflow-hidden transition-all duration-300 ease-in-out ${isSearchVisible ? "max-h-20 py-3 opacity-100" : "max-h-0 py-0 opacity-0"}`}
-        >
-          <div className="relative group">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-lg">
-              search
-            </span>
-            <input
-              type="text"
-              placeholder="Search music..."
-              className="w-full bg-white/5 text-sm py-3.5 pl-11 pr-10 rounded-xl border border-white/10 focus:ring-1 focus:ring-primary/20 outline-none transition-all shadow-xl"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (e.target.value.trim().length > 0) setActiveTab("search");
-              }}
-            />
-            {searchQuery && (
-              <button
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary"
-                onClick={() => {
-                  setSearchQuery("");
-                  setActiveTab("home");
-                }}
-              >
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
-            )}
           </div>
         </div>
 
