@@ -859,7 +859,7 @@ function App() {
         {/* Mini Player - Only shown when a track is selected */}
         {currentTrack && (
           <div
-            className="fixed bottom-24 left-3 right-3 md:left-6 md:right-6 z-50 transition-all duration-500 cursor-pointer"
+            className="fixed bottom-24 left-3 right-3 md:left-[312px] md:right-12 z-[50] transition-all duration-500 cursor-pointer"
             onClick={() => navigate({ showFullPlayer: true })}
           >
             <div className="glass-effect rounded-lg px-4 py-3 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 relative overflow-hidden group">
@@ -873,7 +873,7 @@ function App() {
                   backgroundColor: vibrantColor || "var(--primary)",
                 }}
               ></div>
-              <div className="flex items-center gap-4 overflow-hidden">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
                 <div className="relative w-12 h-12 flex-shrink-0">
                   <img
                     className="w-full h-full rounded-md object-cover shadow-lg transition-transform duration-500 group-hover:scale-105"
@@ -899,7 +899,7 @@ function App() {
                   />
                   <div className="absolute inset-0 bg-black/10 rounded-md" />
                 </div>
-                <div className="flex flex-col truncate">
+                <div className="flex flex-col min-w-0">
                   <span className="text-sm font-bold text-primary truncate tracking-tight">
                     {currentTrack.title}
                   </span>
