@@ -1,6 +1,11 @@
 import React from "react";
 
-const TrackCard = ({ track, onPlay, onNavigateToArtist }) => {
+const TrackCard = ({
+  track,
+  onPlay,
+  onNavigateToArtist,
+  onNavigateToAlbum,
+}) => {
   return (
     <div
       className="w-40 md:w-48 flex-shrink-0 group cursor-pointer"
@@ -16,6 +21,12 @@ const TrackCard = ({ track, onPlay, onNavigateToArtist }) => {
           }
           alt={track.title}
           loading="lazy"
+          onClick={(e) => {
+            if (track.album?.id && onNavigateToAlbum) {
+              e.stopPropagation();
+              onNavigateToAlbum(track.album.id);
+            }
+          }}
         />
         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-500" />
 

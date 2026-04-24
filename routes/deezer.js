@@ -174,4 +174,13 @@ router.get("/artist/:id/related", async (req, res, next) => {
   }
 });
 
+router.get("/album/:id", async (req, res, next) => {
+  try {
+    const result = await deezerService.getAlbum(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

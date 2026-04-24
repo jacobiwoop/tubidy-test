@@ -3,7 +3,7 @@ import axios from "axios";
 import Section from "../components/Section";
 import TrackCard from "../components/TrackCard";
 
-const Home = ({ onPlayTrack, onNavigateToArtist }) => {
+const Home = ({ onPlayTrack, onNavigateToArtist, onNavigateToAlbum }) => {
   const [recommendations, setRecommendations] = useState({
     madeForYou: [],
     recentlyPlayed: [],
@@ -111,6 +111,7 @@ const Home = ({ onPlayTrack, onNavigateToArtist }) => {
             track={track}
             onPlay={onPlayTrack}
             onNavigateToArtist={onNavigateToArtist}
+            onNavigateToAlbum={onNavigateToAlbum}
           />
         ))}
         {recommendations.madeForYou.length === 0 && (
@@ -129,6 +130,7 @@ const Home = ({ onPlayTrack, onNavigateToArtist }) => {
               track={track}
               onPlay={onPlayTrack}
               onNavigateToArtist={onNavigateToArtist}
+              onNavigateToAlbum={onNavigateToAlbum}
             />
           ))}
         </Section>
@@ -142,6 +144,7 @@ const Home = ({ onPlayTrack, onNavigateToArtist }) => {
             track={track}
             onPlay={onPlayTrack}
             onNavigateToArtist={onNavigateToArtist}
+            onNavigateToAlbum={onNavigateToAlbum}
           />
         ))}
       </Section>

@@ -3,6 +3,7 @@ import axios from "axios";
 import HomeScreen from "./screens/Home";
 import SearchScreen from "./screens/Search";
 import ArtistScreen from "./screens/ArtistScreen";
+import AlbumScreen from "./screens/AlbumScreen";
 import LibraryScreen from "./screens/Library";
 import PlayerScreen from "./screens/Player";
 import GenreView from "./screens/GenreView";
@@ -13,7 +14,10 @@ import { getVibrantColorFromImage } from "./utils/vibrant-color";
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [activeArtistId, setActiveArtistId] = useState(null);
+  const [activeAlbumId, setActiveAlbumId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showFullPlayer, setShowFullPlayer] = useState(false);
   const [vibrantColor, setVibrantColor] = useState(null);
@@ -412,6 +416,12 @@ function App() {
     window.scrollTo(0, 0);
   };
 
+  const navigateToAlbum = (albumId) => {
+    setActiveAlbumId(albumId);
+    setActiveTab("album");
+    window.scrollTo(0, 0);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "home":
@@ -419,6 +429,7 @@ function App() {
           <HomeScreen
             onPlayTrack={handlePlayTrack}
             onNavigateToArtist={navigateToArtist}
+            onNavigateToAlbum={navigateToAlbum}
           />
         );
       case "search":
@@ -429,6 +440,7 @@ function App() {
             onPlayTrack={handlePlayTrack}
             onSelectGenre={(genre) => setActiveGenre(genre)}
             onNavigateToArtist={navigateToArtist}
+            onNavigateToAlbum={navigateToAlbum}
           />
         );
       case "artist":
@@ -437,6 +449,17 @@ function App() {
             artistId={activeArtistId}
             onPlayTrack={handlePlayTrack}
             onNavigateToArtist={navigateToArtist}
+            onNavigateToAlbum={navigateToAlbum}
+            likedTrackIds={likedTrackIds}
+          />
+        );
+      case "album":
+        return (
+          <AlbumScreen
+            albumId={activeAlbumId}
+            onPlayTrack={handlePlayTrack}
+            onNavigateToArtist={navigateToArtist}
+            navigateToAlbum={navigateToAlbum}
             likedTrackIds={likedTrackIds}
           />
         );
@@ -456,6 +479,7 @@ function App() {
             isSelectionMode={isSelectionMode}
             setIsSelectionMode={setIsSelectionMode}
             onNavigateToArtist={navigateToArtist}
+            onNavigateToAlbum={navigateToAlbum}
           />
         );
       default:
@@ -463,6 +487,7 @@ function App() {
           <HomeScreen
             onPlayTrack={handlePlayTrack}
             onNavigateToArtist={navigateToArtist}
+            onNavigateToAlbum={navigateToAlbum}
           />
         );
     }
@@ -470,8 +495,17 @@ function App() {
 
   return (
     <div className="bg-background text-primary font-sans min-h-screen selection:bg-white selection:text-black transition-colors duration-500 relative overflow-hidden flex">
-      {/* Sidebar - Hidden on mobile */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <aside>
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setIsSidebarOpen(false);
+          }}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+      </aside>
 
       <div className="flex-1 flex flex-col min-w-0 md:ml-72 transition-all duration-500 relative">
         {/* Ambient background light */}
@@ -483,10 +517,18 @@ function App() {
         />
 
         {/* Top AppBar */}
-        <header className="flex justify-between items-center px-6 py-4 w-full glass-effect z-40 top-0 sticky">
+        <header className="flex justify-between items-center px-6 py-4 w-full glass-effect z-[45] top-0 sticky">
           <div className="flex items-center gap-5">
-            <h1 className="font-headline text-2xl font-black tracking-tighter uppercase italic md:hidden">
-              {activeTab === "home" ? "Home" : activeTab}
+            <button
+              className="p-2 -ml-2 md:hidden transition-all active:scale-75"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <span className="material-symbols-outlined text-primary text-3xl">
+                menu
+              </span>
+            </button>
+            <h1 className="font-headline text-2xl font-black tracking-tighter uppercase italic md:hidden truncate max-w-[150px]">
+              {activeTab === "home" ? "Spotiwoop" : activeTab}
             </h1>
             {/* Desktop Navigation Arrows (Monochrome Style) */}
             <div className="hidden md:flex items-center gap-3 mr-4">

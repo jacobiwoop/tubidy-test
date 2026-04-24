@@ -246,6 +246,16 @@ async function getRelatedArtists(id, { limit = 10 } = {}) {
   });
 }
 
+/**
+ * Récupère les détails d'un album.
+ */
+async function getAlbum(id) {
+  return withRetry(async () => {
+    const response = await axios.get(`${BASE_URL}/album/${id}`);
+    return response.data;
+  });
+}
+
 module.exports = {
   search,
   searchArtist,
@@ -260,4 +270,5 @@ module.exports = {
   getArtistTopTracks,
   getArtistAlbums,
   getRelatedArtists,
+  getAlbum,
 };

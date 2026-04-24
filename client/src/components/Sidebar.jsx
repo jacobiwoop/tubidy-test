@@ -1,6 +1,6 @@
 import React from "react";
 
-const Sidebar = ({ activeTab, setActiveTab }) => {
+const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose }) => {
   const menuItems = [
     { id: "home", label: "Home", icon: "home" },
     { id: "library", label: "Library", icon: "library_music" },
@@ -18,23 +18,35 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   ];
 
   return (
-    <aside className="hidden md:flex flex-col w-72 h-screen fixed left-0 top-0 bg-[#0A0A0A] border-r border-white/5 z-50 p-6 overflow-y-auto no-scrollbar">
-      {/* Logo Section */}
-      <div className="flex items-center justify-between mb-10 px-2">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
-            <span className="material-symbols-outlined text-xl fill-icon text-white">
-              antigravity
-            </span>
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[55] md:hidden animate-in fade-in duration-300"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={`fixed left-0 top-0 h-screen bg-[#0A0A0A] border-r border-white/5 z-[60] p-6 overflow-y-auto no-scrollbar transition-transform duration-500 w-72 ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
+        {/* Logo Section */}
+        <div className="flex items-center justify-between mb-10 px-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-xl fill-icon text-white">
+                antigravity
+              </span>
+            </div>
+            <h1 className="font-headline font-black text-xl tracking-tighter uppercase italic">
+              Spotiwoop
+            </h1>
           </div>
-          <h1 className="font-headline font-black text-xl tracking-tighter uppercase italic">
-            Spotiwoop
-          </h1>
+          <span 
+            className="material-symbols-outlined text-secondary hover:text-primary cursor-pointer transition-colors"
+            onClick={onClose}
+          >
+            chevron_left
+          </span>
         </div>
-        <span className="material-symbols-outlined text-secondary hover:text-primary cursor-pointer transition-colors">
-          chevron_left
-        </span>
-      </div>
 
       {/* Main Navigation */}
       <nav className="flex flex-col gap-1 mb-10">

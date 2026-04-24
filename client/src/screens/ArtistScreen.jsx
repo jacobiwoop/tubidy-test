@@ -7,6 +7,7 @@ const ArtistScreen = ({
   artistId,
   onPlayTrack,
   onNavigateToArtist,
+  onNavigateToAlbum,
   likedTrackIds,
 }) => {
   const [artist, setArtist] = useState(null);
@@ -119,7 +120,15 @@ const ArtistScreen = ({
                   <span className="w-8 text-xs font-black text-secondary/30 group-hover:text-primary transition-colors">
                     {i + 1}
                   </span>
-                  <div className="w-12 h-12 rounded-lg overflow-hidden mr-5 shadow-lg">
+                  <div
+                    className="w-12 h-12 rounded-lg overflow-hidden mr-5 shadow-lg flex-shrink-0 group-hover:scale-110 transition-transform duration-500 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (track.album?.id && onNavigateToAlbum) {
+                        onNavigateToAlbum(track.album.id);
+                      }
+                    }}
+                  >
                     <img
                       src={track.album.cover_small}
                       alt={track.title}
@@ -154,6 +163,7 @@ const ArtistScreen = ({
               <div
                 key={album.id}
                 className="w-40 md:w-48 flex-shrink-0 group cursor-pointer"
+                onClick={() => onNavigateToAlbum(album.id)}
               >
                 <div className="aspect-square rounded-xl overflow-hidden mb-4 shadow-2xl border border-white/5">
                   <img

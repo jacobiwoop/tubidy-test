@@ -46,6 +46,7 @@ function SearchScreen({
   onPlayTrack,
   onSelectGenre,
   onNavigateToArtist,
+  onNavigateToAlbum,
 }) {
   const [results, setResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -232,14 +233,20 @@ function SearchScreen({
                   >
                     <div className="relative w-14 h-14 flex-shrink-0 mr-5">
                       <img
-                        className="w-full h-full rounded-lg object-cover shadow-2xl group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full rounded-lg object-cover shadow-2xl group-hover:scale-105 transition-transform duration-500 cursor-pointer"
                         src={
                           track.album?.cover_medium || track.album?.cover_small
                         }
                         alt={track.title}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (track.album?.id && onNavigateToAlbum) {
+                            onNavigateToAlbum(track.album.id);
+                          }
+                        }}
                       />
-                      <div className="absolute inset-0 bg-black/20 rounded-lg group-hover:bg-black/0 transition-colors" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 bg-black/20 rounded-lg group-hover:bg-black/0 transition-colors pointer-events-none" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         <span className="material-symbols-outlined text-white fill-icon">
                           play_arrow
                         </span>
