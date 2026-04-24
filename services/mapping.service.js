@@ -65,27 +65,49 @@ async function getTubidyDownloadByDeezerId(
       throw new Error("Titre introuvable sur Deezer");
     }
 
-    // 2. Nettoyer et préparer la recherche
-    const artistClean = cleanQuery(track.artist.name);
-    const titleClean = cleanQuery(track.title);
-    const query = `${artistClean} ${titleClean}`;
-    console.log(`[mapping] Recherche Tubidy pour: "${query}"`);
-
-    // 3. Chercher sur Tubidy
-    const { results } = await tubidyService.search(query, { page: 1 }, signal);
-
-    if (!results || results.length === 0) {
-      throw new Error(
-        `Aucun résultat correspondant sur Tubidy pour "${query}"`,
-      );
+    // 2. Vérifier le cache de mapping (Deezer ID -> Tubidy Page URL)
+    let tubidyPageUrl = null;
+    let cachedTitle = null;
+    try {
+      const cached = db
+        .prepare(
+          "SELECT tubidy_url, title FROM tubidy_mapping WHERE deezer_id = ?",
+        )
+        .get(deezerId);
+      if (cached) {
+        console.log(`[mapping-cache] Hit pour Deezer ID: ${deezerId}`);
+        tubidyPageUrl = cached.tubidy_url;
+        cachedTitle = cached.title;
+      }
+    } catch (dbErr) {
+      console.warn("[mapping-cache] Read error:", dbErr.message);
     }
 
-    // 4. Boucle de Fallback : on teste les 3 premiers résultats si besoin
+    let results = [];
+    if (tubidyPageUrl) {
+      // On simule un résultat pour réutiliser la boucle de test plus bas
+      results = [
+        { download_page: tubidyPageUrl, title: cachedTitle || track.title },
+      ];
+    } else {
+      // 3. Sinon, chercher sur Tubidy
+      const artistClean = cleanQuery(track.artist.name);
+      const titleClean = cleanQuery(track.title);
+      const query = `${artistClean} ${titleClean}`;
+      console.log(`[mapping] Recherche Tubidy pour: "${query}"`);
+
+      const searchRes = await tubidyService.search(query, { page: 1 }, signal);
+      results = searchRes.results;
+    }
+
+    if (!results || results.length === 0) {
+      throw new Error("Aucun résultat correspondant sur Tubidy");
+    }
+
+    // 4. Boucle de Test : on teste les résultats
     for (let i = 0; i < Math.min(results.length, 3); i++) {
       const match = results[i];
-      console.log(
-        `[mapping] Test du lien ${i + 1}/${Math.min(results.length, 3)}: ${match.title}`,
-      );
+      console.log(`[mapping] Test du lien ${i + 1}: ${match.title}`);
 
       try {
         const downloadData = await tubidyService.getDownloadLink(
@@ -102,6 +124,18 @@ async function getTubidyDownloadByDeezerId(
 
         if (alive) {
           console.log(`[mapping] Link ${i + 1} est OK!`);
+
+          // S'il n'était pas en cache, on l'ajoute
+          if (!tubidyPageUrl) {
+            try {
+              db.prepare(
+                "INSERT OR REPLACE INTO tubidy_mapping (deezer_id, tubidy_url, title) VALUES (?, ?, ?)",
+              ).run(deezerId, match.download_page, match.title);
+            } catch (dbErr) {
+              console.warn("[mapping-cache] Write error:", dbErr.message);
+            }
+          }
+
           return {
             source: {
               id: deezerId,
@@ -115,10 +149,6 @@ async function getTubidyDownloadByDeezerId(
               format: format === "video" ? "MP4 video" : "MP3 audio",
             },
           };
-        } else {
-          console.warn(
-            `[mapping] Link ${i + 1} (Timeout/Erreur). Passage au suivant...`,
-          );
         }
       } catch (innerError) {
         console.warn(
@@ -127,9 +157,7 @@ async function getTubidyDownloadByDeezerId(
       }
     }
 
-    throw new Error(
-      "Désolé, aucun des liens Tubidy n'a répondu. Réessaie plus tard.",
-    );
+    throw new Error("Aucun lien Tubidy valide n'a pu être extrait.");
   } catch (error) {
     console.error("[mapping] Error Mapping:", error.message);
     throw error;

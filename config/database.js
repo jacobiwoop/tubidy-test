@@ -76,6 +76,18 @@ function initDB() {
   `,
   ).run();
 
+  // Table de mapping Deezer ID -> Tubidy URL
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS tubidy_mapping (
+      deezer_id TEXT PRIMARY KEY,
+      tubidy_url TEXT NOT NULL,
+      title TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
+  ).run();
+
   console.log("[db] Database initialized successfully.");
 }
 

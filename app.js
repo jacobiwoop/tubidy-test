@@ -67,7 +67,7 @@ function proxyAudio(url, res, req, redirectCount = 0) {
       url,
       {
         headers: requestHeaders,
-        timeout: 15000, // 15 secondes max pour répondre
+        timeout: 60000, // 60 secondes max pour répondre (plus robuste)
       },
       (upstream) => {
         const { statusCode, headers } = upstream;
