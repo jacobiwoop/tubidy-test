@@ -38,3 +38,16 @@ Ce fichier sert à documenter les modifications importantes, les décisions arch
 - Annuler une requête côté client ne suffit pas si le backend est lourd (scraping) ; il faut propager le signal pour libérer les ressources du serveur.
 - Le "Backoff Exponentiel" est la méthode la plus efficace pour "attendre" la fin d'une micro-coupure internet sans surcharger les services tiers.
 - Un cache de métadonnées local transforme radicalement la perception de vitesse de l'application (passage de 2s à 10ms pour les titres connus).
+
+### UI Modernization (Style Monochrome)
+
+- **Layout Immersif & "Sections"** : Passage à une interface basée sur des cartes et des sections (Home, Search) inspirée de Monochrome.
+- **Profils Artistes & Albums** : Création de pages profils premium avec extraction de couleur (`vibrant-color`), métadonnées riches et recommandations contextuelles (Similar Albums/Artists).
+- **Navigation Responsive & Fixe** : Implémentation d'un header fixe sur mobile, d'un menu latéral coulissant et d'une recherche intégrée en "sub-header" (plus d'overlay plein écran).
+- **Gestion de l'Historique (Back Button)** : Intégration de l'API History (`pushState`/`popstate`) pour enregistrer la navigation interne. Le bouton "Retour" du téléphone permet désormais de revenir à l'écran précédent au lieu de quitter l'application.
+
+### Leçons apprises
+
+- Manipuler l'historique de navigation manuellement via `popstate` est crucial pour transformer une SPA web en une application mobile fluide (look-and-feel d'une App Native).
+- Le responsive ne se limite pas aux CSS `@media`. La gestion des états de visibilité (Sidebar, Recherche mobile) en React est nécessaire pour une UX de qualité.
+- L'ajout de contextuel (recommandations) en bas d'écran augmente considérablement le temps de rétention sur une application musicale.
