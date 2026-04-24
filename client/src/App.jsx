@@ -677,6 +677,7 @@ function App() {
             onToggleShuffle={toggleShuffle}
             onToggleRepeat={toggleRepeat}
             onOpenPlaylistModal={() => openAddToPlaylistModal(currentTrack)}
+            onNavigateToArtist={navigateToArtist}
             hasNext={currentIndex < queue.length - 1 || repeatMode === "all"}
             hasPrev={
               currentIndex > 0 || currentTime > 3 || repeatMode === "all"
