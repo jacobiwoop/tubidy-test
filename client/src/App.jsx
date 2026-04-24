@@ -61,32 +61,46 @@ function App() {
    */
   const getSmartRadio = async (seedTrack) => {
     try {
-      // 1. Essayer la Radio Smart de Deezer
+      console.log(`[smart-radio] Requesting radio for track: ${seedTrack.id}`);
       const radioRes = await axios.get(
         `/api/deezer/track/${seedTrack.id}/radio`,
       );
-      if (radioRes.data.data && radioRes.data.data.length > 5) {
-        return radioRes.data.data.filter((t) => t.id !== seedTrack.id);
+
+      const tracks = radioRes.data.data || radioRes.data;
+      if (Array.isArray(tracks) && tracks.length > 0) {
+        console.log(
+          `[smart-radio] Found ${tracks.length} tracks via Deezer Radio`,
+        );
+        return tracks.filter(
+          (t) => t.id?.toString() !== seedTrack.id?.toString(),
+        );
       }
 
-      // 2. Fallback : Artistes Similaires
+      console.warn(
+        `[smart-radio] No direct radio found. Trying similar artists fallback...`,
+      );
       if (seedTrack.artist?.id) {
         const relatedRes = await axios.get(
           `/api/deezer/artist/${seedTrack.artist.id}/related?limit=5`,
         );
-        const similarArtists = relatedRes.data.data || [];
+        const similarArtists = relatedRes.data.data || relatedRes.data || [];
 
-        // Récupérer les top tracks du premier artiste similaire
         if (similarArtists.length > 0) {
-          const topTracksRes = await axios.get(
-            `/api/deezer/artist/${similarArtists[0].id}/top?limit=20`,
+          console.log(
+            `[smart-radio] Found ${similarArtists.length} similar artists. Fetching top tracks from ${similarArtists[0].name}...`,
           );
-          return topTracksRes.data.data || [];
+          const topTracksRes = await axios.get(
+            `/api/deezer/artist/${similarArtists[0].id}/top?limit=40`,
+          );
+          const topTracks = topTracksRes.data.data || topTracksRes.data || [];
+          return topTracks.filter(
+            (t) => t.id?.toString() !== seedTrack.id?.toString(),
+          );
         }
       }
       return [];
     } catch (err) {
-      console.error("Smart Radio failed", err);
+      console.error("[smart-radio] Failed", err);
       return [];
     }
   };
@@ -110,13 +124,14 @@ function App() {
       setQueue([track]);
       loadTrackContent(track, 0);
 
-      // Récupérer la radio en arrière-plan et mettre à jour la file
-      const radioTracks = await getSmartRadio(track);
-      if (radioTracks.length > 0) {
-        const fullQueue = [track, ...radioTracks];
-        setOriginalQueue(fullQueue);
-        setQueue(fullQueue);
-      }
+      // Récupérer la radio en arrière-plan (non-bloquant)
+      getSmartRadio(track).then((radioTracks) => {
+        if (radioTracks.length > 0) {
+          const fullQueue = [track, ...radioTracks];
+          setOriginalQueue(fullQueue);
+          setQueue(fullQueue);
+        }
+      });
     }
   };
 
