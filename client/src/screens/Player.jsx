@@ -376,14 +376,14 @@ function PlayerScreen({
 
               <div className="relative flex items-center justify-center">
                 {isLoadingTrack && (
-                  <div className="absolute inset-[-10px] border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                  <div className="absolute inset-[-10px] border-2 border-white/20 border-t-accent-monochrome rounded-full animate-spin" />
                 )}
                 <button
-                  className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center transition-all duration-500 active:scale-95 bg-primary text-background ${isLoadingTrack ? "opacity-40 animate-pulse" : "hover:scale-105"}`}
+                  className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center transition-all duration-500 active:scale-95 accent-monochrome ${isLoadingTrack ? "opacity-40 animate-pulse" : "hover:scale-105"}`}
                   style={{
-                    backgroundColor: vibrantColor || "var(--primary)",
+                    backgroundColor: vibrantColor || "#E9FF00",
                     boxShadow: !vibrantColor
-                      ? "0 20px 50px rgba(255,255,255,0.1)"
+                      ? "0 20px 50px rgba(0,0,0,0.5)"
                       : `0 20px 50px ${vibrantColor}33`, // 33 is ~20% opacity in hex
                   }}
                   onClick={onTogglePlay}

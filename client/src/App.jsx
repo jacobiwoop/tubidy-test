@@ -890,7 +890,10 @@ function App() {
               }
             }}
           >
-            <div className="glass-effect rounded-2xl md:rounded-3xl px-4 md:px-6 py-3 md:py-4 shadow-[0_25px_60px_rgba(0,0,0,0.6)] border border-white/10 relative overflow-hidden group">
+            <div
+              className="glass-effect rounded-2xl md:rounded-3xl px-4 md:px-6 py-3 md:py-4 shadow-[0_25px_60px_rgba(0,0,0,0.6)] border border-white/10 relative overflow-hidden group cursor-pointer"
+              onClick={() => navigate({ showFullPlayer: true })}
+            >
               {/* Dynamic Glow Background */}
               <div
                 className="absolute inset-0 opacity-10 pointer-events-none transition-colors duration-1000"
@@ -966,7 +969,10 @@ function App() {
                   <div className="flex items-center gap-6 mb-2">
                     <button
                       className={`material-symbols-outlined text-xl transition-all ${isShuffle ? "text-primary scale-110" : "text-secondary hover:text-white"}`}
-                      onClick={toggleShuffle}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleShuffle(e);
+                      }}
                     >
                       shuffle
                     </button>
@@ -980,11 +986,14 @@ function App() {
                       skip_previous
                     </button>
                     <button
-                      className="relative w-11 h-11 rounded-full bg-primary flex items-center justify-center text-black shadow-lg shadow-primary/20 hover:scale-110 active:scale-95 transition-all mx-2"
-                      onClick={togglePlay}
+                      className="relative w-11 h-11 rounded-full accent-monochrome flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 active:scale-95 transition-all mx-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePlay();
+                      }}
                     >
                       {isLoadingTrack && (
-                        <div className="absolute inset-[-4px] border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        <div className="absolute inset-[-4px] border-2 border-white/20 border-t-accent-monochrome rounded-full animate-spin" />
                       )}
                       <span
                         className={`material-symbols-outlined text-3xl fill-icon ${isLoadingTrack ? "animate-spin" : ""}`}
@@ -1007,7 +1016,10 @@ function App() {
                     </button>
                     <button
                       className={`material-symbols-outlined text-xl transition-all ${repeatMode !== "off" ? "text-primary scale-110" : "text-secondary hover:text-white"}`}
-                      onClick={toggleRepeat}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleRepeat(e);
+                      }}
                     >
                       {repeatMode === "one" ? "repeat_one" : "repeat"}
                     </button>
@@ -1027,7 +1039,11 @@ function App() {
                         min="0"
                         max={duration || 100}
                         value={currentTime}
-                        onChange={(e) => handleSeek(parseFloat(e.target.value))}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleSeek(parseFloat(e.target.value));
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                         className="absolute inset-0 w-full opacity-0 cursor-pointer z-20"
                       />
                       <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
@@ -1114,11 +1130,11 @@ function App() {
                   {/* Mobile Compact Controls */}
                   <div className="md:hidden flex items-center gap-3">
                     <button
-                      className="relative w-10 h-10 flex items-center justify-center text-primary active:scale-90 transition-all"
+                      className="relative w-10 h-10 flex items-center justify-center text-accent-monochrome active:scale-90 transition-all"
                       onClick={togglePlay}
                     >
                       {isLoadingTrack && (
-                        <div className="absolute inset-[-4px] border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                        <div className="absolute inset-[-4px] border-2 border-white/20 border-t-accent-monochrome rounded-full animate-spin" />
                       )}
                       <span
                         className={`material-symbols-outlined text-4xl ${isLoadingTrack ? "animate-spin" : ""}`}

@@ -99,19 +99,19 @@
   font-variation-settings: 'FILL' 1;
 }
 
-/* Premium Color for Play Button & Accents */
-.bg-primary {
+/* Specific Highlight for Interactive Elements (Monochrome Yellow) */
+.accent-monochrome {
   background-color: #E9FF00 !important;
   color: black !important;
 }
 
-.text-primary {
+.text-accent-monochrome {
   color: #E9FF00 !important;
 }
 
 /* Custom Range Input (Sliders) */
 input[type="range"].accent-primary {
-  accent-color: #E9FF00;
+  accent-color: #FFFFFF;
 }
 
 /* Hide default appearance for a clean look */
@@ -137,16 +137,17 @@ input[type="range"]::-webkit-slider-thumb {
   height: 12px;
   width: 12px;
   border-radius: 50%;
-  background: #E9FF00;
+  background: #FFFFFF;
   cursor: pointer;
   -webkit-appearance: none;
   margin-top: -4px; /* Centers thumb on track */
-  box-shadow: 0 0 10px rgba(233, 255, 0, 0.4);
-  transition: transform 0.2s;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s, background 0.2s;
 }
 
 input[type="range"]:hover::-webkit-slider-thumb {
   transform: scale(1.2);
+  background: #E9FF00; /* Subtle yellow hint on hover */
 }
 
 /* Firefox Support */
