@@ -704,7 +704,7 @@ function App() {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 md:ml-72 transition-all duration-500 relative">
+      <div className="flex-1 flex flex-col min-w-0 md:ml-72 transition-all duration-500 relative h-screen overflow-y-auto no-scrollbar">
         {/* Ambient background light */}
         <div
           className="fixed top-0 left-0 w-full h-[600px] opacity-20 pointer-events-none transition-all duration-1000 blur-[120px]"
@@ -940,23 +940,45 @@ function App() {
                   favorite
                 </span>
                 <div className="relative flex items-center justify-center">
-                  {isLoadingTrack && (
-                    <div className="absolute inset-[-4px] border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                  )}
-                  <button
-                    className={`w-10 h-10 rounded-full flex items-center justify-center active:scale-95 transition-all duration-300 ${isLoadingTrack ? "bg-white/10" : "bg-primary text-background hover:scale-105 shadow-lg shadow-white/5"}`}
-                    onClick={togglePlay}
-                    disabled={isLoadingTrack}
-                  >
-                    <span className="material-symbols-outlined fill-icon text-xl">
-                      {isPlaying ? "pause" : "play_arrow"}
-                    </span>
-                  </button>
-                </div>
+              <div className="flex items-center gap-3 ml-2">
+                <button
+                  className="w-10 h-10 flex items-center justify-center text-primary group-hover:scale-110 active:scale-95 transition-all"
+                  onClick={togglePlay}
+                >
+                  <span className="material-symbols-outlined text-[32px]">
+                    {isLoadingTrack
+                      ? "sync"
+                      : isPlaying
+                        ? "pause_circle"
+                        : "play_circle"}
+                  </span>
+                </button>
+                <button
+                  className="w-10 h-10 flex items-center justify-center text-secondary hover:text-primary transition-all md:flex hidden"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate({ isQueueVisible: true });
+                  }}
+                >
+                  <span className="material-symbols-outlined text-2xl">
+                    queue_music
+                  </span>
+                </button>
               </div>
             </div>
           </div>
         )}
+
+        {/* Global Queue Sidebar */}
+        <QueueSidebar
+          isOpen={isQueueVisible}
+          onClose={() => navigate({ isQueueVisible: false })}
+          queue={queue}
+          currentTrack={currentTrack}
+          onPlayTrackAt={handlePlayFromQueue}
+          onRemoveTrackAt={removeFromQueue}
+          onClearQueue={clearQueue}
+        />
 
         {/* Full Player Overlay */}
         {showFullPlayer && currentTrack && (
@@ -985,6 +1007,7 @@ function App() {
             hasPrev={
               currentIndex > 0 || currentTime > 3 || repeatMode === "all"
             }
+            onOpenQueue={() => navigate({ isQueueVisible: true })}
           />
         )}
 

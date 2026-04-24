@@ -34,7 +34,7 @@ function PlayerScreen({
   hasNext,
   hasPrev,
   vibrantColor,
-  onNavigateToArtist,
+  onOpenQueue,
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -448,6 +448,14 @@ function PlayerScreen({
                   className={`material-symbols-outlined text-3xl ${downloading ? "animate-bounce" : ""}`}
                 >
                   {downloading ? "downloading" : "output"}
+                </span>
+              </button>
+              <button
+                className="p-3 text-secondary hover:text-primary transition-all active:scale-75"
+                onClick={onOpenQueue}
+              >
+                <span className="material-symbols-outlined text-3xl">
+                  queue_music
                 </span>
               </button>
               <button className="p-3 text-secondary hover:text-primary transition-all active:scale-75">
