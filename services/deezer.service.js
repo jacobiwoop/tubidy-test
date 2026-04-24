@@ -286,6 +286,49 @@ async function getAlbum(id) {
   });
 }
 
+/**
+ * Récupère les paroles d'un titre via LRCLIB (Synchronisées).
+ */
+async function getTrackLyrics(trackId) {
+  // 1. Récupérer les infos du titre (on a besoin du nom, artiste et durée pour LRCLIB)
+  const track = await getTrack(trackId);
+  if (!track || track.error) throw new Error("Track not found");
+
+  const { title, artist, duration, album } = track;
+
+  return withRetry(async () => {
+    try {
+      // LRCLIB est très efficace pour les paroles synchronisées (LRC)
+      // On tente d'abord avec les infos précises
+      const response = await axios.get("https://lrclib.net/api/get", {
+        params: {
+          artist_name: artist.name || artist,
+          track_name: title,
+          album_name: album?.title || "",
+          duration: duration,
+        },
+        timeout: 5000,
+      });
+
+      return response.data;
+    } catch (err) {
+      // Fallback : recherche plus souple si le "get" précis échoue
+      console.log(
+        `[lyrics] Precision match failed for ${title}, trying search...`,
+      );
+      const searchRes = await axios.get("https://lrclib.net/api/search", {
+        params: { q: `${artist.name || artist} ${title}` },
+        timeout: 5000,
+      });
+
+      // On prend le premier résultat qui a des paroles synchronisées
+      return (
+        searchRes.data.find((l) => l.syncedLyrics) || searchRes.data[0] || null
+      );
+    }
+  });
+}
+
 module.exports = {
   search,
   searchArtist,
@@ -303,4 +346,5 @@ module.exports = {
   getRelatedAlbums,
   getTrackRadio,
   getAlbum,
+  getTrackLyrics,
 };

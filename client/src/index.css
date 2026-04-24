@@ -109,6 +109,28 @@
   color: #E9FF00 !important;
 }
 
+/* Lyrics Effects */
+.mask-vertical-fade {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 30%,
+    black 70%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 30%,
+    black 70%,
+    transparent 100%
+  );
+}
+
+.lyric-glow {
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+}
+
 /* Custom Range Input (Sliders) */
 input[type="range"].accent-primary {
   accent-color: #FFFFFF;

@@ -1076,20 +1076,32 @@ function App() {
                   <div className="hidden lg:flex items-center gap-4 text-secondary">
                     <span
                       className={`material-symbols-outlined text-xl cursor-pointer hover:text-primary transition-all ${likedTrackIds.has(currentTrack.id?.toString()) ? "text-primary fill-icon" : ""}`}
-                      onClick={() => toggleLike(currentTrack)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLike(currentTrack);
+                      }}
                     >
                       favorite
                     </span>
                     <span
                       className="material-symbols-outlined text-xl cursor-pointer hover:text-primary transition-all active:scale-95"
-                      onClick={() => openAddToPlaylistModal(currentTrack)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openAddToPlaylistModal(currentTrack);
+                      }}
                     >
                       playlist_add
                     </span>
-                    <span className="material-symbols-outlined text-xl cursor-pointer hover:text-primary transition-all">
+                    <span
+                      className="material-symbols-outlined text-xl cursor-pointer hover:text-primary transition-all"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       mic
                     </span>
-                    <span className="material-symbols-outlined text-xl cursor-pointer hover:text-primary transition-all">
+                    <span
+                      className="material-symbols-outlined text-xl cursor-pointer hover:text-primary transition-all"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       download
                     </span>
                   </div>
@@ -1110,7 +1122,11 @@ function App() {
                         max="1"
                         step="0.01"
                         value={volume}
-                        onChange={handleVolumeChange}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleVolumeChange(e);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                         className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-primary hover:bg-white/20 transition-all"
                       />
                     </div>

@@ -203,4 +203,13 @@ router.get("/track/:id/radio", async (req, res, next) => {
   }
 });
 
+router.get("/track/:id/lyrics", async (req, res, next) => {
+  try {
+    const result = await deezerService.getTrackLyrics(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
