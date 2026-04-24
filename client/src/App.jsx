@@ -3,92 +3,12 @@ import axios from "axios";
 import SearchScreen from "./screens/Search";
 import LibraryScreen from "./screens/Library";
 import PlayerScreen from "./screens/Player";
+import HomeScreen from "./screens/Home";
 import GenreView from "./screens/GenreView";
+import Sidebar from "./components/Sidebar";
 import AddToPlaylistModal from "./components/AddToPlaylistModal";
 import { getDownloadedTracks } from "./utils/offlineDb";
 import { getVibrantColorFromImage } from "./utils/vibrant-color";
-
-// Temporary Mock Data for Home
-const SHORTCUTS = [
-  {
-    id: 1,
-    title: "Daily Mix 1",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCEyqaDlx0wWNMf5R2EL_ImEwf-d5CAdAiVs-Nqjpmoo3fPCN2MkU_CXsCMHwVLhTKrOTzmczA6dLC2MRoLhxUNQof59T4zUUvirmo8onuM1ex8oUBRAmJ_R8Y6VLew_9H8sJRO95p0OyYqso6aJLg9PwHA6Z0aSxx7ASay3rO_1hO9HLcj_5vjaETVfzzOTjAb9RqQUEpx9EIYraUvK0Hr8whePmv2pASTvAFnbAEKlFb2cpYlckE8gwKlBtJmksL7jfY_kzVVP5s",
-  },
-  {
-    id: 2,
-    title: "Jazz Vibes",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCb0KFqpG1I4wVfh43CEZDTDWk1AHu_9pWQCvxwdUCYxpDbFxOutc5vhmC738lM1MuTEWuUNg7hBxN9r0extZKbJO5NRx_KVVX63xER5B362B88OIce1ZJhtfkN867RRKbbQEOu6HkuVxce0Sy0qkCMjRJC0oO9pKSxw7JArbaBj_NIt0Szd_nOHy4ZIE-ipK3qzW5vHs2lzfkcKBddAllG7_BLxJSgiU_1_jthsirCqfL6vurwAWj4_3wGnRekES_AvCrqQmC_UHs",
-  },
-  {
-    id: 3,
-    title: "Top Hits 2024",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuB919xlKhoiCIKStwWCi8HU4r6VkqR9YE29iD9a3vItYl8VDayhz7u4LO74uWJSJHNWSE71rozfilY3F8CyAhZ4O-GgV2LR-vh_pQ7TlIvbFuHE8_xCOnwM7BhisKXcE3c6Au9GWL_e6Ax3L2K9yN3o71h-zRu7a1ht9n3_CLID0LH7NwI6UV15ux-OgKQyW_wjCohRUuNYh-kPuiiz03r1Qp9k_RRFVENj9uTVQEmUzfEYuEvbO6BB5GYf-SmBULTK9zXJylv_j10",
-  },
-];
-
-function HomeScreen() {
-  return (
-    <div className="animate-in fade-in duration-700">
-      <h2 className="font-headline font-bold text-3xl tracking-tight mb-8">
-        Good morning
-      </h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {SHORTCUTS.map((item) => (
-          <div
-            key={item.id}
-            className="group flex items-center bg-surface border border-white/5 hover:bg-surface-muted hover:border-white/10 rounded-md transition-all duration-300 overflow-hidden cursor-pointer"
-          >
-            <div className="w-16 h-16 flex-shrink-0">
-              <img
-                src={item.img}
-                alt={item.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span className="px-4 font-semibold text-sm truncate uppercase tracking-wider opacity-90">
-              {item.title}
-            </span>
-            <button className="ml-auto mr-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0 bg-primary text-background p-2 rounded-full shadow-xl">
-              <span className="material-symbols-outlined text-xl fill-icon">
-                play_arrow
-              </span>
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <section className="mt-16">
-        <div className="flex justify-between items-end mb-8">
-          <h2 className="font-headline font-bold text-2xl tracking-tight">
-            Made for you
-          </h2>
-          <span className="text-secondary font-semibold text-xs uppercase tracking-widest hover:text-primary transition-colors cursor-pointer">
-            Show all
-          </span>
-        </div>
-        <div className="flex gap-6 overflow-x-auto no-scrollbar pb-4">
-          <div className="w-44 flex-shrink-0 group cursor-pointer">
-            <div className="relative aspect-square mb-4 overflow-hidden rounded-lg">
-              <img
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDXlG7gm85XOEDeF_yieOFgVOPsBEp-cwC8cjscW556q3ddHUnf_FxklbwRbmB6G7MSUckaMhRNEbILdGQLNaJAJ70pFjuE5VLPeJqzjr_Tr1YJAot1UbF1CK9Q9x5_w7_QSRJNSor6dLSqJ13tXbRJlcs7ujYWrUjQprxf_sjsEM1GN5XB2vEmcjldQkoQW6-oBOdyuwRamUzZ6CzBXCQrZipCNLGUKwgcAOW39cF95ILW0-aMcO6u6TInb0xqcrUmTz8z1_6vGY"
-                alt="Mix"
-              />
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
-            </div>
-            <h3 className="font-bold text-sm truncate tracking-wide">
-              Discover Weekly
-            </h3>
-            <p className="text-secondary text-xs line-clamp-2 mt-1.5 leading-relaxed">
-              Your weekly mixtape of fresh music.
-            </p>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
@@ -97,6 +17,7 @@ function App() {
   const [vibrantColor, setVibrantColor] = useState(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   // Global Axios Configuration for timeouts (Spotiwoop scraping and YTMusic can take time)
   axios.defaults.timeout = 60000;
 
@@ -486,10 +407,12 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case "home":
-        return <HomeScreen />;
+        return <HomeScreen onPlayTrack={handlePlayTrack} />;
       case "search":
         return (
           <SearchScreen
+            query={searchQuery}
+            setQuery={setSearchQuery}
             onPlayTrack={handlePlayTrack}
             onSelectGenre={(genre) => setActiveGenre(genre)}
           />
@@ -517,264 +440,269 @@ function App() {
   };
 
   return (
-    <div className="bg-background text-primary font-sans min-h-screen selection:bg-primary selection:text-background transition-colors duration-500">
-      {/* Top AppBar */}
-      <header className="flex justify-between items-center px-6 py-4 w-full glass-effect z-40 top-0 sticky">
-        <div className="flex items-center gap-5">
-          <div className="w-9 h-9 rounded-full overflow-hidden border border-white/10">
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRogVdKoRnL9eXji2r65cXf8amitFG0mGjp-nzL8HgNGdAJcMidAlyCWHKRfnluU88XmE4vu80oF9G5EIg6A5nnM-4PqZQvMOd-j2tnUipBK_Pk0svmKGhnxc4iDtJgokLHrEFR94rATG2FyE_IHO5OYWwBhNACiO1hgiOAdvhBLiCIzGcZult4LsA7pDTX2mOTe6KsHB5Rhn4wAfd5COQ4rMAeTwKpRVL-t_LNPh1YLDERa4ia6G3mYGtLsMC6wW-MJV5TGMk6UA"
-              alt="Avatar"
-              className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
-            />
-          </div>
-          <h1 className="font-headline text-2xl font-black tracking-tighter uppercase italic">
-            {activeTab === "home" ? "Home" : activeTab}
-          </h1>
-        </div>
-        <div className="flex items-center gap-6">
-          {activeTab === "library" && activePlaylist && (
-            <button
-              onClick={() => setIsSelectionMode(!isSelectionMode)}
-              className={`p-2 rounded-full transition-all duration-300 active:scale-90 ${isSelectionMode ? "bg-primary text-background" : "text-primary hover:bg-white/10"}`}
-            >
-              <span className="material-symbols-outlined text-2xl">
-                {isSelectionMode ? "close" : "delete"}
-              </span>
-            </button>
-          )}
-          {!isSelectionMode && (
-            <>
-              <span className="material-symbols-outlined text-primary text-2xl opacity-60 hover:opacity-100 transition-opacity clickable">
-                notifications
-              </span>
-              <span className="material-symbols-outlined text-primary text-2xl opacity-60 hover:opacity-100 transition-opacity clickable">
-                settings
-              </span>
-            </>
-          )}
-        </div>
-      </header>
+    <div className="bg-background text-primary font-sans min-h-screen selection:bg-white selection:text-black transition-colors duration-500 relative overflow-hidden flex">
+      {/* Sidebar - Hidden on mobile */}
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Main Content */}
-      <main className="px-4 md:px-8 pb-40 mt-6 max-w-7xl mx-auto">
-        {activeTab === "home" && (
-          <div className="flex gap-3 overflow-x-auto no-scrollbar mb-10">
-            {["All", "Music", "Podcasts"].map((filter, i) => (
-              <span
-                key={filter}
-                className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-widest cursor-pointer transition-all duration-300 border ${i === 0 ? "bg-primary text-background border-primary" : "bg-transparent text-secondary border-white/10 hover:border-white/30 hover:text-primary"}`}
-              >
-                {filter}
+      <div className="flex-1 flex flex-col min-w-0 md:ml-72 transition-all duration-500 relative">
+        {/* Ambient background light */}
+        <div
+          className="fixed top-0 left-0 w-full h-[600px] opacity-20 pointer-events-none transition-all duration-1000 blur-[120px]"
+          style={{
+            background: `radial-gradient(circle at 50% 0%, ${vibrantColor || "transparent"} 0%, transparent 70%)`,
+          }}
+        />
+
+        {/* Top AppBar */}
+        <header className="flex justify-between items-center px-6 py-4 w-full glass-effect z-40 top-0 sticky">
+          <div className="flex items-center gap-5">
+            <h1 className="font-headline text-2xl font-black tracking-tighter uppercase italic md:hidden">
+              {activeTab === "home" ? "Home" : activeTab}
+            </h1>
+            {/* Desktop Navigation Arrows (Monochrome Style) */}
+            <div className="hidden md:flex items-center gap-3 mr-4">
+              <button className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors">
+                <span className="material-symbols-outlined text-xl">
+                  chevron_left
+                </span>
+              </button>
+              <button className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors">
+                <span className="material-symbols-outlined text-xl">
+                  chevron_right
+                </span>
+              </button>
+            </div>
+
+            {/* Desktop Search Bar (Pill shape) */}
+            <div className="hidden md:flex relative w-[400px]">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-xl">
+                search
               </span>
-            ))}
+              <input
+                type="text"
+                placeholder="Search for tracks, artists, albums..."
+                className="w-full bg-[#1A1A1A] text-sm py-3 pl-12 pr-4 rounded-full border border-white/5 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value.trim().length > 0) setActiveTab("search");
+                }}
+                onFocus={() => setActiveTab("search")}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-6">
+            <span className="material-symbols-outlined text-primary text-xl opacity-60 hover:opacity-100 transition-opacity clickable hidden md:block">
+              help_outline
+            </span>
+            <div className="w-9 h-9 rounded-full overflow-hidden border border-white/10 clickable">
+              <img
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRogVdKoRnL9eXji2r65cXf8amitFG0mGjp-nzL8HgNGdAJcMidAlyCWHKRfnluU88XmE4vu80oF9G5EIg6A5nnM-4PqZQvMOd-j2tnUipBK_Pk0svmKGhnxc4iDtJgokLHrEFR94rATG2FyE_IHO5OYWwBhNACiO1hgiOAdvhBLiCIzGcZult4LsA7pDTX2mOTe6KsHB5Rhn4wAfd5COQ4rMAeTwKpRVL-t_LNPh1YLDERa4ia6G3mYGtLsMC6wW-MJV5TGMk6UA"
+                alt="Avatar"
+                className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+              />
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="px-4 md:px-12 pb-40 mt-8 max-w-7xl">
+          {activeTab === "home" && (
+            <div className="flex gap-3 overflow-x-auto no-scrollbar mb-10">
+              {["All", "Music", "Podcasts"].map((filter, i) => (
+                <span
+                  key={filter}
+                  className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-widest cursor-pointer transition-all duration-300 border ${i === 0 ? "bg-primary text-background border-primary" : "bg-transparent text-secondary border-white/10 hover:border-white/30 hover:text-primary"}`}
+                >
+                  {filter}
+                </span>
+              ))}
+            </div>
+          )}
+          {renderContent()}
+          {activeGenre && (
+            <GenreView
+              genre={activeGenre}
+              onClose={() => setActiveGenre(null)}
+              onPlayTrack={handlePlayTrack}
+            />
+          )}
+        </main>
+
+        {/* Global Audio Element */}
+        <audio
+          ref={audioRef}
+          src={currentTrack?.preview}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={playNext}
+        />
+
+        {/* Mini Player - Only shown when a track is selected */}
+        {currentTrack && (
+          <div
+            className="fixed bottom-24 left-3 right-3 md:left-6 md:right-6 z-50 transition-all duration-500 cursor-pointer"
+            onClick={() => setShowFullPlayer(true)}
+          >
+            <div className="glass-effect rounded-lg px-4 py-3 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 relative overflow-hidden group">
+              <div
+                className="absolute top-0 left-0 h-[1.5px] bg-primary transition-all duration-300"
+                style={{
+                  width: `${(currentTime / duration) * 100 || 0}%`,
+                  boxShadow: vibrantColor
+                    ? `0 0 15px ${vibrantColor}`
+                    : "0 0 10px #fff",
+                  backgroundColor: vibrantColor || "var(--primary)",
+                }}
+              ></div>
+              <div className="flex items-center gap-4 overflow-hidden">
+                <div className="relative w-12 h-12 flex-shrink-0">
+                  <img
+                    className="w-full h-full rounded-md object-cover shadow-lg transition-transform duration-500 group-hover:scale-105"
+                    crossOrigin="anonymous"
+                    src={
+                      currentTrack.album?.cover_medium ||
+                      currentTrack.album?.cover_small ||
+                      currentTrack.cover_url ||
+                      "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg"
+                    }
+                    alt={currentTrack.title}
+                    onLoad={(e) => {
+                      const color = getVibrantColorFromImage(e.target);
+                      setVibrantColor(color);
+                    }}
+                    onError={(e) => {
+                      e.target.src =
+                        "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg";
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/10 rounded-md" />
+                </div>
+                <div className="flex flex-col truncate">
+                  <span className="text-sm font-bold text-primary truncate tracking-tight">
+                    {currentTrack.title}
+                  </span>
+                  <span className="text-xs text-secondary truncate uppercase tracking-widest opacity-80 mt-0.5">
+                    {currentTrack.artist?.name || currentTrack.artist}
+                  </span>
+                </div>
+              </div>
+              <div
+                className="flex items-center gap-5 px-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span
+                  className={`material-symbols-outlined text-2xl transition-all duration-300 cursor-pointer hover:scale-110 ${likedTrackIds.has(currentTrack.id?.toString()) ? "text-primary fill-icon" : "text-secondary hover:text-primary"}`}
+                  onClick={() => toggleLike(currentTrack)}
+                >
+                  favorite
+                </span>
+                <div className="relative flex items-center justify-center">
+                  {isLoadingTrack && (
+                    <div className="absolute inset-[-4px] border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                  )}
+                  <button
+                    className={`w-10 h-10 rounded-full flex items-center justify-center active:scale-95 transition-all duration-300 ${isLoadingTrack ? "bg-white/10" : "bg-primary text-background hover:scale-105 shadow-lg shadow-white/5"}`}
+                    onClick={togglePlay}
+                    disabled={isLoadingTrack}
+                  >
+                    <span className="material-symbols-outlined fill-icon text-xl">
+                      {isPlaying ? "pause" : "play_arrow"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-        {renderContent()}
-        {activeGenre && (
-          <GenreView
-            genre={activeGenre}
-            onClose={() => setActiveGenre(null)}
-            onPlayTrack={handlePlayTrack}
+
+        {/* Full Player Overlay */}
+        {showFullPlayer && currentTrack && (
+          <PlayerScreen
+            track={currentTrack}
+            isPlaying={isPlaying}
+            isLiked={likedTrackIds.has(currentTrack.id?.toString())}
+            playlists={playlists}
+            isLoadingTrack={isLoadingTrack}
+            currentTime={currentTime}
+            duration={duration}
+            isShuffle={isShuffle}
+            repeatMode={repeatMode}
+            onTogglePlay={togglePlay}
+            onToggleLike={() => toggleLike(currentTrack)}
+            onAddToPlaylist={handleAddToPlaylist}
+            onSeek={handleSeek}
+            onClose={() => setShowFullPlayer(false)}
+            onNext={playNext}
+            onPrev={playPrevious}
+            onToggleShuffle={toggleShuffle}
+            onToggleRepeat={toggleRepeat}
+            onOpenPlaylistModal={() => openAddToPlaylistModal(currentTrack)}
+            hasNext={currentIndex < queue.length - 1 || repeatMode === "all"}
+            hasPrev={
+              currentIndex > 0 || currentTime > 3 || repeatMode === "all"
+            }
           />
         )}
-      </main>
 
-      {/* Global Audio Element */}
-      <audio
-        ref={audioRef}
-        src={currentTrack?.preview}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={playNext}
-      />
+        {/* Add To Playlist Modal */}
+        {showAddToPlaylistModal && trackToAdd && (
+          <AddToPlaylistModal
+            track={trackToAdd}
+            playlists={playlists}
+            isLiked={likedTrackIds.has(trackToAdd.id?.toString())}
+            onClose={() => setShowAddToPlaylistModal(false)}
+            onToggleLike={toggleLike}
+            onAddToPlaylist={handleAddToPlaylist}
+            onCreatePlaylist={() => setIsCreatingPlaylist(true)}
+          />
+        )}
 
-      {/* Mini Player - Only shown when a track is selected */}
-      {currentTrack && (
-        <div
-          className="fixed bottom-24 left-3 right-3 md:left-6 md:right-6 z-50 transition-all duration-500 cursor-pointer"
-          onClick={() => setShowFullPlayer(true)}
-        >
-          <div className="glass-effect rounded-lg px-4 py-3 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 relative overflow-hidden group">
+        {/* Create Playlist Modal (Global) */}
+        {isCreatingPlaylist && (
+          <div
+            className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200"
+            onClick={() => setIsCreatingPlaylist(false)}
+          >
             <div
-              className="absolute top-0 left-0 h-[1.5px] bg-primary transition-all duration-300"
-              style={{
-                width: `${(currentTime / duration) * 100 || 0}%`,
-                boxShadow: vibrantColor
-                  ? `0 0 15px ${vibrantColor}`
-                  : "0 0 10px #fff",
-                backgroundColor: vibrantColor || "var(--primary)",
-              }}
-            ></div>
-            <div className="flex items-center gap-4 overflow-hidden">
-              <div className="relative w-12 h-12 flex-shrink-0">
-                <img
-                  className="w-full h-full rounded-md object-cover shadow-lg transition-transform duration-500 group-hover:scale-105"
-                  crossOrigin="anonymous"
-                  src={
-                    currentTrack.album?.cover_medium ||
-                    currentTrack.album?.cover_small ||
-                    currentTrack.cover_url ||
-                    "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg"
-                  }
-                  alt={currentTrack.title}
-                  onLoad={(e) => {
-                    const color = getVibrantColorFromImage(e.target);
-                    setVibrantColor(color);
-                  }}
-                  onError={(e) => {
-                    e.target.src =
-                      "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg";
-                  }}
-                />
-                <div className="absolute inset-0 bg-black/10 rounded-md" />
-              </div>
-              <div className="flex flex-col truncate">
-                <span className="text-sm font-bold text-primary truncate tracking-tight">
-                  {currentTrack.title}
-                </span>
-                <span className="text-xs text-secondary truncate uppercase tracking-widest opacity-80 mt-0.5">
-                  {currentTrack.artist?.name || currentTrack.artist}
-                </span>
-              </div>
-            </div>
-            <div
-              className="flex items-center gap-5 px-2"
+              className="bg-[#282828] w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
-              <span
-                className={`material-symbols-outlined text-2xl transition-all duration-300 cursor-pointer hover:scale-110 ${likedTrackIds.has(currentTrack.id?.toString()) ? "text-primary fill-icon" : "text-secondary hover:text-primary"}`}
-                onClick={() => toggleLike(currentTrack)}
-              >
-                favorite
-              </span>
-              <div className="relative flex items-center justify-center">
-                {isLoadingTrack && (
-                  <div className="absolute inset-[-4px] border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                )}
-                <button
-                  className={`w-10 h-10 rounded-full flex items-center justify-center active:scale-95 transition-all duration-300 ${isLoadingTrack ? "bg-white/10" : "bg-primary text-background hover:scale-105 shadow-lg shadow-white/5"}`}
-                  onClick={togglePlay}
-                  disabled={isLoadingTrack}
-                >
-                  <span className="material-symbols-outlined fill-icon text-xl">
-                    {isPlaying ? "pause" : "play_arrow"}
-                  </span>
-                </button>
-              </div>
+              <h2 className="font-headline text-xl font-bold mb-6 text-center text-white">
+                Name your playlist
+              </h2>
+              <form onSubmit={handleCreatePlaylist}>
+                <div className="relative mb-8">
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="My awesome playlist"
+                    value={newPlaylistName}
+                    onChange={(e) => setNewPlaylistName(e.target.value)}
+                    className="w-full bg-surface-container-high/50 text-white font-headline text-lg px-4 py-4 rounded-xl outline-none focus:ring-2 focus:ring-primary border border-white/5 transition-all"
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingPlaylist(false)}
+                    className="flex-1 py-3 font-semibold text-on-surface-variant hover:text-white transition-colors tracking-wide"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!newPlaylistName.trim()}
+                    className="flex-1 bg-primary text-on-primary py-3 rounded-full font-bold active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 tracking-wide"
+                  >
+                    Create
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Full Player Overlay */}
-      {showFullPlayer && currentTrack && (
-        <PlayerScreen
-          track={currentTrack}
-          isPlaying={isPlaying}
-          isLiked={likedTrackIds.has(currentTrack.id?.toString())}
-          playlists={playlists}
-          isLoadingTrack={isLoadingTrack}
-          currentTime={currentTime}
-          duration={duration}
-          isShuffle={isShuffle}
-          repeatMode={repeatMode}
-          onTogglePlay={togglePlay}
-          onToggleLike={() => toggleLike(currentTrack)}
-          onAddToPlaylist={handleAddToPlaylist}
-          onSeek={handleSeek}
-          onClose={() => setShowFullPlayer(false)}
-          onNext={playNext}
-          onPrev={playPrevious}
-          onToggleShuffle={toggleShuffle}
-          onToggleRepeat={toggleRepeat}
-          onOpenPlaylistModal={() => openAddToPlaylistModal(currentTrack)}
-          hasNext={currentIndex < queue.length - 1 || repeatMode === "all"}
-          hasPrev={currentIndex > 0 || currentTime > 3 || repeatMode === "all"}
-        />
-      )}
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center pt-3 pb-8 px-6 glass-effect z-50 border-t border-white/5">
-        {[
-          { id: "home", label: "Home", icon: "home" },
-          { id: "search", label: "Search", icon: "search" },
-          { id: "library", label: "Library", icon: "library_music" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex flex-col items-center justify-center transition-all duration-300 ${activeTab === tab.id ? "text-primary scale-110" : "text-secondary hover:text-primary opacity-60 hover:opacity-100"}`}
-          >
-            <span
-              className={`material-symbols-outlined text-2xl ${activeTab === tab.id ? "fill-icon" : ""}`}
-            >
-              {tab.icon}
-            </span>
-            <span className="text-[10px] font-black uppercase tracking-widest mt-1.5">
-              {tab.label}
-            </span>
-          </button>
-        ))}
-      </nav>
-
-      {/* Add To Playlist Modal */}
-      {showAddToPlaylistModal && trackToAdd && (
-        <AddToPlaylistModal
-          track={trackToAdd}
-          playlists={playlists}
-          isLiked={likedTrackIds.has(trackToAdd.id?.toString())}
-          onClose={() => setShowAddToPlaylistModal(false)}
-          onToggleLike={toggleLike}
-          onAddToPlaylist={handleAddToPlaylist}
-          onCreatePlaylist={() => setIsCreatingPlaylist(true)}
-        />
-      )}
-
-      {/* Create Playlist Modal (Global) */}
-      {isCreatingPlaylist && (
-        <div
-          className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200"
-          onClick={() => setIsCreatingPlaylist(false)}
-        >
-          <div
-            className="bg-[#282828] w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="font-headline text-xl font-bold mb-6 text-center text-white">
-              Name your playlist
-            </h2>
-            <form onSubmit={handleCreatePlaylist}>
-              <div className="relative mb-8">
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="My awesome playlist"
-                  value={newPlaylistName}
-                  onChange={(e) => setNewPlaylistName(e.target.value)}
-                  className="w-full bg-surface-container-high/50 text-white font-headline text-lg px-4 py-4 rounded-xl outline-none focus:ring-2 focus:ring-primary border border-white/5 transition-all"
-                />
-              </div>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingPlaylist(false)}
-                  className="flex-1 py-3 font-semibold text-on-surface-variant hover:text-white transition-colors tracking-wide"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!newPlaylistName.trim()}
-                  className="flex-1 bg-primary text-on-primary py-3 rounded-full font-bold active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 tracking-wide"
-                >
-                  Create
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

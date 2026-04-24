@@ -40,12 +40,12 @@ const GENRES = [
   },
 ];
 
-function SearchScreen({ onPlayTrack, onSelectGenre }) {
-  const [query, setQuery] = useState("");
+function SearchScreen({ query, setQuery, onPlayTrack, onSelectGenre }) {
   const [results, setResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [searchSource, setSearchSource] = useState("deezer"); // "ytmusic" or "deezer"
+  const [activeCategory, setActiveCategory] = useState("Tracks");
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const obsRef = useRef(null);
@@ -53,12 +53,12 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      if (query.length > 2) {
+      if (query.trim().length > 2) {
         setOffset(0);
         setResults([]);
         setHasMore(true);
         performSearch(0, true);
-      } else if (query.length === 0) {
+      } else if (query.trim().length === 0) {
         setResults([]);
       }
     }, 500);
@@ -68,7 +68,7 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
 
   // Effect to re-search when source changes
   useEffect(() => {
-    if (query.length > 2) {
+    if (query.trim().length > 2) {
       setOffset(0);
       setResults([]);
       setHasMore(true);
@@ -98,7 +98,6 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
       const newItems = resp.data.data || [];
 
       if (searchSource === "ytmusic") {
-        // YTMusic bridge currently returns the whole list, so we replace
         setResults(newItems);
         setHasMore(
           newItems.length >= currentOffset + limit && newItems.length < 50,
@@ -106,7 +105,6 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
       } else {
         setResults((prev) => {
           const combined = isNew ? newItems : [...prev, ...newItems];
-          // Uniqueify by ID
           const seen = new Set();
           return combined.filter((item) => {
             if (seen.has(item.id)) return false;
@@ -136,7 +134,7 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
         hasMore &&
         !isSearching &&
         !isFetchingMore &&
-        query.length > 2
+        query.trim().length > 2
       ) {
         const nextOffset = results.length;
         setOffset(nextOffset);
@@ -155,96 +153,113 @@ function SearchScreen({ onPlayTrack, onSelectGenre }) {
 
   return (
     <div className="animate-in fade-in duration-700">
-      {/* Search Bar Section */}
-      <section className="mb-10">
-        <div className="flex items-center bg-surface border border-white/5 rounded-md px-5 py-4 gap-4 focus-within:border-white/20 transition-all duration-300 shadow-2xl">
-          <span className="material-symbols-outlined text-secondary">
-            search
-          </span>
-          <input
-            className="bg-transparent border-none focus:ring-0 w-full text-primary placeholder:text-secondary font-bold text-lg outline-none uppercase tracking-tighter"
-            placeholder="Search for tracks or artists"
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          {query && (
-            <span
-              className="material-symbols-outlined text-secondary cursor-pointer hover:text-primary transition-colors"
-              onClick={() => setQuery("")}
-            >
-              close
-            </span>
-          )}
-        </div>
-      </section>
+      {query.trim().length > 2 ? (
+        <div className="space-y-10">
+          {/* Header Title */}
+          <div>
+            <h1 className="font-headline text-3xl md:text-4xl font-black tracking-tighter text-primary mb-8">
+              Search Results for{" "}
+              <span className="text-secondary opacity-60">"{query}"</span>
+            </h1>
 
-      {/* Source Selector Chips */}
-      <div className="flex gap-3 mb-10">
-        <button
-          onClick={() => setSearchSource("ytmusic")}
-          className={`px-5 py-2 rounded-md text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 border ${
-            searchSource === "ytmusic"
-              ? "bg-primary text-background border-primary shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-              : "bg-surface text-secondary border-white/5 hover:border-white/20 hover:text-primary"
-          }`}
-        >
-          YouTube Music
-        </button>
-        <button
-          onClick={() => setSearchSource("deezer")}
-          className={`px-5 py-2 rounded-md text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 border ${
-            searchSource === "deezer"
-              ? "bg-primary text-background border-primary shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-              : "bg-surface text-secondary border-white/5 hover:border-white/20 hover:text-primary"
-          }`}
-        >
-          Deezer
-        </button>
-      </div>
+            {/* Category Tabs & Source Selector */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 pb-2">
+              <div className="flex items-center gap-8 overflow-x-auto no-scrollbar">
+                {[
+                  "Tracks",
+                  "Videos",
+                  "Albums",
+                  "Artists",
+                  "Playlists",
+                  "Podcasts",
+                ].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`relative pb-3 text-sm font-black uppercase tracking-widest transition-all duration-300 ${
+                      activeCategory === cat
+                        ? "text-primary"
+                        : "text-secondary opacity-50 hover:opacity-100"
+                    }`}
+                  >
+                    {cat}
+                    {activeCategory === cat && (
+                      <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#E9FF00] shadow-[0_0_10px_rgba(233,255,0,0.5)]" />
+                    )}
+                  </button>
+                ))}
+              </div>
 
-      {query.length > 2 ? (
-        <div className="space-y-6">
-          <h2 className="font-headline text-xs font-black uppercase tracking-[0.3em] text-secondary mb-4">
-            Search results
-          </h2>
-          {isSearching ? (
-            <div className="space-y-1">
-              {[...Array(6)].map((_, i) => (
-                <TrackSkeleton key={i} />
-              ))}
+              {/* Source Selector (Subtle) */}
+              <div className="flex bg-white/5 p-1 rounded-lg self-start">
+                {["ytmusic", "deezer"].map((src) => (
+                  <button
+                    key={src}
+                    onClick={() => setSearchSource(src)}
+                    className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${
+                      searchSource === src
+                        ? "bg-white/10 text-primary shadow-xl"
+                        : "text-secondary opacity-50 hover:opacity-100"
+                    }`}
+                  >
+                    {src === "ytmusic" ? "YouTube Music" : "Deezer"}
+                  </button>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="space-y-1">
-              {results.map((track) => (
-                <div
-                  key={track.id}
-                  className="flex items-center gap-5 group cursor-pointer hover:bg-white/5 p-3 -mx-3 rounded-md transition-all duration-300"
-                  onClick={() => onPlayTrack(track)}
-                >
-                  <div className="relative w-12 h-12 flex-shrink-0">
-                    <img
-                      className="w-full h-full rounded-sm object-cover shadow-lg group-hover:scale-105 transition-transform duration-500"
-                      src={track.album.cover_small}
-                      alt={track.title}
-                    />
-                    <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+          </div>
+
+          <div className="space-y-2 pb-20">
+            {isSearching ? (
+              <div className="space-y-1">
+                {[...Array(8)].map((_, i) => (
+                  <TrackSkeleton key={i} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-1">
+                {results.map((track) => (
+                  <div
+                    key={track.id}
+                    className="flex items-center group cursor-pointer hover:bg-white/5 p-3 rounded-xl transition-all duration-300 border border-transparent hover:border-white/5"
+                    onClick={() => onPlayTrack(track)}
+                  >
+                    <div className="relative w-14 h-14 flex-shrink-0 mr-5">
+                      <img
+                        className="w-full h-full rounded-lg object-cover shadow-2xl group-hover:scale-105 transition-transform duration-500"
+                        src={
+                          track.album?.cover_medium || track.album?.cover_small
+                        }
+                        alt={track.title}
+                      />
+                      <div className="absolute inset-0 bg-black/20 rounded-lg group-hover:bg-black/0 transition-colors" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="material-symbols-outlined text-white fill-icon">
+                          play_arrow
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col flex-1 overflow-hidden">
+                      <h3 className="font-bold text-base text-primary truncate tracking-tight">
+                        {track.title}
+                      </h3>
+                      <p className="text-[10px] uppercase font-black tracking-[0.2em] text-secondary truncate mt-1 opacity-70 group-hover:text-primary transition-colors">
+                        {track.artist.name}
+                      </p>
+                    </div>
+                    <div className="hidden md:flex items-center gap-8 px-4">
+                      <span className="text-[11px] font-bold text-secondary opacity-30">
+                        {track.album?.title || "Single"}
+                      </span>
+                      <span className="material-symbols-outlined text-secondary opacity-0 group-hover:opacity-100 transition-all duration-300 hover:text-primary active:scale-90">
+                        more_vert
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col flex-1 overflow-hidden">
-                    <h3 className="font-bold text-sm text-primary truncate tracking-tight">
-                      {track.title}
-                    </h3>
-                    <p className="text-[10px] uppercase font-black tracking-widest text-secondary truncate mt-1 opacity-70">
-                      {track.artist.name}
-                    </p>
-                  </div>
-                  <span className="material-symbols-outlined text-secondary opacity-0 group-hover:opacity-100 transition-all duration-300 hover:text-primary">
-                    more_vert
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Infinite Scroll Sentinel & Loader */}
           <div ref={obsRef} className="pb-20 pt-4 min-h-[150px]">
