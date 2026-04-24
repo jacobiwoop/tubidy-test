@@ -40,7 +40,7 @@ function PlayerScreen({
   const [showMenu, setShowMenu] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [showPlaylists, setShowPlaylists] = useState(false);
-  const [showLyrics, setShowLyrics] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(true);
   const [parsedLyrics, setParsedLyrics] = useState([]);
   const [lyricsLoading, setLyricsLoading] = useState(false);
   const lyricsScrollRef = React.useRef(null);
@@ -212,7 +212,7 @@ function PlayerScreen({
           src={track.album?.cover_big || track.cover_url}
           alt=""
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-background/60 to-background"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-background/60 to-black"></div>
       </div>
 
       {/* Actions Menu Overlay */}
@@ -359,7 +359,7 @@ function PlayerScreen({
       </header>
 
       <main
-        className={`relative z-10 flex-1 px-6 md:px-12 lg:px-20 pb-10 overflow-y-auto lg:overflow-hidden max-w-[1400px] mx-auto w-full transition-all duration-700 ${showLyrics ? "grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20" : "flex flex-col justify-center items-center"}`}
+        className={`relative z-10 flex-1 px-8 md:px-12 lg:px-20 pb-4 overflow-y-auto lg:overflow-hidden max-w-[1400px] mx-auto w-full transition-all duration-700 ${showLyrics ? "grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 items-stretch" : "flex flex-col justify-center items-center"}`}
       >
         {/* Left Section: Information & Controls */}
         <section
@@ -417,6 +417,15 @@ function PlayerScreen({
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Mini Lyric Segment */}
+          <div className="w-full h-8 mb-2 flex items-end overflow-hidden">
+            <p className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-white/40 italic truncate animate-in slide-in-from-bottom-2 duration-500">
+              {activeLyricIndex !== -1
+                ? parsedLyrics[activeLyricIndex].text
+                : ""}
+            </p>
           </div>
 
           {/* Progress Section */}

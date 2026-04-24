@@ -875,8 +875,8 @@ function App() {
         />
 
         {/* Mini Player - Only shown when a track is selected */}
-        {/* Premium Player Bar - Adapted for Mobile/Desktop */}
-        {currentTrack && (
+        {/* Player Bar (Desktop/Mobile Mini Player) */}
+        {!showFullPlayer && currentTrack && (
           <div
             className="fixed bottom-6 left-3 right-3 md:left-[304px] md:right-8 z-[100] transition-all duration-500"
             onClick={(e) => {
