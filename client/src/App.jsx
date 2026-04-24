@@ -185,6 +185,13 @@ function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  // Sync Audio Volume
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
   // Centralized Navigation Helper
   const navigate = (updates) => {
     const nextState = {
@@ -504,7 +511,8 @@ function App() {
     }
   };
 
-  const toggleShuffle = () => {
+  const toggleShuffle = (e) => {
+    if (e) e.stopPropagation();
     if (!isShuffle) {
       setIsShuffle(true);
       if (queue.length > 0 && currentTrack) {
@@ -531,7 +539,8 @@ function App() {
     }
   };
 
-  const toggleRepeat = () => {
+  const toggleRepeat = (e) => {
+    if (e) e.stopPropagation();
     if (repeatMode === "off") setRepeatMode("all");
     else if (repeatMode === "all") setRepeatMode("one");
     else setRepeatMode("off");
@@ -588,20 +597,6 @@ function App() {
     if (audioRef.current) {
       audioRef.current.volume = newVolume;
     }
-  };
-
-  const toggleShuffle = (e) => {
-    if (e) e.stopPropagation();
-    setIsShuffle(!isShuffle);
-  };
-
-  const toggleRepeat = (e) => {
-    if (e) e.stopPropagation();
-    setRepeatMode((prev) => {
-      if (prev === "off") return "all";
-      if (prev === "all") return "one";
-      return "off";
-    });
   };
 
   const navigateToArtist = (artistId) => {
@@ -985,10 +980,15 @@ function App() {
                       skip_previous
                     </button>
                     <button
-                      className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-black shadow-lg shadow-primary/20 hover:scale-110 active:scale-95 transition-all mx-2"
+                      className="relative w-11 h-11 rounded-full bg-primary flex items-center justify-center text-black shadow-lg shadow-primary/20 hover:scale-110 active:scale-95 transition-all mx-2"
                       onClick={togglePlay}
                     >
-                      <span className="material-symbols-outlined text-3xl fill-icon">
+                      {isLoadingTrack && (
+                        <div className="absolute inset-[-4px] border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      )}
+                      <span
+                        className={`material-symbols-outlined text-3xl fill-icon ${isLoadingTrack ? "animate-spin" : ""}`}
+                      >
                         {isLoadingTrack
                           ? "sync"
                           : isPlaying
@@ -1017,7 +1017,9 @@ function App() {
                   <div className="w-full flex items-center gap-3">
                     <span className="text-[10px] font-black text-secondary w-8 text-right tabular-nums">
                       {Math.floor(currentTime / 60)}:
-                      {(currentTime % 60).toString().padStart(2, "0")}
+                      {Math.floor(currentTime % 60)
+                        .toString()
+                        .padStart(2, "0")}
                     </span>
                     <div className="flex-1 relative h-6 flex items-center group/progress">
                       <input
@@ -1045,7 +1047,9 @@ function App() {
                     </div>
                     <span className="text-[10px] font-black text-secondary w-8 tabular-nums">
                       {Math.floor(duration / 60)}:
-                      {(duration % 60).toString().padStart(2, "0")}
+                      {Math.floor(duration % 60)
+                        .toString()
+                        .padStart(2, "0")}
                     </span>
                   </div>
                 </div>
@@ -1113,7 +1117,9 @@ function App() {
                       className="w-10 h-10 flex items-center justify-center text-primary active:scale-90 transition-all"
                       onClick={togglePlay}
                     >
-                      <span className="material-symbols-outlined text-4xl">
+                      <span
+                        className={`material-symbols-outlined text-4xl ${isLoadingTrack ? "animate-spin" : ""}`}
+                      >
                         {isLoadingTrack
                           ? "sync"
                           : isPlaying
