@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import HomeScreen from "./screens/Home";
 import SearchScreen from "./screens/Search";
+import ArtistScreen from "./screens/ArtistScreen";
 import LibraryScreen from "./screens/Library";
 import PlayerScreen from "./screens/Player";
-import HomeScreen from "./screens/Home";
 import GenreView from "./screens/GenreView";
 import Sidebar from "./components/Sidebar";
 import AddToPlaylistModal from "./components/AddToPlaylistModal";
@@ -12,6 +13,7 @@ import { getVibrantColorFromImage } from "./utils/vibrant-color";
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
+  const [activeArtistId, setActiveArtistId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showFullPlayer, setShowFullPlayer] = useState(false);
   const [vibrantColor, setVibrantColor] = useState(null);
@@ -404,10 +406,21 @@ function App() {
     }
   };
 
+  const navigateToArtist = (artistId) => {
+    setActiveArtistId(artistId);
+    setActiveTab("artist");
+    window.scrollTo(0, 0);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "home":
-        return <HomeScreen onPlayTrack={handlePlayTrack} />;
+        return (
+          <HomeScreen
+            onPlayTrack={handlePlayTrack}
+            onNavigateToArtist={navigateToArtist}
+          />
+        );
       case "search":
         return (
           <SearchScreen
@@ -415,6 +428,16 @@ function App() {
             setQuery={setSearchQuery}
             onPlayTrack={handlePlayTrack}
             onSelectGenre={(genre) => setActiveGenre(genre)}
+            onNavigateToArtist={navigateToArtist}
+          />
+        );
+      case "artist":
+        return (
+          <ArtistScreen
+            artistId={activeArtistId}
+            onPlayTrack={handlePlayTrack}
+            onNavigateToArtist={navigateToArtist}
+            likedTrackIds={likedTrackIds}
           />
         );
       case "library":
@@ -428,14 +451,20 @@ function App() {
             activePlaylist={activePlaylist}
             setActivePlaylist={(p) => {
               setActivePlaylist(p);
-              setIsSelectionMode(false); // Reset selection mode when changing playlist
+              setIsSelectionMode(false);
             }}
             isSelectionMode={isSelectionMode}
             setIsSelectionMode={setIsSelectionMode}
+            onNavigateToArtist={navigateToArtist}
           />
         );
       default:
-        return <HomeScreen />;
+        return (
+          <HomeScreen
+            onPlayTrack={handlePlayTrack}
+            onNavigateToArtist={navigateToArtist}
+          />
+        );
     }
   };
 

@@ -40,7 +40,13 @@ const GENRES = [
   },
 ];
 
-function SearchScreen({ query, setQuery, onPlayTrack, onSelectGenre }) {
+function SearchScreen({
+  query,
+  setQuery,
+  onPlayTrack,
+  onSelectGenre,
+  onNavigateToArtist,
+}) {
   const [results, setResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -243,7 +249,15 @@ function SearchScreen({ query, setQuery, onPlayTrack, onSelectGenre }) {
                       <h3 className="font-bold text-base text-primary truncate tracking-tight">
                         {track.title}
                       </h3>
-                      <p className="text-[10px] uppercase font-black tracking-[0.2em] text-secondary truncate mt-1 opacity-70 group-hover:text-primary transition-colors">
+                      <p
+                        className="text-[10px] uppercase font-black tracking-[0.2em] text-secondary truncate mt-1 opacity-70 hover:text-primary transition-colors hover:underline hover:opacity-100 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (track.artist?.id && onNavigateToArtist) {
+                            onNavigateToArtist(track.artist.id);
+                          }
+                        }}
+                      >
                         {track.artist.name}
                       </p>
                     </div>

@@ -1,6 +1,6 @@
 import React from "react";
 
-const TrackCard = ({ track, onPlay }) => {
+const TrackCard = ({ track, onPlay, onNavigateToArtist }) => {
   return (
     <div
       className="w-40 md:w-48 flex-shrink-0 group cursor-pointer"
@@ -34,7 +34,15 @@ const TrackCard = ({ track, onPlay }) => {
           <h3 className="font-bold text-sm truncate tracking-tight text-primary">
             {track.title}
           </h3>
-          <p className="text-secondary text-[10px] uppercase tracking-widest mt-1 opacity-70 font-black truncate">
+          <p
+            className="text-secondary text-[10px] uppercase tracking-widest mt-1 opacity-70 font-black truncate hover:text-primary transition-colors hover:underline decoration-1 underline-offset-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (track.artist?.id && onNavigateToArtist) {
+                onNavigateToArtist(track.artist.id);
+              }
+            }}
+          >
             {track.artist?.name || track.artist}
           </p>
         </div>

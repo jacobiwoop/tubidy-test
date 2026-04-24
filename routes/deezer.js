@@ -132,4 +132,46 @@ router.get("/genre/:id/releases", async (req, res, next) => {
   }
 });
 
+router.get("/artist/:id", async (req, res, next) => {
+  try {
+    const result = await deezerService.getArtist(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/artist/:id/top", async (req, res, next) => {
+  try {
+    const result = await deezerService.getArtistTopTracks(req.params.id, {
+      limit: req.query.limit || 10,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/artist/:id/albums", async (req, res, next) => {
+  try {
+    const result = await deezerService.getArtistAlbums(req.params.id, {
+      limit: req.query.limit || 20,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/artist/:id/related", async (req, res, next) => {
+  try {
+    const result = await deezerService.getRelatedArtists(req.params.id, {
+      limit: req.query.limit || 10,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

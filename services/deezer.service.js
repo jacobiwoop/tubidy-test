@@ -200,6 +200,52 @@ async function getGenreReleases(id, { limit = 10 } = {}) {
   }
 }
 
+/**
+ * Récupère les détails d'un artiste.
+ */
+async function getArtist(id) {
+  return withRetry(async () => {
+    const response = await axios.get(`${BASE_URL}/artist/${id}`);
+    return response.data;
+  });
+}
+
+/**
+ * Récupère les titres les plus populaires d'un artiste.
+ */
+async function getArtistTopTracks(id, { limit = 10 } = {}) {
+  return withRetry(async () => {
+    const response = await axios.get(`${BASE_URL}/artist/${id}/top`, {
+      params: { limit },
+    });
+    return response.data;
+  });
+}
+
+/**
+ * Récupère les albums d'un artiste.
+ */
+async function getArtistAlbums(id, { limit = 20 } = {}) {
+  return withRetry(async () => {
+    const response = await axios.get(`${BASE_URL}/artist/${id}/albums`, {
+      params: { limit },
+    });
+    return response.data;
+  });
+}
+
+/**
+ * Récupère les artistes similaires.
+ */
+async function getRelatedArtists(id, { limit = 10 } = {}) {
+  return withRetry(async () => {
+    const response = await axios.get(`${BASE_URL}/artist/${id}/related`, {
+      params: { limit },
+    });
+    return response.data;
+  });
+}
+
 module.exports = {
   search,
   searchArtist,
@@ -210,4 +256,8 @@ module.exports = {
   getGenrePlaylists,
   getGenreTracks,
   getGenreReleases,
+  getArtist,
+  getArtistTopTracks,
+  getArtistAlbums,
+  getRelatedArtists,
 };

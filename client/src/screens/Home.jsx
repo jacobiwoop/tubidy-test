@@ -3,7 +3,7 @@ import axios from "axios";
 import Section from "../components/Section";
 import TrackCard from "../components/TrackCard";
 
-const Home = ({ onPlayTrack }) => {
+const Home = ({ onPlayTrack, onNavigateToArtist }) => {
   const [recommendations, setRecommendations] = useState({
     madeForYou: [],
     recentlyPlayed: [],
@@ -106,7 +106,12 @@ const Home = ({ onPlayTrack }) => {
       {/* Recommended Section */}
       <Section title="Made for you" onShowAll={() => {}}>
         {recommendations.madeForYou.map((track) => (
-          <TrackCard key={track.id} track={track} onPlay={onPlayTrack} />
+          <TrackCard
+            key={track.id}
+            track={track}
+            onPlay={onPlayTrack}
+            onNavigateToArtist={onNavigateToArtist}
+          />
         ))}
         {recommendations.madeForYou.length === 0 && (
           <p className="text-secondary text-sm italic opacity-50">
@@ -119,7 +124,12 @@ const Home = ({ onPlayTrack }) => {
       {recommendations.recentlyPlayed.length > 0 && (
         <Section title="Recently Played">
           {recommendations.recentlyPlayed.map((track) => (
-            <TrackCard key={track.id} track={track} onPlay={onPlayTrack} />
+            <TrackCard
+              key={track.id}
+              track={track}
+              onPlay={onPlayTrack}
+              onNavigateToArtist={onNavigateToArtist}
+            />
           ))}
         </Section>
       )}
@@ -127,7 +137,12 @@ const Home = ({ onPlayTrack }) => {
       {/* Trending Section */}
       <Section title="Global Trends">
         {recommendations.trending.map((track) => (
-          <TrackCard key={track.id} track={track} onPlay={onPlayTrack} />
+          <TrackCard
+            key={track.id}
+            track={track}
+            onPlay={onPlayTrack}
+            onNavigateToArtist={onNavigateToArtist}
+          />
         ))}
       </Section>
 
