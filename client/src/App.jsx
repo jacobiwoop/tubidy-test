@@ -1114,9 +1114,12 @@ function App() {
                   {/* Mobile Compact Controls */}
                   <div className="md:hidden flex items-center gap-3">
                     <button
-                      className="w-10 h-10 flex items-center justify-center text-primary active:scale-90 transition-all"
+                      className="relative w-10 h-10 flex items-center justify-center text-primary active:scale-90 transition-all"
                       onClick={togglePlay}
                     >
+                      {isLoadingTrack && (
+                        <div className="absolute inset-[-4px] border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                      )}
                       <span
                         className={`material-symbols-outlined text-4xl ${isLoadingTrack ? "animate-spin" : ""}`}
                       >
