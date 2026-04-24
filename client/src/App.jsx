@@ -1208,6 +1208,7 @@ function App() {
           hasNext={currentIndex < queue.length - 1 || repeatMode === "all"}
           hasPrev={currentIndex > 0 || currentTime > 3 || repeatMode === "all"}
           onOpenQueue={() => navigate({ isQueueVisible: true })}
+          nextTrack={queue[currentIndex + 1]}
         />
       )}
 

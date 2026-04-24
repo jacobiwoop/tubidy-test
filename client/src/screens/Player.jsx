@@ -36,6 +36,7 @@ function PlayerScreen({
   vibrantColor,
   onOpenQueue,
   onNavigateToArtist,
+  nextTrack,
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -213,12 +214,12 @@ function PlayerScreen({
 
       {/* Combined Main Content: Dual-Column Layout */}
       <main className="relative z-20 flex-1 overflow-hidden flex flex-col lg:flex-row max-w-[1500px] mx-auto w-full px-6 lg:px-12 py-10">
-        {/* Left Column: Cover, Info & All Controls */}
+        {/* Left Column: Redesigned Side Panel (Matches Source Image) */}
         <section
-          className={`flex-1 flex flex-col justify-center items-center lg:items-start transition-all duration-700 ${showLyrics ? "hidden lg:flex lg:w-1/2" : "w-full lg:max-w-xl mx-auto"}`}
+          className={`flex-1 flex flex-col justify-center items-center transition-all duration-700 ${showLyrics ? "hidden lg:flex lg:w-1/2" : "w-full lg:max-w-xl mx-auto"}`}
         >
-          {/* Album Cover */}
-          <div className="relative w-full aspect-square max-w-[300px] md:max-w-[400px] lg:max-w-[450px] shadow-[0_40px_100px_rgba(0,0,0,0.7)] rounded-xl overflow-hidden mb-10 group">
+          {/* 1. Large Album Cover */}
+          <div className="relative w-full aspect-square max-w-[320px] md:max-w-[420px] shadow-[0_50px_100px_rgba(0,0,0,0.8)] rounded-[32px] overflow-hidden mb-8 group">
             <img
               className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
               src={track.album?.cover_big || track.cover_url}
@@ -226,171 +227,152 @@ function PlayerScreen({
             />
           </div>
 
-          {/* Metadata */}
-          <div className="w-full max-w-[450px] space-y-2 mb-8 text-center lg:text-left">
-            <h2 className="text-3xl md:text-5xl font-black tracking-tighter uppercase italic leading-[0.9] truncate">
-              {track.title}
-            </h2>
-            <p
-              className="text-secondary uppercase font-black tracking-[0.3em] text-xs md:text-sm opacity-80 cursor-pointer hover:text-primary transition-colors inline-block"
-              onClick={() =>
-                track.artist?.id && onNavigateToArtist(track.artist.id)
-              }
-            >
+          {/* 2. Metadata: Title & Artist */}
+          <div className="w-full max-w-[420px] space-y-1 mb-8">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+                {track.title}
+              </h1>
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-white/10 text-white/40 border border-white/5 uppercase">
+                HD
+              </span>
+            </div>
+            <p className="text-white/60 font-medium text-sm md:text-base">
               {track.artist?.name || track.artist}
             </p>
           </div>
 
-          {/* Mini Lyric Preview */}
-          <div className="w-full max-w-[450px] h-8 mb-4 flex items-center justify-center lg:justify-start overflow-hidden border-l-2 border-primary/20 pl-4">
-            <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-white/50 italic truncate animate-in slide-in-from-bottom-2 duration-500">
+          {/* 3. Actions Row */}
+          <div className="w-full max-w-[420px] flex items-center justify-between mb-8 px-2 text-white/60">
+            <button
+              className={`p-2 transition-all hover:text-white hover:scale-110 active:scale-95 ${isLiked ? "text-primary" : ""}`}
+              onClick={onToggleLike}
+            >
+              <span
+                className={`material-symbols-outlined text-2xl ${isLiked ? "fill-icon" : ""}`}
+              >
+                favorite
+              </span>
+            </button>
+            <button
+              className="p-2 transition-all hover:text-white hover:scale-110 active:scale-95"
+              onClick={onOpenPlaylistModal}
+            >
+              <span className="material-symbols-outlined text-2xl">
+                edit_square
+              </span>
+            </button>
+            <button
+              className={`p-2 transition-all hover:text-white hover:scale-110 active:scale-95 ${isOfflineSaved ? "text-primary" : ""}`}
+              onClick={handleOfflineAction}
+            >
+              <span className="material-symbols-outlined text-2xl">
+                {isSavingOffline ? "downloading" : "download"}
+              </span>
+            </button>
+            <button className="p-2 transition-all hover:text-white hover:scale-110 active:scale-95">
+              <span className="material-symbols-outlined text-2xl">cast</span>
+            </button>
+            <button
+              className="p-2 transition-all hover:text-white hover:scale-110 active:scale-95"
+              onClick={onOpenQueue}
+            >
+              <span className="material-symbols-outlined text-2xl">list</span>
+            </button>
+          </div>
+
+          {/* 4. Up Next / Lyric Section */}
+          <div className="w-full max-w-[420px] flex flex-col items-center mb-8 gap-1">
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
+              Up Next
+            </span>
+            <p className="text-[11px] font-bold text-white/50 text-center truncate w-full px-4 italic">
               {activeLyricIndex !== -1
                 ? parsedLyrics[activeLyricIndex].text
-                : "..."}
+                : nextTrack
+                  ? `${nextTrack.title} • ${nextTrack.artist?.name || nextTrack.artist}`
+                  : "End of Queue"}
             </p>
           </div>
 
-          {/* Progress Section */}
-          <div className="w-full max-w-[450px] mb-10 group">
-            <div
-              className="relative w-full h-[3px] bg-white/10 rounded-full cursor-pointer overflow-visible"
-              onClick={handleProgressClick}
-            >
+          {/* 5. Progress Section: Horizontal Layout */}
+          <div className="w-full max-w-[420px] mb-8 px-2">
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-bold text-white/30 tabular-nums w-8 text-right">
+                {formatTime(currentTime)}
+              </span>
               <div
-                className="absolute top-0 left-0 h-full bg-primary transition-all duration-300"
-                style={{
-                  width: `${(currentTime / duration) * 100 || 0}%`,
-                  backgroundColor: vibrantColor || "var(--primary)",
-                  boxShadow: vibrantColor
-                    ? `0 0-20px ${vibrantColor}`
-                    : "0 0 15px white",
-                }}
+                className="flex-1 relative h-4 flex items-center group/progress cursor-pointer"
+                onClick={handleProgressClick}
               >
+                <div className="w-full h-[3px] bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full transition-all duration-300"
+                    style={{
+                      width: `${(currentTime / duration) * 100 || 0}%`,
+                      backgroundColor: vibrantColor || "white",
+                    }}
+                  />
+                </div>
                 <div
-                  className="absolute -right-2 -top-1.5 w-4 h-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ring-4 ring-black/20"
-                  style={{ backgroundColor: vibrantColor || "white" }}
-                ></div>
+                  className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity ring-4 ring-black/20"
+                  style={{
+                    left: `calc(${(currentTime / duration) * 100 || 0}% - 6px)`,
+                  }}
+                />
               </div>
-            </div>
-            <div className="flex justify-between mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
+              <span className="text-[10px] font-bold text-white/30 tabular-nums w-8">
+                {formatTime(duration)}
+              </span>
             </div>
           </div>
 
-          {/* Integrated Playback Controls */}
-          <div className="w-full max-w-[450px] space-y-10">
-            <div className="flex items-center justify-between">
-              <button
-                className={`p-2 transition-all active:scale-75 ${isShuffle ? "text-primary" : "text-white/30 hover:text-white"}`}
-                onClick={onToggleShuffle}
-              >
-                <span className="material-symbols-outlined text-2xl">
-                  shuffle
-                </span>
-              </button>
+          {/* 6. Playback Controls */}
+          <div className="w-full max-w-[420px] flex items-center justify-between">
+            <button
+              className={`p-2 transition-all hover:text-white active:scale-75 ${isShuffle ? "text-primary" : "text-white/30"}`}
+              onClick={onToggleShuffle}
+            >
+              <span className="material-symbols-outlined text-2xl">
+                shuffle
+              </span>
+            </button>
+            <button
+              className={`p-2 transition-all hover:text-white active:scale-75 ${hasPrev ? "text-white" : "text-white/10"}`}
+              onClick={onPrev}
+              disabled={!hasPrev}
+            >
+              <span className="material-symbols-outlined text-3xl">
+                skip_previous
+              </span>
+            </button>
 
-              <div className="flex items-center gap-6 md:gap-10">
-                <button
-                  className={`transition-all active:scale-75 ${hasPrev ? "text-white" : "text-white/10"}`}
-                  onClick={onPrev}
-                  disabled={!hasPrev}
-                >
-                  <span className="material-symbols-outlined text-5xl fill-icon">
-                    skip_previous
-                  </span>
-                </button>
+            <button
+              className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-black transition-all hover:scale-105 active:scale-95 shadow-2xl"
+              onClick={onTogglePlay}
+            >
+              <span className="material-symbols-outlined text-4xl fill-icon">
+                {isPlaying ? "pause" : "play_arrow"}
+              </span>
+            </button>
 
-                <div className="relative">
-                  {isLoadingTrack && (
-                    <div className="absolute inset-[-8px] border-2 border-t-primary rounded-full animate-spin opacity-40"></div>
-                  )}
-                  <button
-                    className="w-20 h-20 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl"
-                    style={{
-                      backgroundColor: vibrantColor || "white",
-                      color: "black",
-                    }}
-                    onClick={onTogglePlay}
-                  >
-                    <span className="material-symbols-outlined text-5xl fill-icon">
-                      {isPlaying ? "pause" : "play_arrow"}
-                    </span>
-                  </button>
-                </div>
-
-                <button
-                  className={`transition-all active:scale-75 ${hasNext ? "text-white" : "text-white/10"}`}
-                  onClick={onNext}
-                  disabled={!hasNext}
-                >
-                  <span className="material-symbols-outlined text-5xl fill-icon">
-                    skip_next
-                  </span>
-                </button>
-              </div>
-
-              <button
-                className={`p-2 transition-all active:scale-75 ${repeatMode !== "off" ? "text-primary" : "text-white/30 hover:text-white"}`}
-                onClick={onToggleRepeat}
-              >
-                <span className="material-symbols-outlined text-2xl">
-                  {repeatMode === "one" ? "repeat_one" : "repeat"}
-                </span>
-              </button>
-            </div>
-
-            {/* Utility Actions Row */}
-            <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/5">
-              <button
-                className={`flex items-center gap-3 px-4 py-2 rounded-full border text-[9px] font-black uppercase tracking-widest transition-all ${isOfflineSaved ? "bg-white text-black border-white" : "border-white/10 text-white/50 hover:border-primary hover:text-primary"}`}
-                onClick={handleOfflineAction}
-              >
-                <span className="material-symbols-outlined text-xl">
-                  {isSavingOffline
-                    ? "downloading"
-                    : isOfflineSaved
-                      ? "check_circle"
-                      : "download_for_offline"}
-                </span>
-                <span className="hidden sm:inline">
-                  {isSavingOffline
-                    ? `${downloadProgress}%`
-                    : isOfflineSaved
-                      ? "Saved"
-                      : "Offline"}
-                </span>
-              </button>
-
-              <div className="flex items-center gap-3 md:gap-5">
-                <button
-                  className={`p-2 transition-all hover:scale-110 ${showLyrics ? "text-primary" : "text-white/40"}`}
-                  onClick={() => setShowLyrics(!showLyrics)}
-                >
-                  <span className="material-symbols-outlined text-2xl">
-                    mic
-                  </span>
-                </button>
-                <button
-                  className="p-2 text-white/40 hover:text-white transition-all hover:scale-110"
-                  onClick={onOpenQueue}
-                >
-                  <span className="material-symbols-outlined text-2xl">
-                    queue_music
-                  </span>
-                </button>
-                <button
-                  className={`p-2 transition-all hover:scale-110 ${isLiked ? "text-primary" : "text-white/40"}`}
-                  onClick={onToggleLike}
-                >
-                  <span
-                    className={`material-symbols-outlined text-2xl ${isLiked ? "fill-icon" : ""}`}
-                  >
-                    favorite
-                  </span>
-                </button>
-              </div>
-            </div>
+            <button
+              className={`p-2 transition-all hover:text-white active:scale-75 ${hasNext ? "text-white" : "text-white/10"}`}
+              onClick={onNext}
+              disabled={!hasNext}
+            >
+              <span className="material-symbols-outlined text-3xl">
+                skip_next
+              </span>
+            </button>
+            <button
+              className={`p-2 transition-all hover:text-white active:scale-75 ${repeatMode !== "off" ? "text-primary" : "text-white/30"}`}
+              onClick={onToggleRepeat}
+            >
+              <span className="material-symbols-outlined text-2xl">
+                {repeatMode === "one" ? "repeat_one" : "repeat"}
+              </span>
+            </button>
           </div>
         </section>
 
