@@ -44,6 +44,7 @@ function App() {
   const [likedTrackIds, setLikedTrackIds] = useState(new Set());
   const [playlists, setPlaylists] = useState([]);
   const [isQueueVisible, setIsQueueVisible] = useState(false);
+  const [volume, setVolume] = useState(1);
 
   // Modal States
   const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false);
@@ -581,6 +582,28 @@ function App() {
     }
   };
 
+  const handleVolumeChange = (e) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+  };
+
+  const toggleShuffle = (e) => {
+    if (e) e.stopPropagation();
+    setIsShuffle(!isShuffle);
+  };
+
+  const toggleRepeat = (e) => {
+    if (e) e.stopPropagation();
+    setRepeatMode((prev) => {
+      if (prev === "off") return "all";
+      if (prev === "all") return "one";
+      return "off";
+    });
+  };
+
   const navigateToArtist = (artistId) => {
     navigate({
       activeTab: "artist",
@@ -857,97 +880,245 @@ function App() {
         />
 
         {/* Mini Player - Only shown when a track is selected */}
+        {/* Premium Player Bar - Adapted for Mobile/Desktop */}
         {currentTrack && (
           <div
-            className="fixed bottom-24 left-3 right-3 md:left-[312px] md:right-12 z-[50] transition-all duration-500 cursor-pointer"
-            onClick={() => navigate({ showFullPlayer: true })}
+            className="fixed bottom-6 left-3 right-3 md:left-[304px] md:right-8 z-[100] transition-all duration-500"
+            onClick={(e) => {
+              // Only open full player if clicking background on mobile
+              if (
+                window.innerWidth < 768 &&
+                !e.target.closest("button") &&
+                !e.target.closest("input")
+              ) {
+                navigate({ showFullPlayer: true });
+              }
+            }}
           >
-            <div className="glass-effect rounded-lg px-4 py-3 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 relative overflow-hidden group">
+            <div className="glass-effect rounded-2xl md:rounded-3xl px-4 md:px-6 py-3 md:py-4 shadow-[0_25px_60px_rgba(0,0,0,0.6)] border border-white/10 relative overflow-hidden group">
+              {/* Dynamic Glow Background */}
               <div
-                className="absolute top-0 left-0 h-[1.5px] bg-primary transition-all duration-300"
-                style={{
-                  width: `${(currentTime / duration) * 100 || 0}%`,
-                  boxShadow: vibrantColor
-                    ? `0 0 15px ${vibrantColor}`
-                    : "0 0 10px #fff",
-                  backgroundColor: vibrantColor || "var(--primary)",
-                }}
-              ></div>
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className="relative w-12 h-12 flex-shrink-0">
-                  <img
-                    className="w-full h-full rounded-md object-cover shadow-lg transition-transform duration-500 group-hover:scale-105"
-                    src={
-                      currentTrack.album?.cover_medium ||
-                      currentTrack.album?.cover_small ||
-                      currentTrack.cover_url ||
-                      "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg"
-                    }
-                    alt={currentTrack.title}
-                    onLoad={(e) => {
-                      try {
-                        const color = getVibrantColorFromImage(e.target);
-                        setVibrantColor(color);
-                      } catch (err) {
-                        console.warn("Could not extract color (CORS?):", err);
-                      }
-                    }}
-                    onError={(e) => {
-                      e.target.src =
-                        "https://e-cdns-images.dzcdn.net/images/cover//250x250-000000-80-0-0.jpg";
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/10 rounded-md" />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-bold text-primary truncate tracking-tight">
-                    {currentTrack.title}
-                  </span>
-                  <span
-                    className="text-xs text-secondary truncate uppercase tracking-widest opacity-80 mt-0.5 hover:text-primary transition-colors hover:underline cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (currentTrack.artist?.id)
-                        navigateToArtist(currentTrack.artist.id);
-                    }}
-                  >
-                    {currentTrack.artist?.name || currentTrack.artist}
-                  </span>
-                </div>
+                className="absolute inset-0 opacity-10 pointer-events-none transition-colors duration-1000"
+                style={{ backgroundColor: vibrantColor || "var(--primary)" }}
+              />
+
+              {/* Progress Line (Top-only on mobile, integrated on desktop) */}
+              <div className="md:hidden absolute top-0 left-0 w-full h-[2px] bg-white/5">
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{
+                    width: `${(currentTime / duration) * 100 || 0}%`,
+                    boxShadow: vibrantColor
+                      ? `0 0 12px ${vibrantColor}`
+                      : "none",
+                  }}
+                />
               </div>
-              <div
-                className="flex items-center gap-5 px-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span
-                  className={`material-symbols-outlined text-2xl transition-all duration-300 cursor-pointer hover:scale-110 ${likedTrackIds.has(currentTrack.id?.toString()) ? "text-primary fill-icon" : "text-secondary hover:text-primary"}`}
-                  onClick={() => toggleLike(currentTrack)}
-                >
-                  favorite
-                </span>
-                <div className="relative flex items-center justify-center">
-                  <div className="flex items-center gap-3 ml-2">
+
+              <div className="flex items-center justify-between gap-4 md:gap-8 relative z-10">
+                {/* 1. LEFT: Track Info */}
+                <div className="flex items-center gap-4 flex-1 min-w-0 md:flex-initial md:w-[30%]">
+                  <div
+                    className="relative w-12 h-12 md:w-14 md:h-14 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl cursor-pointer group/cover"
+                    onClick={() => navigate({ showFullPlayer: true })}
+                  >
+                    <img
+                      src={
+                        currentTrack.album?.cover_medium ||
+                        currentTrack.cover_url
+                      }
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-110"
+                      alt=""
+                    />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/cover:opacity-100 flex items-center justify-center transition-opacity">
+                      <span className="material-symbols-outlined text-white text-xl">
+                        expand_less
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm md:text-base font-black text-white truncate tracking-tight">
+                        {currentTrack.title}
+                      </span>
+                      <span className="hidden md:inline px-1 py-0.5 rounded text-[8px] font-black bg-white/10 text-secondary border border-white/5 uppercase">
+                        HD
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 opacity-70">
+                      <span
+                        className="text-[11px] md:text-xs text-secondary truncate hover:text-white transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (currentTrack.artist?.id)
+                            navigateToArtist(currentTrack.artist.id);
+                        }}
+                      >
+                        {currentTrack.artist?.name || currentTrack.artist}
+                      </span>
+                      <span className="text-[10px] text-white/20 hidden md:inline">
+                        •
+                      </span>
+                      <span className="text-[10px] text-secondary truncate hidden md:inline opacity-60">
+                        {currentTrack.album?.title || "Single"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. CENTER: Main Controls (Desktop only for full layout) */}
+                <div className="hidden md:flex flex-col items-center flex-1 max-w-xl px-4">
+                  <div className="flex items-center gap-6 mb-2">
                     <button
-                      className="w-10 h-10 flex items-center justify-center text-primary group-hover:scale-110 active:scale-95 transition-all"
+                      className={`material-symbols-outlined text-xl transition-all ${isShuffle ? "text-primary scale-110" : "text-secondary hover:text-white"}`}
+                      onClick={toggleShuffle}
+                    >
+                      shuffle
+                    </button>
+                    <button
+                      className="material-symbols-outlined text-2xl text-secondary hover:text-white transition-all active:scale-90"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playPrevious();
+                      }}
+                    >
+                      skip_previous
+                    </button>
+                    <button
+                      className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-black shadow-lg shadow-primary/20 hover:scale-110 active:scale-95 transition-all mx-2"
                       onClick={togglePlay}
                     >
-                      <span className="material-symbols-outlined text-[32px]">
+                      <span className="material-symbols-outlined text-3xl fill-icon">
+                        {isLoadingTrack
+                          ? "sync"
+                          : isPlaying
+                            ? "pause"
+                            : "play_arrow"}
+                      </span>
+                    </button>
+                    <button
+                      className="material-symbols-outlined text-2xl text-secondary hover:text-white transition-all active:scale-90"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playNext();
+                      }}
+                    >
+                      skip_next
+                    </button>
+                    <button
+                      className={`material-symbols-outlined text-xl transition-all ${repeatMode !== "off" ? "text-primary scale-110" : "text-secondary hover:text-white"}`}
+                      onClick={toggleRepeat}
+                    >
+                      {repeatMode === "one" ? "repeat_one" : "repeat"}
+                    </button>
+                  </div>
+
+                  {/* Progress Bar Container */}
+                  <div className="w-full flex items-center gap-3">
+                    <span className="text-[10px] font-black text-secondary w-8 text-right tabular-nums">
+                      {Math.floor(currentTime / 60)}:
+                      {(currentTime % 60).toString().padStart(2, "0")}
+                    </span>
+                    <div className="flex-1 relative h-6 flex items-center group/progress">
+                      <input
+                        type="range"
+                        min="0"
+                        max={duration || 100}
+                        value={currentTime}
+                        onChange={(e) => handleSeek(parseFloat(e.target.value))}
+                        className="absolute inset-0 w-full opacity-0 cursor-pointer z-20"
+                      />
+                      <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary transition-all duration-150"
+                          style={{
+                            width: `${(currentTime / duration) * 100 || 0}%`,
+                          }}
+                        />
+                      </div>
+                      <div
+                        className="absolute w-2.5 h-2.5 bg-white rounded-full shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity z-10 pointer-events-none"
+                        style={{
+                          left: `calc(${(currentTime / duration) * 100 || 0}% - 5px)`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-black text-secondary w-8 tabular-nums">
+                      {Math.floor(duration / 60)}:
+                      {(duration % 60).toString().padStart(2, "0")}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. RIGHT: Utilities & Mobile Controls */}
+                <div className="flex items-center justify-end gap-2 md:gap-5 flex-shrink-0 md:w-[30%]">
+                  {/* Desktop Only Icons */}
+                  <div className="hidden lg:flex items-center gap-4 text-secondary">
+                    <span
+                      className={`material-symbols-outlined text-xl cursor-pointer hover:text-primary transition-all ${likedTrackIds.has(currentTrack.id?.toString()) ? "text-primary fill-icon" : ""}`}
+                      onClick={() => toggleLike(currentTrack)}
+                    >
+                      favorite
+                    </span>
+                    <span
+                      className="material-symbols-outlined text-xl cursor-pointer hover:text-primary transition-all active:scale-95"
+                      onClick={() => openAddToPlaylistModal(currentTrack)}
+                    >
+                      playlist_add
+                    </span>
+                    <span className="material-symbols-outlined text-xl cursor-pointer hover:text-primary transition-all">
+                      mic
+                    </span>
+                    <span className="material-symbols-outlined text-xl cursor-pointer hover:text-primary transition-all">
+                      download
+                    </span>
+                  </div>
+
+                  {/* Volume Control (Desktop Only) */}
+                  <div className="hidden md:flex items-center gap-2 group/volume w-28 lg:w-32">
+                    <span className="material-symbols-outlined text-xl text-secondary">
+                      {volume === 0
+                        ? "volume_off"
+                        : volume < 0.5
+                          ? "volume_down"
+                          : "volume_up"}
+                    </span>
+                    <div className="flex-1 relative h-4 flex items-center">
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={volume}
+                        onChange={handleVolumeChange}
+                        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-primary hover:bg-white/20 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Queue Toggle (All platforms) */}
+                  <button
+                    className={`material-symbols-outlined text-2xl transition-all ${isQueueVisible ? "text-primary rotate-12" : "text-secondary hover:text-white"}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate({ isQueueVisible: !isQueueVisible });
+                    }}
+                  >
+                    queue_music
+                  </button>
+
+                  {/* Mobile Compact Controls */}
+                  <div className="md:hidden flex items-center gap-3">
+                    <button
+                      className="w-10 h-10 flex items-center justify-center text-primary active:scale-90 transition-all"
+                      onClick={togglePlay}
+                    >
+                      <span className="material-symbols-outlined text-4xl">
                         {isLoadingTrack
                           ? "sync"
                           : isPlaying
                             ? "pause_circle"
                             : "play_circle"}
-                      </span>
-                    </button>
-                    <button
-                      className="w-10 h-10 flex items-center justify-center text-secondary hover:text-primary transition-all md:flex hidden"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate({ isQueueVisible: true });
-                      }}
-                    >
-                      <span className="material-symbols-outlined text-2xl">
-                        queue_music
                       </span>
                     </button>
                   </div>
