@@ -359,15 +359,15 @@ function PlayerScreen({
       </header>
 
       <main
-        className={`relative z-10 flex-1 px-8 md:px-20 pb-20 overflow-hidden max-w-[1400px] mx-auto w-full transition-all duration-700 ${showLyrics ? "grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24" : "flex flex-col justify-center items-center"}`}
+        className={`relative z-10 flex-1 px-6 md:px-12 lg:px-20 pb-10 overflow-y-auto lg:overflow-hidden max-w-[1400px] mx-auto w-full transition-all duration-700 ${showLyrics ? "grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20" : "flex flex-col justify-center items-center"}`}
       >
         {/* Left Section: Information & Controls */}
         <section
-          className={`flex flex-col justify-center transition-all duration-700 ${showLyrics ? "items-start" : "items-center max-w-2xl"}`}
+          className={`flex flex-col justify-center transition-all duration-700 w-full ${showLyrics ? "items-start py-5 lg:py-0" : "items-center max-w-2xl h-full"}`}
         >
           {/* Album Art Section */}
           <div
-            className={`relative group shadow-[0_40px_100px_rgba(0,0,0,0.8)] rounded-md overflow-hidden transition-all duration-700 mb-8 md:mb-12 ${showLyrics ? "w-48 h-48 md:w-64 md:h-64" : "w-full aspect-square max-w-[400px] md:max-w-none"}`}
+            className={`relative group shadow-[0_40px_100px_rgba(0,0,0,0.8)] rounded-md overflow-hidden transition-all duration-700 mb-6 md:mb-10 ${showLyrics ? "w-40 h-40 md:w-56 md:h-56 lg:w-72 lg:h-72" : "w-full aspect-square max-w-[320px] md:max-w-[450px]"}`}
           >
             <img
               className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
@@ -379,19 +379,19 @@ function PlayerScreen({
 
           {/* Metadata */}
           <div
-            className={`mb-10 w-full ${showLyrics ? "text-left" : "text-center"}`}
+            className={`mb-8 w-full ${showLyrics ? "text-left" : "text-center"}`}
           >
             <div
               className={`flex items-start gap-4 ${showLyrics ? "justify-start" : "justify-between"}`}
             >
               <div className="space-y-1 overflow-hidden flex-1">
                 <h2
-                  className={`font-headline font-black tracking-tighter uppercase italic leading-[0.9] truncate transition-all duration-700 ${showLyrics ? "text-2xl md:text-3xl" : "text-4xl md:text-6xl"}`}
+                  className={`font-headline font-black tracking-tighter uppercase italic leading-[0.9] truncate transition-all duration-700 ${showLyrics ? "text-2xl md:text-4xl" : "text-4xl md:text-6xl"}`}
                 >
                   {track.title}
                 </h2>
                 <p
-                  className={`text-secondary uppercase font-black tracking-[0.3em] opacity-80 truncate hover:text-primary transition-colors hover:underline cursor-pointer transition-all duration-700 ${showLyrics ? "text-xs md:text-sm" : "text-sm md:text-lg"}`}
+                  className={`text-secondary uppercase font-black tracking-[0.3em] opacity-80 truncate hover:text-primary transition-colors hover:underline cursor-pointer transition-all duration-700 ${showLyrics ? "text-[10px] md:text-xs" : "text-xs md:text-sm"}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (track.artist?.id && onNavigateToArtist) {
@@ -420,7 +420,7 @@ function PlayerScreen({
           </div>
 
           {/* Progress Section */}
-          <div className="w-full space-y-3 mb-10">
+          <div className="w-full space-y-3 mb-8">
             <div
               className="relative w-full h-[1.5px] bg-white/10 rounded-full group cursor-pointer"
               onClick={handleProgressClick}
@@ -449,7 +449,7 @@ function PlayerScreen({
 
           {/* Playback Controls */}
           <div
-            className={`flex items-center justify-between w-full px-2 mb-10 ${showLyrics ? "gap-4" : "gap-12"}`}
+            className={`flex items-center justify-between w-full px-2 mb-8 ${showLyrics ? "gap-4 lg:gap-8" : "gap-12"}`}
           >
             <button
               className={`transition-all duration-300 active:scale-75 ${isShuffle ? "text-primary" : "text-secondary hover:text-white"}`}
@@ -461,7 +461,7 @@ function PlayerScreen({
             </button>
 
             <div
-              className={`flex items-center ${showLyrics ? "gap-6" : "gap-10 md:gap-14"}`}
+              className={`flex items-center ${showLyrics ? "gap-6 lg:gap-8" : "gap-10 md:gap-14"}`}
             >
               <button
                 className={`transition-all duration-300 active:scale-75 ${hasPrev ? "text-primary" : "text-secondary opacity-30 cursor-not-allowed"}`}
@@ -482,7 +482,7 @@ function PlayerScreen({
                   />
                 )}
                 <button
-                  className={`rounded-full flex items-center justify-center transition-all duration-500 active:scale-95 accent-monochrome ${isLoadingTrack ? "opacity-40 animate-pulse" : "hover:scale-105"} ${showLyrics ? "w-16 h-16 md:w-20 md:h-20" : "w-24 h-24 md:w-28 md:h-28"}`}
+                  className={`rounded-full flex items-center justify-center transition-all duration-500 active:scale-95 accent-monochrome ${isLoadingTrack ? "opacity-40 animate-pulse" : "hover:scale-105"} ${showLyrics ? "w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20" : "w-24 h-24 md:w-28 md:h-28"}`}
                   style={{
                     backgroundColor: vibrantColor || "#E9FF00",
                     boxShadow: !vibrantColor
@@ -533,7 +533,7 @@ function PlayerScreen({
               onClick={handleOfflineAction}
             >
               <span
-                className={`material-symbols-outlined text-2xl ${isSavingOffline ? "animate-pulse" : ""} ${isOfflineSaved ? "fill-icon" : ""}`}
+                className={`material-symbols-outlined text-xl ${isSavingOffline ? "animate-pulse" : ""} ${isOfflineSaved ? "fill-icon" : ""}`}
               >
                 {isSavingOffline ? "downloading" : "download_for_offline"}
               </span>
@@ -548,7 +548,7 @@ function PlayerScreen({
 
             <div className="flex gap-2">
               <button
-                className="p-3 text-secondary hover:text-primary transition-all active:scale-75"
+                className="p-2 md:p-3 text-secondary hover:text-primary transition-all active:scale-75"
                 onClick={onOpenQueue}
               >
                 <span className="material-symbols-outlined text-2xl md:text-3xl">
@@ -557,11 +557,11 @@ function PlayerScreen({
               </button>
               {showLyrics && (
                 <button
-                  className={`p-3 transition-all active:scale-125 rounded-full hover:bg-white/5 ${isLiked ? "text-primary" : "text-secondary"}`}
+                  className={`p-2 md:p-3 transition-all active:scale-125 rounded-full hover:bg-white/5 ${isLiked ? "text-primary" : "text-secondary"}`}
                   onClick={onToggleLike}
                 >
                   <span
-                    className={`material-symbols-outlined text-3xl ${isLiked ? "fill-icon" : ""}`}
+                    className={`material-symbols-outlined text-2xl md:text-3xl ${isLiked ? "fill-icon" : ""}`}
                   >
                     favorite
                   </span>
@@ -573,10 +573,10 @@ function PlayerScreen({
 
         {/* Right Section: Lyrics Column */}
         {showLyrics && (
-          <section className="flex flex-col h-full overflow-hidden relative">
+          <section className="flex flex-col h-full lg:h-[75vh] overflow-hidden relative">
             <div
               ref={lyricsScrollRef}
-              className="flex-1 overflow-y-auto no-scrollbar scroll-smooth mask-vertical-fade py-[30vh]"
+              className="flex-1 overflow-y-auto no-scrollbar scroll-smooth mask-vertical-fade py-[35vh]"
             >
               {lyricsLoading ? (
                 <div className="h-full flex items-center justify-center">
@@ -586,7 +586,7 @@ function PlayerScreen({
                 parsedLyrics.map((lyric, idx) => (
                   <div
                     key={idx}
-                    className={`py-4 px-4 transition-all duration-500 origin-left cursor-pointer hover:opacity-100 ${idx === activeLyricIndex ? "text-3xl md:text-5xl font-black text-white opacity-100 scale-105 lyric-glow" : "text-xl md:text-3xl font-bold text-white/20 opacity-40 hover:opacity-60 scale-95 blur-[2px] hover:blur-0"}`}
+                    className={`py-4 px-4 transition-all duration-500 origin-left cursor-pointer hover:opacity-100 ${idx === activeLyricIndex ? "text-3xl md:text-5xl font-black text-white opacity-100 scale-105 lyric-glow" : "text-xl md:text-3xl font-bold text-white/20 opacity-30 hover:opacity-100 scale-95 blur-[1.5px] hover:blur-0"}`}
                     onClick={() => {
                       if (lyric.time !== -1) onSeek(lyric.time);
                     }}
@@ -596,10 +596,10 @@ function PlayerScreen({
                 ))
               ) : (
                 <div className="h-full flex flex-col items-center justify-center opacity-40 space-y-4">
-                  <span className="material-symbols-outlined text-6xl">
+                  <span className="material-symbols-outlined text-5xl">
                     sentiment_dissatisfied
                   </span>
-                  <p className="font-headline italic font-black uppercase tracking-widest text-xs">
+                  <p className="font-headline italic font-black uppercase tracking-widest text-[10px]">
                     No Lyrics Found
                   </p>
                 </div>
