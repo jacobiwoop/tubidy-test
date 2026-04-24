@@ -1168,107 +1168,106 @@ function App() {
             </div>
           </div>
         )}
-
-        {/* Global Queue Sidebar */}
-        <QueueSidebar
-          isOpen={isQueueVisible}
-          onClose={() => navigate({ isQueueVisible: false })}
-          queue={queue}
-          currentTrack={currentTrack}
-          onPlayTrackAt={handlePlayFromQueue}
-          onRemoveTrackAt={removeFromQueue}
-          onClearQueue={clearQueue}
-        />
-
-        {/* Full Player Overlay */}
-        {showFullPlayer && currentTrack && (
-          <PlayerScreen
-            track={currentTrack}
-            isPlaying={isPlaying}
-            isLiked={likedTrackIds.has(currentTrack.id?.toString())}
-            playlists={playlists}
-            isLoadingTrack={isLoadingTrack}
-            currentTime={currentTime}
-            duration={duration}
-            isShuffle={isShuffle}
-            repeatMode={repeatMode}
-            onTogglePlay={togglePlay}
-            onToggleLike={() => toggleLike(currentTrack)}
-            onAddToPlaylist={handleAddToPlaylist}
-            onSeek={handleSeek}
-            onClose={() => navigate({ showFullPlayer: false })}
-            onNext={playNext}
-            onPrev={playPrevious}
-            onToggleShuffle={toggleShuffle}
-            onToggleRepeat={toggleRepeat}
-            onOpenPlaylistModal={() => openAddToPlaylistModal(currentTrack)}
-            onNavigateToArtist={navigateToArtist}
-            hasNext={currentIndex < queue.length - 1 || repeatMode === "all"}
-            hasPrev={
-              currentIndex > 0 || currentTime > 3 || repeatMode === "all"
-            }
-            onOpenQueue={() => navigate({ isQueueVisible: true })}
-          />
-        )}
-
-        {/* Add To Playlist Modal */}
-        {showAddToPlaylistModal && trackToAdd && (
-          <AddToPlaylistModal
-            track={trackToAdd}
-            playlists={playlists}
-            isLiked={likedTrackIds.has(trackToAdd.id?.toString())}
-            onClose={() => setShowAddToPlaylistModal(false)}
-            onToggleLike={toggleLike}
-            onAddToPlaylist={handleAddToPlaylist}
-            onCreatePlaylist={() => setIsCreatingPlaylist(true)}
-          />
-        )}
-
-        {/* Create Playlist Modal (Global) */}
-        {isCreatingPlaylist && (
-          <div
-            className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200"
-            onClick={() => setIsCreatingPlaylist(false)}
-          >
-            <div
-              className="bg-[#282828] w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 className="font-headline text-xl font-bold mb-6 text-center text-white">
-                Name your playlist
-              </h2>
-              <form onSubmit={handleCreatePlaylist}>
-                <div className="relative mb-8">
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="My awesome playlist"
-                    value={newPlaylistName}
-                    onChange={(e) => setNewPlaylistName(e.target.value)}
-                    className="w-full bg-surface-container-high/50 text-white font-headline text-lg px-4 py-4 rounded-xl outline-none focus:ring-2 focus:ring-primary border border-white/5 transition-all"
-                  />
-                </div>
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsCreatingPlaylist(false)}
-                    className="flex-1 py-3 font-semibold text-on-surface-variant hover:text-white transition-colors tracking-wide"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!newPlaylistName.trim()}
-                    className="flex-1 bg-primary text-on-primary py-3 rounded-full font-bold active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 tracking-wide"
-                  >
-                    Create
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Global Overlays - Moved to root level to avoid clipping */}
+      {/* Global Queue Sidebar */}
+      <QueueSidebar
+        isOpen={isQueueVisible}
+        onClose={() => navigate({ isQueueVisible: false })}
+        queue={queue}
+        currentTrack={currentTrack}
+        onPlayTrackAt={handlePlayFromQueue}
+        onRemoveTrackAt={removeFromQueue}
+        onClearQueue={clearQueue}
+      />
+
+      {/* Full Player Overlay */}
+      {showFullPlayer && currentTrack && (
+        <PlayerScreen
+          track={currentTrack}
+          isPlaying={isPlaying}
+          isLiked={likedTrackIds.has(currentTrack.id?.toString())}
+          playlists={playlists}
+          isLoadingTrack={isLoadingTrack}
+          currentTime={currentTime}
+          duration={duration}
+          isShuffle={isShuffle}
+          repeatMode={repeatMode}
+          onTogglePlay={togglePlay}
+          onToggleLike={() => toggleLike(currentTrack)}
+          onAddToPlaylist={handleAddToPlaylist}
+          onSeek={handleSeek}
+          onClose={() => navigate({ showFullPlayer: false })}
+          onNext={playNext}
+          onPrev={playPrevious}
+          onToggleShuffle={toggleShuffle}
+          onToggleRepeat={toggleRepeat}
+          onOpenPlaylistModal={() => openAddToPlaylistModal(currentTrack)}
+          onNavigateToArtist={navigateToArtist}
+          hasNext={currentIndex < queue.length - 1 || repeatMode === "all"}
+          hasPrev={currentIndex > 0 || currentTime > 3 || repeatMode === "all"}
+          onOpenQueue={() => navigate({ isQueueVisible: true })}
+        />
+      )}
+
+      {/* Add To Playlist Modal */}
+      {showAddToPlaylistModal && trackToAdd && (
+        <AddToPlaylistModal
+          track={trackToAdd}
+          playlists={playlists}
+          isLiked={likedTrackIds.has(trackToAdd.id?.toString())}
+          onClose={() => setShowAddToPlaylistModal(false)}
+          onToggleLike={toggleLike}
+          onAddToPlaylist={handleAddToPlaylist}
+          onCreatePlaylist={() => setIsCreatingPlaylist(true)}
+        />
+      )}
+
+      {/* Create Playlist Modal (Global) */}
+      {isCreatingPlaylist && (
+        <div
+          className="fixed inset-0 z-[1200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200"
+          onClick={() => setIsCreatingPlaylist(false)}
+        >
+          <div
+            className="bg-[#282828] w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-headline text-xl font-bold mb-6 text-center text-white">
+              Name your playlist
+            </h2>
+            <form onSubmit={handleCreatePlaylist}>
+              <div className="relative mb-8">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="My awesome playlist"
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  className="w-full bg-surface-container-high/50 text-white font-headline text-lg px-4 py-4 rounded-xl outline-none focus:ring-2 focus:ring-primary border border-white/5 transition-all"
+                />
+              </div>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingPlaylist(false)}
+                  className="flex-1 py-3 font-semibold text-on-surface-variant hover:text-white transition-colors tracking-wide"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newPlaylistName.trim()}
+                  className="flex-1 bg-primary text-on-primary py-3 rounded-full font-bold active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 tracking-wide"
+                >
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

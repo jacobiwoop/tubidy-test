@@ -114,15 +114,15 @@
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    black 30%,
-    black 70%,
+    black 10%,
+    black 90%,
     transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    black 30%,
-    black 70%,
+    black 10%,
+    black 90%,
     transparent 100%
   );
 }
