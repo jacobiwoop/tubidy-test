@@ -559,7 +559,6 @@ function App() {
                 <div className="relative w-12 h-12 flex-shrink-0">
                   <img
                     className="w-full h-full rounded-md object-cover shadow-lg transition-transform duration-500 group-hover:scale-105"
-                    crossOrigin="anonymous"
                     src={
                       currentTrack.album?.cover_medium ||
                       currentTrack.album?.cover_small ||
@@ -568,8 +567,12 @@ function App() {
                     }
                     alt={currentTrack.title}
                     onLoad={(e) => {
-                      const color = getVibrantColorFromImage(e.target);
-                      setVibrantColor(color);
+                      try {
+                        const color = getVibrantColorFromImage(e.target);
+                        setVibrantColor(color);
+                      } catch (err) {
+                        console.warn("Could not extract color (CORS?):", err);
+                      }
                     }}
                     onError={(e) => {
                       e.target.src =
