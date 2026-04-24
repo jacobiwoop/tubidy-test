@@ -194,4 +194,13 @@ router.get("/album/:id/related", async (req, res, next) => {
   }
 });
 
+router.get("/track/:id/radio", async (req, res, next) => {
+  try {
+    const result = await deezerService.getTrackRadio(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

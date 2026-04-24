@@ -267,6 +267,16 @@ async function getRelatedAlbums(id, { limit = 6 } = {}) {
 }
 
 /**
+ * Récupère la Smart Radio d'un titre.
+ */
+async function getTrackRadio(id) {
+  return withRetry(async () => {
+    const response = await axios.get(`${BASE_URL}/track/${id}/radio`);
+    return response.data;
+  });
+}
+
+/**
  * Récupère les détails d'un album.
  */
 async function getAlbum(id) {
@@ -291,5 +301,6 @@ module.exports = {
   getArtistAlbums,
   getRelatedArtists,
   getRelatedAlbums,
+  getTrackRadio,
   getAlbum,
 };

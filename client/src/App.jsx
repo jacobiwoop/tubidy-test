@@ -8,6 +8,7 @@ import LibraryScreen from "./screens/Library";
 import PlayerScreen from "./screens/Player";
 import GenreView from "./screens/GenreView";
 import Sidebar from "./components/Sidebar";
+import QueueSidebar from "./components/QueueSidebar";
 import AddToPlaylistModal from "./components/AddToPlaylistModal";
 import { getDownloadedTracks } from "./utils/offlineDb";
 import { getVibrantColorFromImage } from "./utils/vibrant-color";
@@ -42,6 +43,7 @@ function App() {
 
   const [likedTrackIds, setLikedTrackIds] = useState(new Set());
   const [playlists, setPlaylists] = useState([]);
+  const [isQueueVisible, setIsQueueVisible] = useState(false);
 
   // Modal States
   const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false);
@@ -52,6 +54,71 @@ function App() {
   const audioRef = useRef(null);
   const activeTrackIdRef = useRef(null); // tracks dernière demande de lecture
   const abortControllerRef = useRef(null); // permet d'annuler la requête axios en cours
+
+  /**
+   * Automatise la génération d'une file d'attente (Radio) à partir d'un morceau.
+   * Utilise l'API Radio de Deezer avec fallback sur les artistes similaires.
+   */
+  const getSmartRadio = async (seedTrack) => {
+    try {
+      // 1. Essayer la Radio Smart de Deezer
+      const radioRes = await axios.get(
+        `/api/deezer/track/${seedTrack.id}/radio`,
+      );
+      if (radioRes.data.data && radioRes.data.data.length > 5) {
+        return radioRes.data.data.filter((t) => t.id !== seedTrack.id);
+      }
+
+      // 2. Fallback : Artistes Similaires
+      if (seedTrack.artist?.id) {
+        const relatedRes = await axios.get(
+          `/api/deezer/artist/${seedTrack.artist.id}/related?limit=5`,
+        );
+        const similarArtists = relatedRes.data.data || [];
+
+        // Récupérer les top tracks du premier artiste similaire
+        if (similarArtists.length > 0) {
+          const topTracksRes = await axios.get(
+            `/api/deezer/artist/${similarArtists[0].id}/top?limit=20`,
+          );
+          return topTracksRes.data.data || [];
+        }
+      }
+      return [];
+    } catch (err) {
+      console.error("Smart Radio failed", err);
+      return [];
+    }
+  };
+
+  const handlePlayTrack = async (track, context = null) => {
+    if (!track) return;
+
+    // Reset abort signal pour la nouvelle requête
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+
+    // Si on joue dans un contexte (playlist/album), on charge toute la liste
+    if (context && context.tracks) {
+      setOriginalQueue(context.tracks);
+      setQueue(context.tracks);
+      const index = context.tracks.findIndex((t) => t.id === track.id);
+      loadTrackContent(track, index >= 0 ? index : 0);
+    } else {
+      // Cas : Jouer un morceau seul -> Lancer la Radio intelligente (comme Monochrome)
+      setOriginalQueue([track]);
+      setQueue([track]);
+      loadTrackContent(track, 0);
+
+      // Récupérer la radio en arrière-plan et mettre à jour la file
+      const radioTracks = await getSmartRadio(track);
+      if (radioTracks.length > 0) {
+        const fullQueue = [track, ...radioTracks];
+        setOriginalQueue(fullQueue);
+        setQueue(fullQueue);
+      }
+    }
+  };
 
   // Fetch initial data (Likes and Playlists)
   useEffect(() => {
@@ -84,6 +151,7 @@ function App() {
           activePlaylist,
           activeGenre,
           showFullPlayer,
+          isQueueVisible,
         } = event.state;
 
         // Restore all navigation states
@@ -93,6 +161,7 @@ function App() {
         setActivePlaylist(activePlaylist || null);
         setActiveGenre(activeGenre || null);
         setShowFullPlayer(showFullPlayer || false);
+        setIsQueueVisible(isQueueVisible || false);
       }
     };
 
@@ -103,7 +172,8 @@ function App() {
   // Centralized Navigation Helper
   const navigate = (updates) => {
     const nextState = {
-      activeTab: updates.activeTab || activeTab,
+      activeTab:
+        updates.activeTab !== undefined ? updates.activeTab : activeTab,
       activeArtistId:
         updates.activeArtistId !== undefined
           ? updates.activeArtistId
@@ -122,13 +192,17 @@ function App() {
         updates.showFullPlayer !== undefined
           ? updates.showFullPlayer
           : showFullPlayer,
+      isQueueVisible:
+        updates.isQueueVisible !== undefined
+          ? updates.isQueueVisible
+          : isQueueVisible,
     };
 
     // Only actual navigation changes should push state
     window.history.pushState(nextState, "");
 
     // Apply updates locally
-    if (updates.activeTab) setActiveTab(updates.activeTab);
+    if (updates.activeTab !== undefined) setActiveTab(updates.activeTab);
     if (updates.activeArtistId !== undefined)
       setActiveArtistId(updates.activeArtistId);
     if (updates.activeAlbumId !== undefined)
@@ -138,6 +212,46 @@ function App() {
     if (updates.activeGenre !== undefined) setActiveGenre(updates.activeGenre);
     if (updates.showFullPlayer !== undefined)
       setShowFullPlayer(updates.showFullPlayer);
+    if (updates.isQueueVisible !== undefined)
+      setIsQueueVisible(updates.isQueueVisible);
+  };
+
+  const handlePlayFromQueue = (index) => {
+    if (index >= 0 && index < queue.length) {
+      loadTrackContent(queue[index], index);
+    }
+  };
+
+  const removeFromQueue = (index) => {
+    const newQueue = [...queue];
+    newQueue.splice(index, 1);
+    setQueue(newQueue);
+    setOriginalQueue(newQueue);
+
+    // Si on a supprimé le morceau en cours, passer au suivant
+    if (index === currentIndex) {
+      if (newQueue.length > index) {
+        loadTrackContent(newQueue[index], index);
+      } else if (newQueue.length > 0) {
+        loadTrackContent(newQueue[0], 0);
+      } else {
+        setIsPlaying(false);
+      }
+    } else if (index < currentIndex) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  const clearQueue = () => {
+    if (currentTrack) {
+      setQueue([currentTrack]);
+      setOriginalQueue([currentTrack]);
+      setCurrentIndex(0);
+    } else {
+      setQueue([]);
+      setOriginalQueue([]);
+      setCurrentIndex(-1);
+    }
   };
 
   const toggleLike = async (track) => {
