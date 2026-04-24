@@ -14,6 +14,7 @@ function AlbumScreen({
   const [vibrantColor, setVibrantColor] = useState(null);
   const [moreFromArtist, setMoreFromArtist] = useState([]);
   const [similarAlbums, setSimilarAlbums] = useState([]);
+  const [similarArtists, setSimilarArtists] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -27,15 +28,30 @@ function AlbumScreen({
 
         if (isMounted) {
           setAlbum(albumData);
-          // Fetch more from artist
-          if (albumData.artist?.id) {
-            const moreRes = await axios.get(
-              `/api/deezer/artist/${albumData.artist.id}/albums?limit=6`,
-            );
+
+          // Parallel fetch for more content
+          const [moreRes, similarAlbumsRes, relatedArtistsRes] =
+            await Promise.all([
+              albumData.artist?.id
+                ? axios.get(
+                    `/api/deezer/artist/${albumData.artist.id}/albums?limit=6`,
+                  )
+                : Promise.resolve({ data: { data: [] } }),
+              axios.get(`/api/deezer/album/${albumId}/related?limit=6`),
+              albumData.artist?.id
+                ? axios.get(
+                    `/api/deezer/artist/${albumData.artist.id}/related?limit=6`,
+                  )
+                : Promise.resolve({ data: { data: [] } }),
+            ]);
+
+          if (isMounted) {
             setMoreFromArtist(
               moreRes.data.data?.filter((a) => a.id !== parseInt(albumId)) ||
                 [],
             );
+            setSimilarAlbums(similarAlbumsRes.data.data || []);
+            setSimilarArtists(relatedArtistsRes.data.data || []);
           }
         }
       } catch (err) {
@@ -220,43 +236,111 @@ function AlbumScreen({
       </section>
 
       {/* Contextual Sections */}
-      {moreFromArtist.length > 0 && (
-        <section className="mt-20 px-6 max-w-7xl mx-auto w-full">
-          <h2 className="font-headline font-black text-xs uppercase tracking-[0.4em] text-secondary mb-8 pl-4">
-            More from {album.artist.name}
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 px-4">
-            {moreFromArtist.map((artAlbum) => (
-              <div
-                key={artAlbum.id}
-                className="group cursor-pointer flex flex-col"
-                onClick={() => navigateToAlbum(artAlbum.id)}
-              >
-                <div className="relative aspect-square rounded-md overflow-hidden shadow-lg mb-4">
-                  <img
-                    src={artAlbum.cover_medium}
-                    alt={artAlbum.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-background scale-90 group-hover:scale-100 transition-transform shadow-xl">
-                      <span className="material-symbols-outlined fill-icon text-3xl">
-                        play_arrow
-                      </span>
+      <div className="space-y-24 mt-20">
+        {moreFromArtist.length > 0 && (
+          <section className="px-6 max-w-7xl mx-auto w-full">
+            <h2 className="font-headline font-black text-xs uppercase tracking-[0.4em] text-secondary mb-8 pl-4 opacity-50">
+              More from {album.artist.name}
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 px-4">
+              {moreFromArtist.map((artAlbum) => (
+                <div
+                  key={artAlbum.id}
+                  className="group cursor-pointer flex flex-col"
+                  onClick={() => navigateToAlbum(artAlbum.id)}
+                >
+                  <div className="relative aspect-square rounded-md overflow-hidden shadow-lg mb-4">
+                    <img
+                      src={artAlbum.cover_medium}
+                      alt={artAlbum.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-background scale-90 group-hover:scale-100 transition-transform shadow-xl">
+                        <span className="material-symbols-outlined fill-icon text-3xl">
+                          play_arrow
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <span className="text-xs font-bold text-primary truncate mb-1">
+                    {artAlbum.title}
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-secondary opacity-40">
+                    {new Date(artAlbum.release_date).getFullYear()}
+                  </span>
                 </div>
-                <span className="text-xs font-bold text-primary truncate mb-1">
-                  {artAlbum.title}
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-secondary opacity-60">
-                  {new Date(artAlbum.release_date).getFullYear()}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+              ))}
+            </div>
+          </section>
+        )}
+
+        {similarAlbums.length > 0 && (
+          <section className="px-6 max-w-7xl mx-auto w-full">
+            <h2 className="font-headline font-black text-xs uppercase tracking-[0.4em] text-secondary mb-8 pl-4 opacity-50">
+              Similar Albums
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 px-4">
+              {similarAlbums.map((simAlbum) => (
+                <div
+                  key={simAlbum.id}
+                  className="group cursor-pointer flex flex-col"
+                  onClick={() => navigateToAlbum(simAlbum.id)}
+                >
+                  <div className="relative aspect-square rounded-md overflow-hidden shadow-lg mb-4">
+                    <img
+                      src={simAlbum.cover_medium}
+                      alt={simAlbum.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-background scale-90 group-hover:scale-100 transition-transform shadow-xl">
+                        <span className="material-symbols-outlined fill-icon text-3xl">
+                          play_arrow
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-primary truncate mb-1">
+                    {simAlbum.title}
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-secondary opacity-40">
+                    {simAlbum.artist?.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {similarArtists.length > 0 && (
+          <section className="px-6 max-w-7xl mx-auto w-full">
+            <h2 className="font-headline font-black text-xs uppercase tracking-[0.4em] text-secondary mb-8 pl-4 opacity-50">
+              Similar Artists
+            </h2>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 px-4">
+              {similarArtists.map((artist) => (
+                <div
+                  key={artist.id}
+                  className="group cursor-pointer flex flex-col items-center text-center"
+                  onClick={() => onNavigateToArtist(artist.id)}
+                >
+                  <div className="relative w-full aspect-square rounded-full overflow-hidden shadow-lg mb-4 border border-white/5 ring-4 ring-primary/0 group-hover:ring-primary/20 transition-all duration-500">
+                    <img
+                      src={artist.picture_medium}
+                      alt={artist.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary truncate w-full">
+                    {artist.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 }
