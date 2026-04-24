@@ -117,9 +117,19 @@ function PlayerScreen({
 
   useEffect(() => {
     if (showLyrics && activeLyricIndex !== -1 && lyricsScrollRef.current) {
-      const activeElement = lyricsScrollRef.current.children[activeLyricIndex];
+      const container = lyricsScrollRef.current;
+      const activeElement = container.children[activeLyricIndex];
       if (activeElement) {
-        activeElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Precise centering logic (Manual Smooth Scroll)
+        const targetScroll =
+          activeElement.offsetTop -
+          container.offsetHeight / 2 +
+          activeElement.offsetHeight / 2;
+
+        container.scrollTo({
+          top: targetScroll,
+          behavior: "smooth",
+        });
       }
     }
   }, [activeLyricIndex, showLyrics]);
@@ -369,22 +379,45 @@ function PlayerScreen({
 
           <div
             ref={lyricsScrollRef}
-            className="flex-1 overflow-y-auto no-scrollbar mask-vertical-fade py-[30vh]"
+            className="flex-1 overflow-y-auto no-scrollbar mask-vertical-fade py-[40vh]"
           >
             {lyricsLoading ? (
               <div className="h-full flex items-center justify-center">
                 <div className="w-10 h-10 border-2 border-white/10 border-t-primary rounded-full animate-spin" />
               </div>
             ) : parsedLyrics.length > 0 ? (
-              parsedLyrics.map((lyric, idx) => (
-                <div
-                  key={idx}
-                  className={`py-6 px-4 transition-all duration-500 cursor-pointer origin-left hover:opacity-100 ${idx === activeLyricIndex ? "text-3xl md:text-5xl font-black text-white opacity-100 scale-105 italic lyric-glow" : "text-xl md:text-3xl font-bold text-white/10 opacity-20 hover:opacity-60 blur-[2px] hover:blur-0"}`}
-                  onClick={() => lyric.time !== -1 && onSeek(lyric.time)}
-                >
-                  {lyric.text}
-                </div>
-              ))
+              parsedLyrics.map((lyric, idx) => {
+                const distance = Math.abs(idx - activeLyricIndex);
+                let variantClass = "";
+
+                if (distance === 0) {
+                  // Active Line: Clear, Large, Glow
+                  variantClass =
+                    "text-3xl md:text-5xl font-black text-white opacity-100 scale-105 italic blur-0 mb-4 lyric-glow";
+                } else if (distance === 1) {
+                  // Immediate neighbors
+                  variantClass =
+                    "text-2xl md:text-4xl font-bold text-white/40 opacity-50 scale-100 blur-[1px] mb-2";
+                } else if (distance === 2) {
+                  // Secondary neighbors
+                  variantClass =
+                    "text-xl md:text-3xl font-bold text-white/20 opacity-30 scale-[0.98] blur-[2px]";
+                } else {
+                  // Far lines
+                  variantClass =
+                    "text-lg md:text-2xl font-bold text-white/5 opacity-10 scale-[0.95] blur-[4px]";
+                }
+
+                return (
+                  <div
+                    key={idx}
+                    className={`px-4 transition-all duration-700 ease-in-out cursor-pointer origin-left hover:scale-100 hover:opacity-100 hover:blur-0 ${variantClass}`}
+                    onClick={() => lyric.time !== -1 && onSeek(lyric.time)}
+                  >
+                    {lyric.text}
+                  </div>
+                );
+              })
             ) : (
               <div className="h-full flex flex-col items-center justify-center opacity-30 gap-4">
                 <span className="material-symbols-outlined text-5xl">
