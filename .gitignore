@@ -1,0 +1,8 @@
+monochrome/
+node_modules/
+.venv/
+*.db
+*.db-shm
+*.db-wal
+.env
+dist/
