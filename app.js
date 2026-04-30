@@ -16,7 +16,7 @@ const ytmusicRoute = require("./routes/ytmusic");
 
 const path = require("path");
 
-const app = express();
+const app = express(); const cors = require("cors"); app.use(cors());
 app.use(express.json());
 
 // Logger simple
