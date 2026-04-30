@@ -1,0 +1,60 @@
+name: Spotywoop Android Build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./client
+
+      - name: Build Web App (Vite)
+        run: npm run build
+        working-directory: ./client
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'http://localhost:3000/api' }}
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+        working-directory: ./client
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "gradle"
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+        working-directory: ./client/android
+
+      - name: Build Debug APK
+        working-directory: ./client/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spotywoop-debug-${{ github.run_number }}
+          path: client/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
