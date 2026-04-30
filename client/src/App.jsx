@@ -716,7 +716,15 @@ function App() {
         activeTab={activeTab}
         setActiveTab={(tab) => {
           navigate({
-        setActiveTab={setActiveTab}
+            activeTab: tab,
+            activeArtistId: null,
+            activeAlbumId: null,
+            activeGenre: null,
+            activePlaylist: null,
+          });
+          setIsSidebarOpen(false);
+          setIsSearchVisible(false);
+        }}
         activeDownloads={activeDownloads}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
