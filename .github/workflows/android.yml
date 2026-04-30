@@ -33,7 +33,7 @@ jobs:
 
       - name: Prebuild Expo (Development Mode)
         working-directory: mobile
-        run: npx expo prebuild --platform android --template architecture-samples --no-install
+        run: npx expo prebuild --platform android --no-install
 
       - name: Build Debug APK (Development Client)
         working-directory: mobile
