@@ -12,6 +12,7 @@ import QueueSidebar from "./components/QueueSidebar";
 import AddToPlaylistModal from "./components/AddToPlaylistModal";
 import { getDownloadedTracks } from "./utils/offlineDb";
 import { getVibrantColorFromImage } from "./utils/vibrant-color";
+axios.defaults.timeout = 60000; axios.defaults.baseURL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://10.45.54.54:3000';
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
@@ -26,7 +27,7 @@ function App() {
   const [duration, setDuration] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   // Global Axios Configuration for timeouts (Spotiwoop scraping and YTMusic can take time)
-  axios.defaults.timeout = 60000; axios.defaults.baseURL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://10.45.54.54:3000';
+  
 
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isLoadingTrack, setIsLoadingTrack] = useState(false);
