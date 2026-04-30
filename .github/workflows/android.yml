@@ -31,7 +31,7 @@ jobs:
         run: npm run build
         working-directory: ./client
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL || 'http://localhost:3000/api' }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'http://10.45.54.54:3000/api' }}
 
       - name: Sync Capacitor
         run: npx cap sync android
