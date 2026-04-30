@@ -56,7 +56,7 @@ function DownloadsScreen({ activeDownloads, onPlayTrack, currentTrack, isPlaying
 
       <div className="mt-12">
         <p className="text-secondary text-[9px] leading-relaxed opacity-40">
-          Tip: You can find all your completed downloads in the <span className="text-primary">Library > Offline Downloads</span> section.
+          Tip: You can find all your completed downloads in the <span className="text-primary">Library &gt; Offline Downloads</span> section.
         </p>
       </div>
     </div>

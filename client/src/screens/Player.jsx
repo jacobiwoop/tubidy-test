@@ -561,6 +561,7 @@ function PlayerFooter({
   repeatMode,
   onToggleRepeat,
   isLoadingTrack,
+}) {
   return (
     <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
       {/* Progress Bar */}
