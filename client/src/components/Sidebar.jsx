@@ -1,9 +1,10 @@
 import React from "react";
 
-const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose }) => {
+const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, activeDownloads = {} }) => {
   const menuItems = [
     { id: "home", label: "Home", icon: "home" },
     { id: "library", label: "Library", icon: "library_music" },
+    { id: "downloads", label: "Downloads", icon: "downloading" },
     { id: "recent", label: "Recent", icon: "history" },
     { id: "unreleased", label: "Unreleased", icon: "grid_view" },
     { id: "donate", label: "Donate", icon: "volunteer_activism" },
@@ -66,6 +67,11 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose }) => {
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
+                {item.id === "downloads" && Object.keys(activeDownloads).length > 0 && (
+                  <span className="ml-auto bg-primary text-background text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+                    {Object.keys(activeDownloads).length}
+                  </span>
+                )}
               </div>
             );
           })}

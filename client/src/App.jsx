@@ -6,6 +6,7 @@ import ArtistScreen from "./screens/ArtistScreen";
 import AlbumScreen from "./screens/AlbumScreen";
 import LibraryScreen from "./screens/Library";
 import PlayerScreen from "./screens/Player";
+import DownloadsScreen from "./screens/Downloads";
 import GenreView from "./screens/GenreView";
 import Sidebar from "./components/Sidebar";
 import QueueSidebar from "./components/QueueSidebar";
@@ -17,6 +18,7 @@ axios.defaults.timeout = 60000; const finalURL = import.meta.env.VITE_API_URL ? 
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
+  const [activeDownloads, setActiveDownloads] = useState({}); // { trackId: progress }
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [activeArtistId, setActiveArtistId] = useState(null);
@@ -168,7 +170,7 @@ function App() {
 
   // Update Media Session Metadata when track changes
   useEffect(() => {
-    if ('mediaSession' in navigator && currentTrack) {
+    if ('mediaSession' in navigator && currentTrack) { navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
       navigator.mediaSession.metadata = new window.MediaMetadata({
         title: currentTrack.title,
         artist: currentTrack.artist?.name || 'Unknown Artist',
@@ -714,15 +716,8 @@ function App() {
         activeTab={activeTab}
         setActiveTab={(tab) => {
           navigate({
-            activeTab: tab,
-            activeArtistId: null,
-            activeAlbumId: null,
-            activeGenre: null,
-            activePlaylist: null,
-          });
-          setIsSidebarOpen(false);
-          setIsSearchVisible(false);
-        }}
+        setActiveTab={setActiveTab}
+        activeDownloads={activeDownloads}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
@@ -1202,6 +1197,14 @@ function App() {
       />
 
       {/* Full Player Overlay */}
+        {activeTab === "downloads" && (
+          <DownloadsScreen
+            activeDownloads={activeDownloads}
+            onPlayTrack={loadTrackContent}
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+          />
+        )}
       {showFullPlayer && currentTrack && (
         <PlayerScreen
           track={currentTrack}
@@ -1228,6 +1231,15 @@ function App() {
           hasPrev={currentIndex > 0 || currentTime > 3 || repeatMode === "all"}
           onOpenQueue={() => navigate({ isQueueVisible: true })}
           nextTrack={queue[currentIndex + 1]}
+          activeDownloads={activeDownloads}
+          onUpdateDownload={(id, progress) => {
+            setActiveDownloads(prev => {
+              const next = { ...prev };
+              if (progress >= 100 || progress < 0) delete next[id];
+              else next[id] = progress;
+              return { ...next };
+            });
+          }}
         />
       )}
 

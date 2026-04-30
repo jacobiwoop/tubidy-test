@@ -37,6 +37,8 @@ function PlayerScreen({
   onOpenQueue,
   onNavigateToArtist,
   nextTrack,
+  activeDownloads = {},
+  onUpdateDownload,
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -136,23 +138,30 @@ function PlayerScreen({
 
   const handleOfflineAction = async () => {
     if (!track.preview) return;
+    const isCurrentlyDownloading = !!activeDownloads[track.id];
+    if (isCurrentlyDownloading || isOfflineSaved) return; // Don't download again if saved or downloading
+
     setIsSavingOffline(true);
+    if (onUpdateDownload) onUpdateDownload(track.id, 0);
+
     try {
-      if (isOfflineSaved) {
-        await removeTrackMetadata(track.id);
-        await removeCachedAudio(track.id, track.preview);
-        setIsOfflineSaved(false);
-      } else {
-        const success = await cacheAudioFile(
-          track.id,
-          track.preview,
-          setDownloadProgress,
-        );
-        if (success) {
-          await saveTrackMetadata(track);
-          setIsOfflineSaved(true);
+      const success = await cacheAudioFile(
+        track.id,
+        track.preview,
+        (progress) => {
+          setDownloadProgress(progress);
+          if (onUpdateDownload) onUpdateDownload(track.id, progress);
         }
+      );
+      if (success) {
+        await saveTrackMetadata(track);
+        setIsOfflineSaved(true);
+        if (onUpdateDownload) onUpdateDownload(track.id, 100);
+      } else {
+        if (onUpdateDownload) onUpdateDownload(track.id, -1);
       }
+    } catch (err) {
+      if (onUpdateDownload) onUpdateDownload(track.id, -1);
     } finally {
       setIsSavingOffline(false);
       setDownloadProgress(0);
@@ -490,15 +499,22 @@ function PlayerScreen({
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className="flex items-center gap-4 p-4 hover:bg-white/5 rounded-xl cursor-pointer"
-              onClick={handleDownload}
+              className={`flex items-center gap-4 p-4 rounded-xl transition-all ${isOfflineSaved ? "opacity-50 cursor-default" : "hover:bg-white/5 cursor-pointer"}`}
+              onClick={handleOfflineAction}
             >
-              <span className="material-symbols-outlined text-2xl text-white">
-                download
+              <span className={`material-symbols-outlined text-2xl ${isOfflineSaved ? "text-primary" : "text-white"}`}>
+                {isOfflineSaved ? "offline_pin" : isSavingOffline ? "sync" : "download_for_offline"}
               </span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white">
-                {downloading ? "Preparing..." : "Download MP3"}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                  {isSavingOffline ? `Saving (${downloadProgress}%)` : isOfflineSaved ? "Available Offline" : "Save Offline"}
+                </span>
+                {isSavingOffline && (
+                  <div className="w-32 h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
+                    <div className="h-full bg-primary transition-all duration-300" style={{ width: `${downloadProgress}%` }}></div>
+                  </div>
+                )}
+              </div>
             </div>
             <div
               className="flex items-center gap-4 p-4 hover:bg-white/5 rounded-xl cursor-pointer"
@@ -545,7 +561,6 @@ function PlayerFooter({
   repeatMode,
   onToggleRepeat,
   isLoadingTrack,
-}) {
   return (
     <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
       {/* Progress Bar */}
