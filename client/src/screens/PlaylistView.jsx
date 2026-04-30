@@ -75,13 +75,13 @@ function PlaylistView({
 
       if (playlist.id === "downloads") {
         // Suppression locale (IDB + Cache)
-        const { deleteDownloadedTrack } = await import("../utils/offlineDb.js");
+        const { removeTrackMetadata } = await import("../utils/offlineDb.js");
         const { removeCachedAudio } = await import("../utils/audioCache.js");
 
         for (const track of tracks) {
           if (selectedIds.has(track.id)) {
-            await deleteDownloadedTrack(track.id);
-            if (track.preview) await removeCachedAudio(track.preview);
+            await removeTrackMetadata(track.id);
+            if (track.preview) await removeCachedAudio(track.id, track.preview);
           }
         }
       } else if (playlist.id === "liked") {

@@ -56,7 +56,7 @@ function PlayerScreen({
     if (track) {
       Promise.all([
         isTrackDownloaded(track.id),
-        isAudioCached(track.preview),
+        isAudioCached(track.id, track.preview),
       ]).then(([inDb, inCache]) => {
         if (mounted) setIsOfflineSaved(inDb && inCache);
       });
@@ -140,10 +140,11 @@ function PlayerScreen({
     try {
       if (isOfflineSaved) {
         await removeTrackMetadata(track.id);
-        await removeCachedAudio(track.preview);
+        await removeCachedAudio(track.id, track.preview);
         setIsOfflineSaved(false);
       } else {
         const success = await cacheAudioFile(
+          track.id,
           track.preview,
           setDownloadProgress,
         );

@@ -12,6 +12,7 @@ import QueueSidebar from "./components/QueueSidebar";
 import AddToPlaylistModal from "./components/AddToPlaylistModal";
 import { getDownloadedTracks } from "./utils/offlineDb";
 import { getVibrantColorFromImage } from "./utils/vibrant-color";
+import { isAudioCached, getAudioUri } from "./utils/audioCache";
 axios.defaults.timeout = 60000; const finalURL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://10.45.54.54:3000'; axios.defaults.baseURL = finalURL; 
 
 function App() {
@@ -155,7 +156,30 @@ function App() {
 
     // Push initial state to history for back button support
     window.history.replaceState({ activeTab: "home" }, "");
+
+    // --- MEDIA SESSION SETUP ---
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => setIsPlaying(true));
+      navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
+      navigator.mediaSession.setActionHandler('previoustrack', () => handlePrev());
+      navigator.mediaSession.setActionHandler('nexttrack', () => handleNext());
+    }
   }, []);
+
+  // Update Media Session Metadata when track changes
+  useEffect(() => {
+    if ('mediaSession' in navigator && currentTrack) {
+      navigator.mediaSession.metadata = new window.MediaMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.artist?.name || 'Unknown Artist',
+        album: currentTrack.album?.title || '',
+        artwork: [
+          { src: currentTrack.album?.cover_medium || '', sizes: '250x250', type: 'image/jpeg' },
+          { src: currentTrack.album?.cover_xl || '', sizes: '1000x1000', type: 'image/jpeg' },
+        ]
+      });
+    }
+  }, [currentTrack]);
 
   // Handle Back Button (Popstate)
   useEffect(() => {
@@ -405,28 +429,22 @@ function App() {
     // Créer un nouveau contrôleur pour la requête courante
     abortControllerRef.current = new AbortController();
 
-    // --- MODE HORS LIGNE (SMART SKIP) ---
+    // --- LOGIQUE LOCAL-FIRST ---
+    const localUri = await getAudioUri(trackId, track.preview);
+    const isLocal = await isAudioCached(trackId, track.preview);
+
+    if (isLocal) {
+      console.log(`[player] Playing from local storage: ${trackId}`);
+      if (activeTrackIdRef.current !== trackId) return;
+      setCurrentTrack({ ...track, preview: localUri, isFull: true });
+      setIsPlaying(true);
+      setIsLoadingTrack(false);
+      return;
+    }
+
+    // --- MODE HORS LIGNE (SKIP SI PAS LOCAL) ---
     if (!navigator.onLine) {
-      console.log(`[player-offline] Checking local db for ${trackId}...`);
-      try {
-        const localTracks = await getDownloadedTracks();
-        const cachedTrack = localTracks.find(
-          (t) => t.id?.toString() === trackId,
-        );
-
-        if (cachedTrack && cachedTrack.preview) {
-          console.log(`[player-offline] Found in cache!`);
-          if (activeTrackIdRef.current !== trackId) return;
-          setCurrentTrack({ ...cachedTrack, isFull: true });
-          setIsPlaying(true);
-          setIsLoadingTrack(false);
-          return;
-        }
-      } catch (err) {
-        console.error("Offline DB error", err);
-      }
-
-      console.warn(`[player-offline] Not cached. Skipping ${trackId}...`);
+      console.warn(`[player-offline] Not cached and no network. Skipping ${trackId}...`);
       if (activeTrackIdRef.current === trackId) {
         if (newIndex < queue.length - 1) {
           loadTrackContent(queue[newIndex + 1], newIndex + 1);
