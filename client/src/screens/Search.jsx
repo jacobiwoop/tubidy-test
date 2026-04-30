@@ -125,7 +125,7 @@ function SearchScreen({
       if (axios.isCancel(err)) {
         console.log("Search request canceled", query);
       } else {
-        console.error("Search failed:", err);
+        console.error("Search failed:", err); alert("Search Error: " + err.message);
       }
     } finally {
       if (isNew) setIsSearching(false);
