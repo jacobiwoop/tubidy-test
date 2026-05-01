@@ -50,4 +50,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tubidy-app-release
-          path: mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          path: mobile/android/app/build/outputs/apk/release/*.apk
