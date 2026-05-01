@@ -50,4 +50,19 @@ Ce fichier sert à documenter les modifications importantes, les décisions arch
 
 - Manipuler l'historique de navigation manuellement via `popstate` est crucial pour transformer une SPA web en une application mobile fluide (look-and-feel d'une App Native).
 - Le responsive ne se limite pas aux CSS `@media`. La gestion des états de visibilité (Sidebar, Recherche mobile) en React est nécessaire pour une UX de qualité.
-- L'ajout de contextuel (recommandations) en bas d'écran augmente considérablement le temps de rétention sur une application musicale.
+## [2026-05-01] - Transition Native & Design Monochrome (Mobile)
+
+### Modifications
+
+- **Migration vers App Native (Expo/React Native)** : Basculement complet du projet Web vers une architecture mobile performante utilisant `expo-audio` pour la stabilité.
+- **Grille de Bibliothèque Moderne** : Redesign de `LibraryScreen` passant d'une liste classique à une grille de cartes (2 colonnes) respectant les codes esthétiques de Monochrome.
+- **Navigation par Piles (Nested Stacks)** : Implémentation de `native-stack` à l'intérieur des onglets de navigation. Cela permet d'ouvrir une page artiste tout en conservant le Mini-Player et la barre d'onglets visible en bas.
+- **Page de Profil Artiste Premium** : Création d'un écran dédié avec bannière immersive, avatar circulaire, sections "Top Tracks" et "Discography".
+- **Optimisation du Build Release** : Activation de Proguard et du retrait des ressources inutiles dans `app.json`, réduisant drastiquement le poids de l'APK (de 70Mo à ~20Mo).
+- **Forçage Kotlin 2.0.21** : Correction d'une incompatibilité critique entre KSP et le template Expo par défaut via une injection `sed` dans le workflow CI/CD.
+
+### Leçons apprises
+
+- **Navigation UX Mobile** : Le "Mini-Player" doit impérativement être placé en dehors du conteneur de navigation pour rester persistant lors du changement de page ou d'onglet.
+- **KSP & Kotlin** : Les outils de compression modernes (KSP) exigent une synchronisation parfaite des versions. Si Expo force une version trop ancienne de Kotlin, il ne faut pas hésiter à la corriger manuellement dans les fichiers de build générés.
+- **Grid Layout (React Native)** : Contrairement au Web, les grilles en React Native nécessitent une gestion précise de `flexWrap` et des largeurs en pourcentage (`width: '47%'`) pour garantir un affichage cohérent sur tous les écrans.
