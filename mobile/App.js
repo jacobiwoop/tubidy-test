@@ -307,7 +307,6 @@ export default function App() {
             <Tab.Screen name="Search" component={SearchStack} />
             <Tab.Screen name="Library" component={LibraryStack} />
           </Tab.Navigator>
-        </NavigationContainer>
 
         {/* Mini Player */}
         {currentTrack && !showFullPlayer && (
@@ -358,6 +357,7 @@ export default function App() {
             activeDownloads={activeDownloads}
           />
         </Animated.View>
+        </NavigationContainer>
 
         {/* Modal Ajout Playlist */}
         <Modal
