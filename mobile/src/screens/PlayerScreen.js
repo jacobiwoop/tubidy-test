@@ -79,7 +79,7 @@ export default function PlayerScreen({
     const time = player.currentTime;
     if (time !== undefined && time !== null) {
       // Conversion si nécessaire (secondes -> ms)
-      return (time < 1000 && track.duration > 10) ? time * 1000 : time;
+      return (time < 1000 && track?.duration > 10) ? time * 1000 : time;
     }
     return 0;
   });
@@ -138,7 +138,7 @@ export default function PlayerScreen({
         if (time !== undefined && time !== null) {
           // Si la durée est grande (ex: > 1000ms) et que le temps est petit, 
           // c'est probablement des secondes.
-          const posMs = (time < 1000 && duration > 10000) ? time * 1000 : time;
+          const posMs = (time < 1000 && (duration > 10000)) ? time * 1000 : time;
           setCurrentPosition(posMs);
         }
       }, 500);
@@ -151,7 +151,7 @@ export default function PlayerScreen({
   // Si on vient de charger une nouvelle track, on remet la position à 0
   useEffect(() => {
     setCurrentPosition(0);
-  }, [track.id]);
+  }, [track?.id]);
 
   useEffect(() => {
     Animated.spring(albumScale, {
@@ -166,7 +166,7 @@ export default function PlayerScreen({
 
   // Position et Durée avec fallbacks
   // On utilise player.status en priorité, puis track.duration de Deezer
-  const duration = player.status?.duration || (track.duration ? track.duration * 1000 : 0);
+  const duration = player.status?.duration || (track?.duration ? track.duration * 1000 : 0);
   const position = isSliding ? slideValue : currentPosition;
 
   const handleSlidingStart = () => {

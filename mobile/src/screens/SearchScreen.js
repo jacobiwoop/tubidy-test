@@ -13,8 +13,10 @@ import { Search, Heart } from 'lucide-react-native';
 
 import { theme } from '../utils/theme';
 import { searchMusic } from '../services/api';
+import { usePlayer } from '../../App';
 
-export default function SearchScreen({ onPlayTrack, loadingTrackId, favorites, onToggleFavorite, onViewArtist }) {
+export default function SearchScreen({ navigation }) {
+  const { onPlayTrack, loadingTrackId, favorites, onToggleFavorite, onViewArtist } = usePlayer();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);

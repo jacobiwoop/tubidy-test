@@ -5,10 +5,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Play, Shuffle, Download, Heart, Disc, ListMusic } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import * as api from '../services/api';
+import { usePlayer } from '../../App';
 
 const { width } = Dimensions.get('window');
 
-export default function ArtistScreen({ artistId, onBack, onPlayTrack }) {
+export default function ArtistScreen({ navigation, route }) {
+  const { artistId } = route.params;
+  const { onPlayTrack } = usePlayer();
+  const onBack = () => navigation.goBack();
   const [loading, setLoading] = useState(true);
   const [artist, setArtist] = useState(null);
   const [topTracks, setTopTracks] = useState([]);

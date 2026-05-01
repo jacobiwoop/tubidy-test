@@ -8,16 +8,20 @@ import { Heart, ListMusic, ChevronRight, Clock, Download, User, Plus, X, ArrowLe
 
 
 import { createPlaylist } from '../utils/playlists';
+import { usePlayer } from '../../App';
 
-export default function LibraryScreen({ 
-  playlists = [], 
-  onPlayTrack, 
-  loadingTrackId, 
-  refreshPlaylists, 
-  currentTrackId,
-  downloads = [],
-  activeDownloads = {}
-}) {
+export default function LibraryScreen({ navigation }) {
+  const { 
+    playlists, 
+    onPlayTrack, 
+    loadingTrackId, 
+    loadPlaylists: refreshPlaylists, 
+    currentTrack,
+    downloads,
+    activeDownloads 
+  } = usePlayer();
+  
+  const currentTrackId = currentTrack?.id;
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [showDownloads, setShowDownloads] = useState(false);
   const [showCreate, setShowCreate] = useState(false);

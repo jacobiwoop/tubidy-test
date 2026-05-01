@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { StyleSheet, Text, View, StatusBar, TouchableOpacity, Image, Platform, Animated, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAudioPlayerStatus } from 'expo-audio';
+import { LinearGradient } from 'expo-linear-gradient';
 import audioModule from './src/utils/audioFactory';
 import { theme } from './src/utils/theme';
 import SearchScreen from './src/screens/SearchScreen';
@@ -26,6 +27,9 @@ const { player, TrackPlayer } = audioModule;
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const navigationRef = React.createRef();
+const PlayerContext = createContext();
+
+export const usePlayer = () => useContext(PlayerContext);
 
 export default function App() {
   const playerStatus = useAudioPlayerStatus(player);
@@ -180,7 +184,7 @@ export default function App() {
         artwork: track.album?.cover_medium,
       });
       await TrackPlayer.play();
-      setShowFullPlayer(true);
+      // setShowFullPlayer(true); // Désactivé à la demande de l'utilisateur
     } catch (error) {
       console.error('Playback error:', error);
     } finally {
@@ -265,288 +269,175 @@ export default function App() {
   // On considère que le player est prêt si on a un statut
   const isPlayerReady = !!playerStatus;
 
-  // Composant Stack pour chaque onglet
-  const HomeStack = () => (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
-      <Stack.Screen name="HomeMain">
-        {(props) => (
-          <HomeScreen 
-            {...props} 
-            favorites={favorites}
-            playlists={playlists}
-            onPlayTrack={handlePlayTrack}
-            onViewArtist={(id) => props.navigation.navigate('ArtistDetail', { artistId: id })}
-          />
-        )}
-      </Stack.Screen>
-      <Stack.Screen name="ArtistDetail">
-        {(props) => (
-          <ArtistScreen 
-            artistId={props.route.params.artistId}
-            onBack={() => props.navigation.goBack()}
-            onPlayTrack={handlePlayTrack}
-          />
-        )}
-      </Stack.Screen>
-    </Stack.Navigator>
-  );
-
-  const SearchStack = () => (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
-      <Stack.Screen name="SearchMain">
-        {(props) => (
-          <SearchScreen 
-            {...props} 
-            onPlayTrack={(track) => handlePlayTrack(track, [])} 
-            loadingTrackId={loadingTrackId} 
-            favorites={favorites}
-            onToggleFavorite={toggleTrackFavorite}
-            onViewArtist={(id) => props.navigation.navigate('ArtistDetail', { artistId: id })}
-          />
-        )}
-      </Stack.Screen>
-      <Stack.Screen name="ArtistDetail">
-        {(props) => (
-          <ArtistScreen 
-            artistId={props.route.params.artistId}
-            onBack={() => props.navigation.goBack()}
-            onPlayTrack={handlePlayTrack}
-          />
-        )}
-      </Stack.Screen>
-    </Stack.Navigator>
-  );
-
-  const LibraryStack = () => (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
-      <Stack.Screen name="LibraryMain">
-        {(props) => (
-          <LibraryScreen 
-            {...props} 
-            playlists={playlists}
-            onPlayTrack={handlePlayTrack}
-            loadingTrackId={loadingTrackId}
-            refreshPlaylists={loadPlaylists}
-            currentTrackId={currentTrack?.id}
-            downloads={downloads}
-            activeDownloads={activeDownloads}
-            onViewArtist={(id) => props.navigation.navigate('ArtistDetail', { artistId: id })}
-          />
-        )}
-      </Stack.Screen>
-      <Stack.Screen name="ArtistDetail">
-        {(props) => (
-          <ArtistScreen 
-            artistId={props.route.params.artistId}
-            onBack={() => props.navigation.goBack()}
-            onPlayTrack={handlePlayTrack}
-          />
-        )}
-      </Stack.Screen>
-    </Stack.Navigator>
-  );
-
-  if (!isPlayerReady) {
-    return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" />
-        <Text style={styles.text}>Initializing Audio Engine...</Text>
-      </View>
-    );
-  }
-
-  // On ne retourne plus PlayerScreen ici, on le mettra dans une Modal plus bas
-
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      
-      <NavigationContainer ref={navigationRef}>
-
-        <Tab.Navigator
-          screenOptions={({ route }) => ({
-            headerShown: false,
-            tabBarStyle: {
-              backgroundColor: 'rgba(10, 10, 10, 0.8)',
-              borderTopWidth: 0,
-              height: 60,
-              paddingBottom: 10,
-              paddingTop: 5,
-              position: 'absolute',
-              elevation: 0,
-            },
-            tabBarActiveTintColor: theme.colors.accent,
-            tabBarInactiveTintColor: theme.colors.secondary,
-            tabBarIcon: ({ color, size }) => {
-              if (route.name === 'Home') return <Home size={size} color={color} />;
-              if (route.name === 'Search') return <Search size={size} color={color} />;
-              if (route.name === 'Library') return <Library size={size} color={color} />;
-            },
-          })}
-        >
-          <Tab.Screen name="Home" component={HomeStack} />
-          <Tab.Screen name="Search" component={SearchStack} />
-          <Tab.Screen name="Library" component={LibraryStack} />
-        </Tab.Navigator>
-      </NavigationContainer>
-
-      {currentTrack && !showFullPlayer && (
-        <TouchableOpacity 
-          style={styles.miniPlayer}
-          onPress={() => setShowFullPlayer(true)}
-          activeOpacity={0.9}
-        >
-          <Image 
-            source={{ uri: currentTrack?.album?.cover_medium || '' }} 
-            style={styles.miniCover} 
-          />
-          <View style={styles.miniInfo}>
-            <Text style={styles.miniTitle} numberOfLines={1}>{currentTrack.title}</Text>
-            <Text style={styles.miniArtist}>{currentTrack.artist?.name}</Text>
-          </View>
-
-          <TouchableOpacity 
-            onPress={(e) => {
-              e.stopPropagation();
-              toggleFavorite();
-            }}
-            style={{ paddingHorizontal: 10 }}
+    <PlayerContext.Provider value={{ 
+      onPlayTrack: handlePlayTrack, 
+      loadingTrackId, 
+      favorites, 
+      onToggleFavorite: toggleTrackFavorite,
+      playlists,
+      loadPlaylists,
+      currentTrack,
+      downloads,
+      activeDownloads,
+      onViewArtist: handleViewArtist
+    }}>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        
+        <NavigationContainer ref={navigationRef}>
+          <Tab.Navigator
+            screenOptions={({ route }) => ({
+              tabBarIcon: ({ focused, color, size }) => {
+                if (route.name === 'Home') return <Home size={size} color={color} />;
+                if (route.name === 'Search') return <Search size={size} color={color} />;
+                if (route.name === 'Library') return <Library size={size} color={color} />;
+              },
+              tabBarActiveTintColor: theme.colors.accent,
+              tabBarInactiveTintColor: 'rgba(255,255,255,0.5)',
+              tabBarStyle: {
+                backgroundColor: '#121212',
+                borderTopWidth: 0,
+                height: 60,
+                paddingBottom: 10,
+                display: isPlayerReady ? 'flex' : 'flex'
+              },
+              headerShown: false
+            })}
           >
-            <Heart 
-              size={22} 
-              color={isFavorite ? theme.colors.accent : theme.colors.primary} 
-              fill={isFavorite ? theme.colors.accent : 'transparent'} 
-              opacity={isFavorite ? 1 : 0.6}
+            <Tab.Screen name="Home" component={HomeStack} />
+            <Tab.Screen name="Search" component={SearchStack} />
+            <Tab.Screen name="Library" component={LibraryStack} />
+          </Tab.Navigator>
+        </NavigationContainer>
+
+        {/* Mini Player */}
+        {currentTrack && !showFullPlayer && (
+          <TouchableOpacity 
+            activeOpacity={0.9}
+            onPress={() => setShowFullPlayer(true)}
+            style={[styles.miniPlayer, { bottom: 65 }]}
+          >
+            <LinearGradient
+              colors={['#282828', '#121212']}
+              style={StyleSheet.absoluteFill}
             />
+            <Image 
+              source={{ uri: currentTrack?.album?.cover_medium || '' }} 
+              style={styles.miniCover} 
+            />
+            <View style={styles.miniInfo}>
+              <Text style={styles.miniTitle} numberOfLines={1}>{currentTrack.title}</Text>
+              <Text style={styles.miniArtist} numberOfLines={1}>{currentTrack.artist?.name}</Text>
+            </View>
+            <TouchableOpacity onPress={togglePlay} style={styles.miniPlayBtn}>
+              {playerStatus?.playing ? <Pause size={24} color="#fff" /> : <Play size={24} color="#fff" />}
+            </TouchableOpacity>
           </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => playbackError ? handlePlayTrack(currentTrack, currentQueue) : togglePlay()} 
-            style={styles.miniPlayBtn} 
-            disabled={!!loadingTrackId}
-          >
-             {loadingTrackId ? (
-               <ActivityIndicator size="small" color={theme.colors.accent} />
-             ) : playbackError ? (
-               <RotateCcw size={24} color={theme.colors.accent} />
-             ) : (
-               playerStatus.playing ? (
-                 <Pause size={24} color="white" fill="white" />
-               ) : (
-                 <Play size={24} color="white" fill="white" />
-               )
-             )}
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
+        )}
 
-      {/* Grand Lecteur en superposition avec animation interactive */}
-      <Animated.View 
-        pointerEvents={showFullPlayer ? 'auto' : 'none'}
-        style={[
-          StyleSheet.absoluteFill,
-          { 
-            transform: [{ translateY: playerPos }],
-            zIndex: 100,
-            backgroundColor: theme.colors.background,
-            opacity: playerPos.interpolate({
-              inputRange: [0, height * 0.5, height],
-              outputRange: [1, 1, 0]
-            })
-          }
-        ]}
-      >
-        {currentTrack && (
+        {/* Full Player Overlay */}
+        <Animated.View 
+          pointerEvents={showFullPlayer ? 'auto' : 'none'}
+          style={[
+            StyleSheet.absoluteFill,
+            { transform: [{ translateY: playerPos }], zIndex: 1000 }
+          ]}
+        >
           <PlayerScreen 
             track={currentTrack}
-            isPlaying={playerStatus.playing}
-            isLoading={!!loadingTrackId}
+            status={playerStatus}
+            onClose={() => setShowFullPlayer(false)}
+            onPlayPause={togglePlay}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
             isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
             onAddToPlaylist={() => setShowPlaylistModal(true)}
-            onTogglePlay={togglePlay}
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            onDownload={() => handleDownload(currentTrack)}
-            activeDownloads={activeDownloads}
-            downloads={downloads}
-            playbackError={playbackError}
-            onRetry={() => handlePlayTrack(currentTrack, currentQueue)}
-            onClose={() => setShowFullPlayer(false)}
-            onViewArtist={handleViewArtist}
+            queue={currentQueue}
+            queueIndex={currentQueueIndex}
+            onSelectFromQueue={(track, idx) => handlePlayTrack(track, currentQueue)}
           />
-        )}
-      </Animated.View>
+        </Animated.View>
 
-      {/* Modal de gestion des Playlists */}
-      <Modal
-        visible={showPlaylistModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowPlaylistModal(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setShowPlaylistModal(false)}
+        {/* Modal Ajout Playlist */}
+        <Modal
+          visible={showPlaylistModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowPlaylistModal(false)}
         >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add to Playlist</Text>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Ajouter à une playlist</Text>
+              
+              <TouchableOpacity 
+                style={styles.createPlaylistBtn}
+                onPress={() => {
+                  const title = prompt("Nom de la nouvelle playlist :");
+                  if (title) handleCreatePlaylist(title);
+                }}
+              >
+                <Plus size={20} color={theme.colors.accent} />
+                <Text style={styles.createPlaylistText}>Nouvelle playlist</Text>
+              </TouchableOpacity>
+
+              <ScrollView style={styles.playlistList}>
+                {playlists.map(playlist => (
+                  <TouchableOpacity 
+                    key={playlist.id} 
+                    style={styles.playlistItem}
+                    onPress={() => handleAddToPlaylist(playlist.id)}
+                  >
+                    <ListMusic size={20} color="#fff" />
+                    <Text style={styles.playlistItemText}>{playlist.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <TouchableOpacity 
+                style={styles.closeModalBtn}
+                onPress={() => setShowPlaylistModal(false)}
+              >
+                <Text style={styles.closeModalText}>Annuler</Text>
+              </TouchableOpacity>
             </View>
-
-            <ScrollView style={styles.playlistList}>
-              {/* Option Nouvelle Playlist */}
-              <View style={styles.createContainer}>
-                <TextInput
-                  style={styles.playlistInput}
-                  placeholder="New playlist name..."
-                  placeholderTextColor={theme.colors.secondary}
-                  value={newPlaylistTitle}
-                  onChangeText={setNewPlaylistTitle}
-                />
-                <TouchableOpacity 
-                  style={styles.createBtn}
-                  onPress={async () => {
-                    if (newPlaylistTitle.trim()) {
-                      const updated = await createPlaylist(newPlaylistTitle);
-                      setPlaylists(updated);
-                      setNewPlaylistTitle('');
-                    }
-                  }}
-                >
-                  <Plus size={20} color="white" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Liste des Playlists existantes */}
-              {playlists.map(pl => (
-                <TouchableOpacity 
-                  key={pl.id} 
-                  style={styles.playlistItem}
-                  onPress={async () => {
-                    await toggleTrackInPlaylist(pl.id, currentTrack);
-                    // On ne ferme pas forcément la modal pour permettre de gérer plusieurs playlists
-                  }}
-                >
-                  <View style={styles.playlistIcon}>
-                    <ListMusic size={20} color={theme.colors.secondary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.playlistTitle}>{pl.title}</Text>
-                    <Text style={styles.playlistCount}>{pl.tracks?.length || 0} tracks</Text>
-                  </View>
-                  {currentTrack && pl.tracks?.some(t => t.id === currentTrack.id) && (
-                    <CheckCircle size={22} color={theme.colors.accent} fill={theme.colors.accent + '20'} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
           </View>
-        </TouchableOpacity>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+
+      </SafeAreaView>
+    </PlayerContext.Provider>
   );
 }
+
+// Stack Navigators définis en dehors pour la stabilité
+function HomeStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen name="ArtistDetail" component={ArtistScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function SearchStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
+      <Stack.Screen name="SearchMain" component={SearchScreen} />
+      <Stack.Screen name="ArtistDetail" component={ArtistScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function LibraryStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
+      <Stack.Screen name="LibraryMain" component={LibraryScreen} />
+      <Stack.Screen name="ArtistDetail" component={ArtistScreen} />
+    </Stack.Navigator>
+  );
+}
+
 
 const styles = StyleSheet.create({
   container: {

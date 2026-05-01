@@ -1,25 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Play, Heart, Disc, Music } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import { checkHealth, BASE_URL } from '../services/api';
+import { usePlayer } from '../../App';
 
 const { width } = Dimensions.get('window');
 
-export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack }) {
+export default function HomeScreen({ navigation }) {
+  const { favorites, playlists, onPlayTrack, onViewArtist } = usePlayer();
   const [serverStatus, setServerStatus] = useState('checking');
+  const [debugLogs, setDebugLogs] = useState([]);
 
   useEffect(() => {
+    const isRender = BASE_URL.includes('onrender.com');
+    let attempts = 0;
+    const maxAttempts = isRender ? 15 : 1; // On insiste beaucoup pour Render (free tier cold start)
+
     const check = async () => {
-      try {
-        await checkHealth();
-        setServerStatus('online');
-      } catch (e) {
-        setServerStatus('offline');
-        console.log('[Status] Server unreachable via tunnel');
+      setServerStatus('checking');
+      const addLog = (msg) => setDebugLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 10));
+      
+      while (attempts < maxAttempts) {
+        attempts++;
+        try {
+          addLog(`Connexion à ${BASE_URL}... (Essai ${attempts})`);
+          const data = await checkHealth();
+          
+          if (data) {
+            setServerStatus('online');
+            addLog(`Succès ! Le serveur a répondu : ${JSON.stringify(data)}`);
+            return;
+          }
+        } catch (e) {
+          const errorMsg = e.response ? `Erreur ${e.response.status}` : e.message;
+          addLog(`Échec : ${errorMsg}`);
+          
+          if (isRender && attempts < maxAttempts) {
+            setServerStatus('waiting');
+            // On attend 4 secondes avant de réessayer pour laisser Render démarrer
+            await new Promise(resolve => setTimeout(resolve, 4000));
+          } else {
+            break;
+          }
+        }
       }
+      setServerStatus('offline');
+      addLog(`Serveur injoignable après ${attempts} tentatives.`);
     };
     check();
   }, []);
@@ -52,10 +81,17 @@ export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack
             <Text style={styles.appTitle}>Spotywoop</Text>
             <TouchableOpacity 
               style={styles.statusContainer}
-              onPress={() => Alert.alert('Connection Details', `API URL: ${BASE_URL}\nStatus: ${serverStatus.toUpperCase()}`)}
+              onPress={() => Alert.alert(
+                'Détails de Connexion', 
+                `URL: ${BASE_URL}\nStatut: ${serverStatus.toUpperCase()}\n\nHistorique récent :\n${debugLogs.join('\n')}`
+              )}
             >
-              <View style={[styles.statusDot, { backgroundColor: serverStatus === 'online' ? '#1DB954' : serverStatus === 'offline' ? '#ff4444' : '#ffbb33' }]} />
-              <Text style={styles.statusText}>{serverStatus.toUpperCase()}</Text>
+              {(serverStatus === 'checking' || serverStatus === 'waiting') ? (
+                <ActivityIndicator size="small" color={theme.colors.accent} style={{ transform: [{ scale: 0.7 }] }} />
+              ) : (
+                <View style={[styles.statusDot, { backgroundColor: serverStatus === 'online' ? '#1DB954' : serverStatus === 'offline' ? '#ff4444' : '#ffbb33' }]} />
+              )}
+              <Text style={styles.statusText}>{serverStatus === 'waiting' ? 'RETRYING...' : serverStatus.toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.headerRow}>
