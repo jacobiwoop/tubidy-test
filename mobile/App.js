@@ -8,7 +8,7 @@ import { theme } from './src/utils/theme';
 import SearchScreen from './src/screens/SearchScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
 import { getTrackDownload, BASE_URL } from './src/services/api';
-import { Play, Pause, Heart, Home, Search, Library, Plus, ListMusic, CheckCircle } from 'lucide-react-native';
+import { Play, Pause, Heart, Home, Search, Library, Plus, ListMusic, CheckCircle, RotateCcw } from 'lucide-react-native';
 
 import { isTrackFavorite, saveFavorite } from './src/utils/favorites';
 import { NavigationContainer } from '@react-navigation/native';
@@ -41,6 +41,8 @@ export default function App() {
   // États de Téléchargement
   const [downloads, setDownloads] = useState([]);
   const [activeDownloads, setActiveDownloads] = useState({}); // { trackId: progress }
+  
+  const [playbackError, setPlaybackError] = useState(false);
   
   const playerPos = React.useRef(new Animated.Value(height)).current;
 
@@ -116,6 +118,7 @@ export default function App() {
   }, [showFullPlayer]);
 
   const handlePlayTrack = async (track, queue = []) => {
+    setPlaybackError(false);
     setCurrentTrack(track);
     
     // 1. Gérer la file d'attente
@@ -157,6 +160,7 @@ export default function App() {
           if (currentQueue.length > 1 && currentQueueIndex < currentQueue.length - 1) {
             handleNext();
           } else {
+            setPlaybackError(true);
             alert("Erreur de lecture : " + netError.message);
           }
           return;
@@ -353,9 +357,15 @@ export default function App() {
               opacity={isFavorite ? 1 : 0.6}
             />
           </TouchableOpacity>
-          <TouchableOpacity onPress={togglePlay} style={styles.miniPlayBtn} disabled={!!loadingTrackId}>
+          <TouchableOpacity 
+            onPress={() => playbackError ? handlePlayTrack(currentTrack, currentQueue) : togglePlay()} 
+            style={styles.miniPlayBtn} 
+            disabled={!!loadingTrackId}
+          >
              {loadingTrackId ? (
                <ActivityIndicator size="small" color={theme.colors.accent} />
+             ) : playbackError ? (
+               <RotateCcw size={24} color={theme.colors.accent} />
              ) : (
                playerStatus.playing ? (
                  <Pause size={24} color="white" fill="white" />
@@ -397,6 +407,8 @@ export default function App() {
             onDownload={() => handleDownload(currentTrack)}
             activeDownloads={activeDownloads}
             downloads={downloads}
+            playbackError={playbackError}
+            onRetry={() => handlePlayTrack(currentTrack, currentQueue)}
             onClose={() => setShowFullPlayer(false)}
           />
         )}

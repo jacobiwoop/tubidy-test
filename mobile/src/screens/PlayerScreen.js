@@ -24,10 +24,10 @@ import {
   MoreHorizontal, 
   Heart, 
   ListMusic,
-  Shuffle,
   Repeat,
   ListPlus,
-  Download
+  Download,
+  RotateCcw
 } from 'lucide-react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -59,6 +59,8 @@ export default function PlayerScreen({
   onDownload,
   activeDownloads = {},
   downloads = [],
+  playbackError,
+  onRetry,
   onClose,
   onAddToPlaylist
 }) {
@@ -285,11 +287,13 @@ export default function PlayerScreen({
         
         <TouchableOpacity 
           style={styles.playButton}
-          onPress={onTogglePlay}
+          onPress={playbackError ? onRetry : onTogglePlay}
           disabled={isLoading}
         >
           {isLoading ? (
             <ActivityIndicator size="large" color={theme.colors.background} />
+          ) : playbackError ? (
+            <RotateCcw size={40} color={theme.colors.background} />
           ) : (
             isPlaying ? (
               <Pause size={40} color={theme.colors.background} fill={theme.colors.background} />
