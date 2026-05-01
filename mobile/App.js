@@ -361,11 +361,6 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      <View style={styles.header}>
-        <Text style={styles.title}>Spotywoop</Text>
-        <Text style={styles.subtitle}>Native Experience</Text>
-      </View>
-      
       <NavigationContainer ref={navigationRef}>
 
         <Tab.Navigator

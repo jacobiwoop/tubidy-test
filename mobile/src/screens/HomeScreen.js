@@ -33,7 +33,23 @@ export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          <Text style={styles.greeting}>{getGreeting()}</Text>
+          <Text style={styles.appTitle}>Spotywoop</Text>
+          <View style={styles.headerRow}>
+            <TouchableOpacity style={styles.avatarContainer}>
+              <Text style={styles.avatarText}>S</Text>
+            </TouchableOpacity>
+            <View style={styles.filterContainer}>
+              <TouchableOpacity style={[styles.filterChip, { backgroundColor: '#1DB954' }]}>
+                <Text style={[styles.filterText, { color: '#000' }]}>Tout</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.filterChip, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }]}>
+                <Text style={styles.filterText}>Musique</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.filterChip, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+                <Text style={styles.filterText}>Podcasts</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Grille de raccourcis rapides */}
           <View style={styles.quickGrid}>
@@ -107,25 +123,6 @@ export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack
                ))}
              </ScrollView>
           </View>
-          {/* Section: Project DNA (Comparison) */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Project DNA</Text>
-            <View style={styles.dnaGrid}>
-              <View style={styles.dnaCard}>
-                <Text style={styles.dnaHeader}>Monochrome Web</Text>
-                <Text style={styles.dnaText}>L'inspiration visuelle et la qualité Hi-Res, mais limitée par le navigateur.</Text>
-              </View>
-              <View style={styles.dnaCard}>
-                <Text style={styles.dnaHeader}>Legacy Client</Text>
-                <Text style={styles.dnaText}>Base de données brute, mais lent et sans confort (pas de mode hors-ligne).</Text>
-              </View>
-              <View style={[styles.dnaCard, { borderColor: theme.colors.accent, borderWidth: 1 }]}>
-                <Text style={[styles.dnaHeader, { color: theme.colors.accent }]}>Spotywoop Native</Text>
-                <Text style={styles.dnaText}>Performance Turbo, Mode Hors-ligne réel, UI Monochrome & Contrôles Natifs.</Text>
-              </View>
-            </View>
-          </View>
-
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -145,8 +142,50 @@ const styles = StyleSheet.create({
     height: 300,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 150,
+  },
+  appTitle: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    letterSpacing: -0.5,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    gap: 12,
+  },
+  avatarContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F06292', // Rose Spotify
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#000',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   greeting: {
     fontSize: 28,
