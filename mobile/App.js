@@ -23,7 +23,7 @@ import { getDownloadMetadata, startDownload, deleteDownload } from './src/utils/
 import { Modal, ScrollView, TextInput } from 'react-native';
 import { PlayerContext } from './src/context/PlayerContext';
 
-const { height } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('screen');
 const { player, TrackPlayer } = audioModule;
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -50,7 +50,7 @@ export default function App() {
   
   const [playbackError, setPlaybackError] = useState(false);
   
-  const playerPos = React.useRef(new Animated.Value(height + 100)).current;
+  const playerPos = React.useRef(new Animated.Value(SCREEN_HEIGHT + 500)).current;
 
   React.useEffect(() => {
     loadFavoritesList();
@@ -116,7 +116,7 @@ export default function App() {
 
   React.useEffect(() => {
     Animated.spring(playerPos, {
-      toValue: showFullPlayer ? 0 : height + 100,
+      toValue: showFullPlayer ? 0 : SCREEN_HEIGHT + 500,
       useNativeDriver: true,
       tension: 40,
       friction: 8
@@ -336,7 +336,7 @@ export default function App() {
           pointerEvents={showFullPlayer ? 'auto' : 'none'}
           style={[
             StyleSheet.absoluteFill,
-            { transform: [{ translateY: playerPos }], zIndex: 1000 }
+            { transform: [{ translateY: playerPos }], zIndex: showFullPlayer ? 1000 : -1 }
           ]}
         >
           <PlayerScreen 
