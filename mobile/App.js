@@ -316,10 +316,7 @@ export default function App() {
             onPress={() => setShowFullPlayer(true)}
             style={[styles.miniPlayer, { bottom: 65 }]}
           >
-            <LinearGradient
-              colors={['#282828', '#121212']}
-              style={StyleSheet.absoluteFill}
-            />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(28, 28, 30, 0.95)', borderRadius: 15 }]} />
             <Image 
               source={{ uri: currentTrack?.album?.cover_medium || '' }} 
               style={styles.miniCover} 
@@ -344,7 +341,7 @@ export default function App() {
         >
           <PlayerScreen 
             track={currentTrack}
-            status={playerStatus}
+            status={{ ...playerStatus, loadingTrackId }}
             onClose={() => setShowFullPlayer(false)}
             onPlayPause={togglePlay}
             onNext={handleNext}

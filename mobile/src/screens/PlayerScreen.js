@@ -50,11 +50,10 @@ const formatTime = (ms) => {
 
 export default function PlayerScreen({ 
   track, 
-  isPlaying, 
-  isLoading, 
+  status: propStatus, // On peut recevoir le status en prop ou l'utiliser localement
   isFavorite, 
   onToggleFavorite, 
-  onTogglePlay, 
+  onPlayPause, 
   onNext,
   onPrevious,
   onDownload,
@@ -130,10 +129,9 @@ export default function PlayerScreen({
   // Synchronisation de la position en temps réel
   useEffect(() => {
     let interval;
+    const isPlaying = playerStatus?.playing;
     if (isPlaying && !isSliding) {
       interval = setInterval(() => {
-        // Dans certaines versions d'expo-audio, currentTime est en secondes.
-        // On vérifie et on convertit en ms si nécessaire.
         const time = player.currentTime;
         if (time !== undefined && time !== null) {
           // Si la durée est grande (ex: > 1000ms) et que le temps est petit, 
@@ -146,7 +144,7 @@ export default function PlayerScreen({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPlaying, isSliding, duration]);
+  }, [playerStatus?.playing, isSliding, duration]);
 
   // Si on vient de charger une nouvelle track, on remet la position à 0
   useEffect(() => {
@@ -165,9 +163,10 @@ export default function PlayerScreen({
   const [repeatMode, setRepeatMode] = useState(0); // 0: None, 1: All, 2: One
 
   // Position et Durée avec fallbacks
-  // On utilise player.status en priorité, puis track.duration de Deezer
-  const duration = player.status?.duration || (track?.duration ? track.duration * 1000 : 0);
+  const duration = playerStatus?.duration || (track?.duration ? track.duration * 1000 : 0);
   const position = isSliding ? slideValue : currentPosition;
+  const isPlaying = playerStatus?.playing;
+  const isLoading = playerStatus?.loading || (track?.id === propStatus?.loadingTrackId);
 
   const handleSlidingStart = () => {
     setIsSliding(true);
@@ -294,7 +293,7 @@ export default function PlayerScreen({
         
         <TouchableOpacity 
           style={styles.playButton}
-          onPress={playbackError ? onRetry : onTogglePlay}
+          onPress={playbackError ? onRetry : onPlayPause}
           disabled={isLoading}
         >
           {isLoading ? (
