@@ -29,7 +29,7 @@ const audioModule = {
       // On met à jour les métadonnées pour l'écran de verrouillage
       player.metadata = {
         title: track.title,
-        artist: track.artist || track.artist?.name,
+        artist: track.artist?.name || track.artist || 'Unknown Artist',
         album: track.album?.title || 'Spotywoop',
         artwork: track.artwork || track.album?.cover_medium,
       };
