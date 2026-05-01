@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const DOWNLOADS_KEY = '@tubidy_downloads_metadata';
+const DOWNLOADS_KEY = '@spotywoop_downloads_metadata';
 const DOWNLOAD_DIR = `${FileSystem.documentDirectory}downloads/`;
 
 // S'assurer que le dossier existe

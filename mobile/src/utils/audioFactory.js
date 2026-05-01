@@ -30,7 +30,7 @@ const audioModule = {
       player.metadata = {
         title: track.title,
         artist: track.artist || track.artist?.name,
-        album: track.album?.title || 'Tubidy',
+        album: track.album?.title || 'Spotywoop',
         artwork: track.artwork || track.album?.cover_medium,
       };
 

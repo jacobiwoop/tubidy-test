@@ -120,7 +120,7 @@ export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack
                 <Text style={styles.dnaText}>Base de données brute, mais lent et sans confort (pas de mode hors-ligne).</Text>
               </View>
               <View style={[styles.dnaCard, { borderColor: theme.colors.accent, borderWidth: 1 }]}>
-                <Text style={[styles.dnaHeader, { color: theme.colors.accent }]}>Tubidy Native</Text>
+                <Text style={[styles.dnaHeader, { color: theme.colors.accent }]}>Spotywoop Native</Text>
                 <Text style={styles.dnaText}>Performance Turbo, Mode Hors-ligne réel, UI Monochrome & Contrôles Natifs.</Text>
               </View>
             </View>

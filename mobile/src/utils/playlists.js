@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const PLAYLISTS_KEY = '@tubidy_playlists';
+const PLAYLISTS_KEY = '@spotywoop_playlists';
 
 // Playlist par défaut (Favoris)
 const DEFAULT_PLAYLISTS = [
