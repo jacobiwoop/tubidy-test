@@ -25,6 +25,7 @@ const { height } = Dimensions.get('window');
 const { player, TrackPlayer } = audioModule;
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const navigationRef = React.createRef();
 
 export default function App() {
   const playerStatus = useAudioPlayerStatus(player);
@@ -252,6 +253,15 @@ export default function App() {
     }
   };
 
+  const handleViewArtist = (id) => {
+    if (!id || !navigationRef.current) return;
+    // On navigue dans l'onglet actuel vers le détail de l'artiste
+    navigationRef.current.navigate('Home', {
+      screen: 'ArtistDetail',
+      params: { artistId: id },
+    });
+  };
+
   // On considère que le player est prêt si on a un statut
   const isPlayerReady = !!playerStatus;
 
@@ -351,7 +361,7 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
 
         <Tab.Navigator
           screenOptions={({ route }) => ({
