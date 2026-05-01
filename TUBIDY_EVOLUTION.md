@@ -10,11 +10,20 @@ Ce document récapitule les étapes majeures de la transformation de l'applicati
 - **Lecture Locale :** Priorité aux fichiers stockés sur le téléphone pour économiser la data et permettre l'écoute sans Wi-Fi.
 
 ### 2. Design "Monochrome" Premium
+- **Library Grid :** Transition d'une liste verticale simple vers une grille interactive en 2 colonnes pour les playlists, optimisant l'espace et le look.
+- **Artist Profile :** Implémentation d'un écran dédié aux artistes avec photo de profil circulaire, bannière immersive, top tracks et discographie complète.
+
+### 3. Architecture de Navigation Avancée
+- **Nested Stacks :** Refactorisation de la navigation pour utiliser des piles (Stacks) à l'intérieur des onglets (Tabs). Cela permet de naviguer vers un artiste sans cacher la barre de navigation ni le mini-lecteur.
 - **HomeScreen :** Refonte totale avec un dégradé d'aura, une salutation dynamique et une grille de raccourcis rapides (Style Spotify/Monochrome Web).
 - **Library :** Ajout d'une vue dédiée aux téléchargements avec barres de progression en temps réel.
 - **Player :** Intégration d'un bouton "Reload" intelligent qui apparaît uniquement en cas d'erreur de lecture pour permettre une retentative rapide.
 
-### 3. Expérience Utilisateur (UX)
+### 4. Build & Optimisation Android
+- **Réduction de Taille :** Passage de 70 Mo à environ 20 Mo grâce à l'activation de Proguard et de la compression des ressources dans `app.json`.
+- **Compatibilité KSP :** Résolution du conflit de version Kotlin (1.9.24 vs 2.0.21). Utilisation d'un script `sed` dans le workflow GitHub pour forcer la version stable requise par les outils de compression.
+
+### 5. Expérience Utilisateur (UX)
 - **Lecteur Persistant :** Configuration du mode arrière-plan et des contrôles sur l'écran de verrouillage (Titre, Artiste, Pochette).
 - **Feedback Visuel :** Masquage automatique du bouton de téléchargement si le morceau est déjà présent sur le téléphone.
 
