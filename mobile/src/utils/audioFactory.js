@@ -7,6 +7,8 @@ const player = createAudioPlayer('');
 // Configuration du lecteur pour l'arrière-plan et l'écran de verrouillage
 player.staysActiveInBackground = true;
 player.showNowPlayingNotification = true;
+// On s'assure que le volume est à 1 par défaut
+player.volume = 1;
 
 /**
  * Interface de compatibilité pour garder le fonctionnement actuel
