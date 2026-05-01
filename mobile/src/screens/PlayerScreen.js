@@ -179,7 +179,6 @@ export default function PlayerScreen({
   // Position et Durée avec fallbacks
   const duration = playerStatus?.duration || (track?.duration ? track.duration * 1000 : 0);
   const position = isSliding ? slideValue : currentPosition;
-  const isPlaying = playerStatus?.playing;
   const isLoading = playerStatus?.loading || (track?.id === propStatus?.loadingTrackId);
 
   const handleSlidingStart = () => {
