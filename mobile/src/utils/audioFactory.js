@@ -44,7 +44,7 @@ const audioModule = {
       player.pause();
     },
     seekTo: async (seconds) => {
-      player.seekTo(seconds * 1000); // expo-audio utilise les millisecondes
+      player.seekTo(seconds); // expo-audio utilise les secondes
     }
   },
   engine: 'expo-audio',

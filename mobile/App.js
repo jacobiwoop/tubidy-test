@@ -352,7 +352,7 @@ export default function App() {
             queueIndex={currentQueueIndex}
             onSelectFromQueue={(track, idx) => handlePlayTrack(track, currentQueue)}
             onViewArtist={handleViewArtist}
-            onDownload={() => startDownload(currentTrack)}
+            onDownload={() => handleDownload(currentTrack)}
             downloads={downloads}
             activeDownloads={activeDownloads}
           />
@@ -563,6 +563,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  playlistItemText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 15,
+  },
+  createPlaylistBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    marginHorizontal: 20,
+    marginTop: 10,
+    backgroundColor: 'rgba(29, 185, 84, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(29, 185, 84, 0.2)',
+  },
+  createPlaylistText: {
+    color: theme.colors.accent,
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  closeModalBtn: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  closeModalText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 14,
+    fontWeight: '600',
   },
   playlistIcon: {
     width: 50,

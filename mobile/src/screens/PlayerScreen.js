@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigation } from '@react-navigation/native';
 import { 
   StyleSheet, 
   Text, 
@@ -66,25 +65,53 @@ export default function PlayerScreen({
   onAddToPlaylist,
   onViewArtist
 }) {
-  const navigation = useNavigation();
+
 
 
   const playerStatus = useAudioPlayerStatus(player);
   const [isSliding, setIsSliding] = useState(false);
   const [slideValue, setSlideValue] = useState(0);
 
+  // Position et Durée calculées en MS pour l'interface
+  const duration = (playerStatus?.duration ? playerStatus.duration * 1000 : 0) || 
+                   (player.duration ? player.duration * 1000 : 0) || 
+                   (track?.duration ? track.duration * 1000 : 0);
+                   
+  const [currentPosition, setCurrentPosition] = useState(0);
+  const position = isSliding ? slideValue : currentPosition;
+  
   const isPlaying = playerStatus?.playing;
   const isDownloaded = downloads.some(d => d.id === track?.id);
-  
-  // Initialisation directe avec la position actuelle pour éviter le saut au montage
-  const [currentPosition, setCurrentPosition] = useState(() => {
-    const time = player.currentTime;
-    if (time !== undefined && time !== null) {
-      // Conversion si nécessaire (secondes -> ms)
-      return (time < 1000 && track?.duration > 10) ? time * 1000 : time;
+  const isLoading = playerStatus?.loading || (track?.id === propStatus?.loadingTrackId);
+
+  // Debug pour comprendre pourquoi les compteurs sont à 0
+  useEffect(() => {
+    if (isPlaying) {
+      console.log(`[Player] ${track?.title} - Status Dur: ${playerStatus?.duration}, Player Dur: ${player?.duration}, Track Dur: ${track?.duration}`);
     }
-    return 0;
-  });
+  }, [isPlaying, playerStatus?.duration, track?.id]);
+
+  // Synchronisation de la position en temps réel
+  useEffect(() => {
+    let interval;
+    if (isPlaying && !isSliding) {
+      interval = setInterval(() => {
+        const time = player.currentTime; // En secondes chez expo-audio
+        if (time !== undefined && time !== null) {
+          setCurrentPosition(time * 1000); // Conversion en ms
+        }
+      }, 500);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isPlaying, isSliding]);
+
+  // Si on vient de charger une nouvelle track, on remet la position à 0
+  useEffect(() => {
+    setCurrentPosition(0);
+  }, [track?.id]);
+
   const albumScale = useRef(new Animated.Value(isPlaying ? 1 : 0.8)).current;
   const pan = useRef(new Animated.Value(0)).current;
 
@@ -120,53 +147,19 @@ export default function PlayerScreen({
     })
   ).current;
 
-
-  useEffect(() => {
-    Animated.spring(albumScale, {
-      toValue: isPlaying ? 1 : 0.8,
-      useNativeDriver: true,
-      friction: 8,
-    }).start();
-  }, [isPlaying]);
-
-  // Synchronisation de la position en temps réel
-  useEffect(() => {
-    let interval;
-    const isPlaying = playerStatus?.playing;
-    if (isPlaying && !isSliding) {
-      interval = setInterval(() => {
-        const time = player.currentTime;
-        if (time !== undefined && time !== null) {
-          // Si la durée est grande (ex: > 1000ms) et que le temps est petit, 
-          // c'est probablement des secondes.
-          const posMs = (time < 1000 && (duration > 10000)) ? time * 1000 : time;
-          setCurrentPosition(posMs);
-        }
-      }, 500);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [playerStatus?.playing, isSliding, duration]);
-
-  // Si on vient de charger une nouvelle track, on remet la position à 0
-  useEffect(() => {
-    setCurrentPosition(0);
-  }, [track?.id]);
-
-  useEffect(() => {
-    Animated.spring(albumScale, {
-      toValue: isPlaying ? 1 : 0.8,
-      useNativeDriver: true,
-      friction: 8,
-    }).start();
-  }, [isPlaying]);
-
   // État local pour le coeur (pour une réactivité instantanée)
   const [localIsFavorite, setLocalIsFavorite] = useState(isFavorite);
   useEffect(() => {
     setLocalIsFavorite(isFavorite);
   }, [isFavorite]);
+
+  useEffect(() => {
+    Animated.spring(albumScale, {
+      toValue: isPlaying ? 1 : 0.8,
+      useNativeDriver: true,
+      friction: 8,
+    }).start();
+  }, [isPlaying]);
 
   const handleToggleFavorite = () => {
     setLocalIsFavorite(!localIsFavorite);
@@ -176,17 +169,12 @@ export default function PlayerScreen({
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState(0); // 0: None, 1: All, 2: One
 
-  // Position et Durée avec fallbacks
-  const duration = playerStatus?.duration || (track?.duration ? track.duration * 1000 : 0);
-  const position = isSliding ? slideValue : currentPosition;
-  const isLoading = playerStatus?.loading || (track?.id === propStatus?.loadingTrackId);
-
   const handleSlidingStart = () => {
     setIsSliding(true);
   };
 
   const handleSlidingComplete = async (value) => {
-    await player.seekTo(value);
+    await player.seekTo(value / 1000); // Conversion en secondes pour expo-audio
     setIsSliding(false);
     setCurrentPosition(value);
   };
@@ -238,7 +226,7 @@ export default function PlayerScreen({
           <TouchableOpacity 
             onPress={() => {
               onClose();
-              navigation.navigate('ArtistDetail', { artistId: track.artist?.id });
+              onViewArtist(track.artist?.id);
             }}
             style={{ alignSelf: 'flex-start' }}
           >
