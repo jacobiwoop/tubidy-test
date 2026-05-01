@@ -105,7 +105,8 @@ export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack
                     </LinearGradient>
                  </TouchableOpacity>
                ))}
-            </ScrollView>
+             </ScrollView>
+          </View>
           {/* Section: Project DNA (Comparison) */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Project DNA</Text>
