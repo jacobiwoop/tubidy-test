@@ -353,6 +353,9 @@ export default function App() {
             queueIndex={currentQueueIndex}
             onSelectFromQueue={(track, idx) => handlePlayTrack(track, currentQueue)}
             onViewArtist={handleViewArtist}
+            onDownload={() => startDownload(currentTrack)}
+            downloads={downloads}
+            activeDownloads={activeDownloads}
           />
         </Animated.View>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import { 
   StyleSheet, 
   Text, 
@@ -65,12 +66,14 @@ export default function PlayerScreen({
   onAddToPlaylist,
   onViewArtist
 }) {
+  const navigation = useNavigation();
 
 
   const playerStatus = useAudioPlayerStatus(player);
   const [isSliding, setIsSliding] = useState(false);
   const [slideValue, setSlideValue] = useState(0);
 
+  const isPlaying = playerStatus?.playing;
   const isDownloaded = downloads.some(d => d.id === track?.id);
   
   // Initialisation directe avec la position actuelle pour éviter le saut au montage
@@ -159,6 +162,17 @@ export default function PlayerScreen({
     }).start();
   }, [isPlaying]);
 
+  // État local pour le coeur (pour une réactivité instantanée)
+  const [localIsFavorite, setLocalIsFavorite] = useState(isFavorite);
+  useEffect(() => {
+    setLocalIsFavorite(isFavorite);
+  }, [isFavorite]);
+
+  const handleToggleFavorite = () => {
+    setLocalIsFavorite(!localIsFavorite);
+    onToggleFavorite();
+  };
+
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState(0); // 0: None, 1: All, 2: One
 
@@ -222,39 +236,48 @@ export default function PlayerScreen({
       <View style={styles.infoContainer}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title} numberOfLines={1}>{track.title}</Text>
-          <TouchableOpacity onPress={() => {
-            onClose();
-            onViewArtist(track.artist?.id);
-          }}>
+          <TouchableOpacity 
+            onPress={() => {
+              onClose();
+              navigation.navigate('ArtistDetail', { artistId: track.artist?.id });
+            }}
+            style={{ alignSelf: 'flex-start' }}
+          >
             <Text style={styles.artist}>{track.artist?.name}</Text>
           </TouchableOpacity>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {!isDownloaded && (
-            <TouchableOpacity onPress={onDownload} style={{ marginRight: 15 }}>
-              {activeDownloads[track?.id] !== undefined ? (
-                activeDownloads[track.id] === 0 ? (
-                  <ActivityIndicator size="small" color={theme.colors.accent} />
-                ) : (
-                  <View style={styles.downloadingBadge}>
-                    <Text style={styles.downloadingText}>{Math.round(activeDownloads[track.id] * 100)}%</Text>
-                  </View>
-                )
-              ) : (
-                <Download size={24} color={theme.colors.primary} opacity={0.8} />
-              )}
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity onPress={onAddToPlaylist} style={{ marginRight: 15 }}>
-            <ListPlus size={26} color={theme.colors.primary} opacity={0.8} />
+        <View style={styles.rightActions}>
+          <TouchableOpacity 
+            onPress={onDownload} 
+            style={styles.actionCircle}
+            activeOpacity={0.6}
+          >
+            {activeDownloads[track?.id] !== undefined ? (
+              <View style={styles.downloadProgress}>
+                <Text style={styles.progressText}>{Math.round(activeDownloads[track.id] * 100)}%</Text>
+              </View>
+            ) : (
+              <Download size={24} color={isDownloaded ? theme.colors.accent : theme.colors.primary} />
+            )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={onToggleFavorite}>
+
+          <TouchableOpacity 
+            onPress={onAddToPlaylist} 
+            style={styles.actionCircle}
+            activeOpacity={0.6}
+          >
+            <ListPlus size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            onPress={handleToggleFavorite}
+            style={styles.actionCircle}
+            activeOpacity={0.6}
+          >
             <Heart 
-              size={28} 
-              color={isFavorite ? theme.colors.accent : theme.colors.primary} 
-              fill={isFavorite ? theme.colors.accent : 'transparent'}
-              opacity={isFavorite ? 1 : 0.5} 
+              size={26} 
+              color={localIsFavorite ? theme.colors.accent : theme.colors.primary} 
+              fill={localIsFavorite ? theme.colors.accent : 'transparent'}
             />
           </TouchableOpacity>
         </View>
@@ -403,6 +426,29 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  downloadProgress: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressText: {
+    color: theme.colors.accent,
+    fontSize: 8,
+    fontWeight: 'bold',
   },
   progressContainer: {
     paddingHorizontal: 20,

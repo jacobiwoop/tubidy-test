@@ -49,7 +49,10 @@ export default function SearchScreen({ navigation }) {
         />
         <View style={styles.trackInfo}>
           <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
-          <TouchableOpacity onPress={() => onViewArtist(item.artist?.id)}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('ArtistDetail', { artistId: item.artist?.id })}
+            style={styles.artistBtn}
+          >
             <Text style={styles.trackArtist}>{item.artist?.name}</Text>
           </TouchableOpacity>
         </View>
@@ -168,6 +171,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  artistBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    paddingRight: 10,
   },
   favoriteBtn: {
     padding: 10,
