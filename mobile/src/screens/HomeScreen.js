@@ -1,13 +1,28 @@
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Play, Heart, Disc, Music } from 'lucide-react-native';
 import { theme } from '../utils/theme';
+import { checkHealth, BASE_URL } from '../services/api';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack }) {
+  const [serverStatus, setServerStatus] = useState('checking');
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        await checkHealth();
+        setServerStatus('online');
+      } catch (e) {
+        setServerStatus('offline');
+        console.log('[Status] Server unreachable via tunnel');
+      }
+    };
+    check();
+  }, []);
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -33,7 +48,16 @@ export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack
       <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          <Text style={styles.appTitle}>Spotywoop</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.appTitle}>Spotywoop</Text>
+            <TouchableOpacity 
+              style={styles.statusContainer}
+              onPress={() => Alert.alert('Connection Details', `API URL: ${BASE_URL}\nStatus: ${serverStatus.toUpperCase()}`)}
+            >
+              <View style={[styles.statusDot, { backgroundColor: serverStatus === 'online' ? '#1DB954' : serverStatus === 'offline' ? '#ff4444' : '#ffbb33' }]} />
+              <Text style={styles.statusText}>{serverStatus.toUpperCase()}</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.headerRow}>
             <TouchableOpacity style={styles.avatarContainer}>
               <Text style={styles.avatarText}>S</Text>
@@ -149,8 +173,32 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16,
     letterSpacing: -0.5,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   headerRow: {
     flexDirection: 'row',

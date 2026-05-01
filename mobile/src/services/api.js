@@ -1,12 +1,22 @@
 import axios from 'axios';
 
 // Replace with your local machine IP or Cloudflare tunnel URL
-export const BASE_URL = 'https://eco-angel-ken-scene.trycloudflare.com';
+export const BASE_URL = 'https://spotymood.loca.lt';
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 60000,
+  timeout: 10000,
 });
+
+export const checkHealth = async () => {
+  try {
+    const response = await api.get('/health');
+    return response.data;
+  } catch (error) {
+    console.error('Health check failed:', error);
+    throw error;
+  }
+};
 
 export const searchMusic = async (query) => {
   try {
