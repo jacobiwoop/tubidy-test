@@ -24,6 +24,7 @@ import {
   MoreHorizontal, 
   Heart, 
   ListMusic,
+  Shuffle,
   Repeat,
   ListPlus,
   Download,
