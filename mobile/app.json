@@ -26,8 +26,8 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.expowoop.app",
-      "compileSdkVersion": 34,
-      "targetSdkVersion": 34,
+      "compileSdkVersion": 35,
+      "targetSdkVersion": 35,
       "permissions": [
         "FOREGROUND_SERVICE",
         "WAKE_LOCK"
@@ -46,7 +46,7 @@
         "expo-build-properties",
         {
           "android": {
-            "kotlinVersion": "1.9.24"
+            "kotlinVersion": "2.0.21"
           }
         }
       ],
