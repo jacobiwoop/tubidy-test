@@ -7,6 +7,7 @@ import audioModule from './src/utils/audioFactory';
 import { theme } from './src/utils/theme';
 import SearchScreen from './src/screens/SearchScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
+import ArtistScreen from './src/screens/ArtistScreen';
 import { getTrackDownload, BASE_URL } from './src/services/api';
 import { Play, Pause, Heart, Home, Search, Library, Plus, ListMusic, CheckCircle, RotateCcw } from 'lucide-react-native';
 
@@ -43,6 +44,7 @@ export default function App() {
   const [activeDownloads, setActiveDownloads] = useState({}); // { trackId: progress }
   
   const [playbackError, setPlaybackError] = useState(false);
+  const [viewingArtistId, setViewingArtistId] = useState(null);
   
   const playerPos = React.useRef(new Animated.Value(height)).current;
 
@@ -249,6 +251,11 @@ export default function App() {
     }
   };
 
+  const handleViewArtist = (id) => {
+    if (!id) return;
+    setViewingArtistId(id);
+  };
+
   // On considère que le player est prêt si on a un statut
   const isPlayerReady = !!playerStatus;
 
@@ -297,6 +304,7 @@ export default function App() {
                 favorites={favorites}
                 playlists={playlists}
                 onPlayTrack={handlePlayTrack}
+                onViewArtist={handleViewArtist}
               />
             )}
           </Tab.Screen>
@@ -308,6 +316,7 @@ export default function App() {
                 loadingTrackId={loadingTrackId} 
                 favorites={favorites}
                 onToggleFavorite={toggleTrackFavorite}
+                onViewArtist={handleViewArtist}
               />
             )}
           </Tab.Screen>
@@ -322,6 +331,7 @@ export default function App() {
                 currentTrackId={currentTrack?.id}
                 downloads={downloads}
                 activeDownloads={activeDownloads}
+                onViewArtist={handleViewArtist}
               />
             )}
           </Tab.Screen>
@@ -410,6 +420,7 @@ export default function App() {
             playbackError={playbackError}
             onRetry={() => handlePlayTrack(currentTrack, currentQueue)}
             onClose={() => setShowFullPlayer(false)}
+            onViewArtist={handleViewArtist}
           />
         )}
       </Animated.View>
@@ -481,6 +492,17 @@ export default function App() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Écran Artiste en superposition */}
+      {viewingArtistId && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 200 }]}>
+          <ArtistScreen 
+            artistId={viewingArtistId}
+            onBack={() => setViewingArtistId(null)}
+            onPlayTrack={handlePlayTrack}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }

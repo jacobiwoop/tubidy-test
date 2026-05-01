@@ -30,4 +30,44 @@ export const getTrackDownload = async (trackId) => {
   }
 };
 
+export const getArtist = async (id) => {
+  try {
+    const response = await api.get(`/api/deezer/artist/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Get Artist error:', error);
+    throw error;
+  }
+};
+
+export const getArtistTopTracks = async (id) => {
+  try {
+    const response = await api.get(`/api/deezer/artist/${id}/top`);
+    return response.data;
+  } catch (error) {
+    console.error('Get Artist Top Tracks error:', error);
+    throw error;
+  }
+};
+
+export const getArtistAlbums = async (id) => {
+  try {
+    const response = await api.get(`/api/deezer/artist/${id}/albums`);
+    return response.data;
+  } catch (error) {
+    console.error('Get Artist Albums error:', error);
+    throw error;
+  }
+};
+
+export const getRelatedArtists = async (id) => {
+  try {
+    const response = await api.get(`/api/deezer/artist/${id}/related`);
+    return response.data;
+  } catch (error) {
+    console.error('Get Related Artists error:', error);
+    throw error;
+  }
+};
+
 export default api;

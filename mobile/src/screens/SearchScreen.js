@@ -14,7 +14,7 @@ import { Search, Heart } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import { searchMusic } from '../services/api';
 
-export default function SearchScreen({ onPlayTrack, loadingTrackId, favorites, onToggleFavorite }) {
+export default function SearchScreen({ onPlayTrack, loadingTrackId, favorites, onToggleFavorite, onViewArtist }) {
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -47,7 +47,9 @@ export default function SearchScreen({ onPlayTrack, loadingTrackId, favorites, o
         />
         <View style={styles.trackInfo}>
           <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.trackArtist}>{item.artist?.name}</Text>
+          <TouchableOpacity onPress={() => onViewArtist(item.artist?.id)}>
+            <Text style={styles.trackArtist}>{item.artist?.name}</Text>
+          </TouchableOpacity>
         </View>
         {isLoading ? (
           <ActivityIndicator size="small" color={theme.colors.accent} />

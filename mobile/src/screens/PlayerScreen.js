@@ -63,7 +63,8 @@ export default function PlayerScreen({
   playbackError,
   onRetry,
   onClose,
-  onAddToPlaylist
+  onAddToPlaylist,
+  onViewArtist
 }) {
 
 
@@ -222,7 +223,12 @@ export default function PlayerScreen({
       <View style={styles.infoContainer}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title} numberOfLines={1}>{track.title}</Text>
-          <Text style={styles.artist}>{track.artist?.name}</Text>
+          <TouchableOpacity onPress={() => {
+            onClose();
+            onViewArtist(track.artist?.id);
+          }}>
+            <Text style={styles.artist}>{track.artist?.name}</Text>
+          </TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {!isDownloaded && (
