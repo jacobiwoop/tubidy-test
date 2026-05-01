@@ -314,7 +314,7 @@ export default function App() {
           <TouchableOpacity 
             activeOpacity={0.9}
             onPress={() => setShowFullPlayer(true)}
-            style={[styles.miniPlayer, { bottom: 65 }]}
+            style={styles.miniPlayer}
           >
             {/* Pas de dégradé, on utilise le style de fond du miniPlayer */}
             <Image 
