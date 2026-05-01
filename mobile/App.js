@@ -50,7 +50,7 @@ export default function App() {
   
   const [playbackError, setPlaybackError] = useState(false);
   
-  const playerPos = React.useRef(new Animated.Value(height)).current;
+  const playerPos = React.useRef(new Animated.Value(height + 100)).current;
 
   React.useEffect(() => {
     loadFavoritesList();
@@ -116,7 +116,7 @@ export default function App() {
 
   React.useEffect(() => {
     Animated.spring(playerPos, {
-      toValue: showFullPlayer ? 0 : height,
+      toValue: showFullPlayer ? 0 : height + 100,
       useNativeDriver: true,
       tension: 40,
       friction: 8
@@ -316,10 +316,7 @@ export default function App() {
             onPress={() => setShowFullPlayer(true)}
             style={[styles.miniPlayer, { bottom: 65 }]}
           >
-            <LinearGradient
-              colors={['#282828', '#121212']}
-              style={StyleSheet.absoluteFill}
-            />
+            {/* Pas de dégradé, on utilise le style de fond du miniPlayer */}
             <Image 
               source={{ uri: currentTrack?.album?.cover_medium || '' }} 
               style={styles.miniCover} 
