@@ -35,20 +35,19 @@ export default function LibraryScreen({
     </TouchableOpacity>
   );
 
-  const PlaylistItem = ({ item, isLiked }) => (
-    <TouchableOpacity style={styles.playlistRow} onPress={() => setSelectedPlaylist(item)}>
-      <View style={[styles.playlistThumb, isLiked && styles.likedThumb]}>
+  const PlaylistCard = ({ item, isLiked }) => (
+    <TouchableOpacity style={styles.playlistCard} onPress={() => setSelectedPlaylist(item)}>
+      <View style={[styles.cardThumb, isLiked && styles.likedThumb]}>
         {isLiked ? (
-          <Heart size={24} color="white" fill="white" />
+          <Heart size={32} color="white" fill="white" />
         ) : (
-          <ListMusic size={24} color={theme.colors.secondary} />
+          <ListMusic size={32} color={theme.colors.secondary} />
         )}
       </View>
-      <View style={styles.playlistInfo}>
-        <Text style={styles.playlistTitle}>{item.title}</Text>
-        <Text style={styles.playlistCount}>{item.tracks?.length || 0} tracks</Text>
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+        <Text style={styles.cardCount}>{item.tracks?.length || 0} tracks</Text>
       </View>
-      <ChevronRight size={20} color="rgba(255,255,255,0.1)" />
     </TouchableOpacity>
   );
 
@@ -74,16 +73,9 @@ export default function LibraryScreen({
           <QuickAction icon={User} title="Artists" color="#ff9500" />
         </View>
 
-        {/* Liked Songs - Essential Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Essential</Text>
-          {likedSongs && <PlaylistItem item={likedSongs} isLiked={true} />}
-        </View>
-
-        {/* Playlists Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Playlists</Text>
+            <Text style={styles.sectionTitle}>My Library</Text>
             <TouchableOpacity onPress={() => setShowCreate(!showCreate)}>
               <Plus size={22} color={showCreate ? theme.colors.accent : 'white'} />
             </TouchableOpacity>
@@ -114,14 +106,17 @@ export default function LibraryScreen({
               </TouchableOpacity>
             </View>
           )}
-          
-          {otherPlaylists.length > 0 ? (
-            otherPlaylists.map(pl => <PlaylistItem key={pl.id} item={pl} />)
-          ) : (
-            <View style={styles.emptyPlaylists}>
-              <Text style={styles.emptyText}>No playlists created yet</Text>
-            </View>
-          )}
+
+          <View style={styles.playlistGrid}>
+            {likedSongs && <PlaylistCard item={likedSongs} isLiked={true} />}
+            {otherPlaylists.length > 0 ? (
+              otherPlaylists.map(pl => <PlaylistCard key={pl.id} item={pl} />)
+            ) : !likedSongs && (
+              <View style={styles.emptyPlaylists}>
+                <Text style={styles.emptyText}>No playlists created yet</Text>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
 
@@ -329,35 +324,38 @@ const styles = StyleSheet.create({
     color: 'white',
     marginBottom: 15,
   },
-  playlistRow: {
+  playlistGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    padding: 10,
-    borderRadius: 15,
+    flexWrap: 'wrap',
+    paddingHorizontal: 15,
+    gap: 15,
   },
-  playlistThumb: {
-    width: 55,
-    height: 55,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surface,
+  playlistCard: {
+    width: '47%', // Pour avoir 2 colonnes avec le gap
+    marginBottom: 10,
+  },
+  cardThumb: {
+    aspectRatio: 1,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.03)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   likedThumb: {
     backgroundColor: theme.colors.accent,
   },
-  playlistInfo: {
-    flex: 1,
+  cardInfo: {
+    paddingHorizontal: 5,
   },
-  playlistTitle: {
+  cardTitle: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
-  playlistCount: {
+  cardCount: {
     color: theme.colors.secondary,
     fontSize: 12,
     marginTop: 2,

@@ -106,6 +106,23 @@ export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack
                  </TouchableOpacity>
                ))}
             </ScrollView>
+          {/* Section: Project DNA (Comparison) */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Project DNA</Text>
+            <View style={styles.dnaGrid}>
+              <View style={styles.dnaCard}>
+                <Text style={styles.dnaHeader}>Monochrome Web</Text>
+                <Text style={styles.dnaText}>L'inspiration visuelle et la qualité Hi-Res, mais limitée par le navigateur.</Text>
+              </View>
+              <View style={styles.dnaCard}>
+                <Text style={styles.dnaHeader}>Legacy Client</Text>
+                <Text style={styles.dnaText}>Base de données brute, mais lent et sans confort (pas de mode hors-ligne).</Text>
+              </View>
+              <View style={[styles.dnaCard, { borderColor: theme.colors.accent, borderWidth: 1 }]}>
+                <Text style={[styles.dnaHeader, { color: theme.colors.accent }]}>Tubidy Native</Text>
+                <Text style={styles.dnaText}>Performance Turbo, Mode Hors-ligne réel, UI Monochrome & Contrôles Natifs.</Text>
+              </View>
+            </View>
           </View>
 
         </ScrollView>
@@ -254,5 +271,26 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '800',
+  },
+  dnaGrid: {
+    gap: 12,
+  },
+  dnaCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  dnaHeader: {
+    color: '#f5f5f5',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  dnaText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 13,
+    lineHeight: 18,
   }
 });
