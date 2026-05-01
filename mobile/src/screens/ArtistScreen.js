@@ -134,7 +134,7 @@ export default function ArtistScreen({ artistId, onBack, onPlayTrack }) {
         </View>
 
         {/* Similar Artists */}
-        <View style={[styles.section, { marginBottom: 100 }]}>
+        <View style={[styles.section, { marginBottom: 160 }]}>
           <Text style={styles.sectionTitle}>Fans also like</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
             {related.map(item => (

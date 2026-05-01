@@ -14,6 +14,7 @@ import { Play, Pause, Heart, Home, Search, Library, Plus, ListMusic, CheckCircle
 import { isTrackFavorite, saveFavorite } from './src/utils/favorites';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from './src/screens/HomeScreen';
 import LibraryScreen from './src/screens/LibraryScreen';
 import { getPlaylists, createPlaylist, addTrackToPlaylist, removeTrackFromPlaylist } from './src/utils/playlists';
@@ -23,6 +24,7 @@ import { Modal, ScrollView, TextInput } from 'react-native';
 const { height } = Dimensions.get('window');
 const { player, TrackPlayer } = audioModule;
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
 export default function App() {
   const playerStatus = useAudioPlayerStatus(player);
@@ -44,7 +46,6 @@ export default function App() {
   const [activeDownloads, setActiveDownloads] = useState({}); // { trackId: progress }
   
   const [playbackError, setPlaybackError] = useState(false);
-  const [viewingArtistId, setViewingArtistId] = useState(null);
   
   const playerPos = React.useRef(new Animated.Value(height)).current;
 
@@ -251,13 +252,89 @@ export default function App() {
     }
   };
 
-  const handleViewArtist = (id) => {
-    if (!id) return;
-    setViewingArtistId(id);
-  };
-
   // On considère que le player est prêt si on a un statut
   const isPlayerReady = !!playerStatus;
+
+  // Composant Stack pour chaque onglet
+  const HomeStack = () => (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
+      <Stack.Screen name="HomeMain">
+        {(props) => (
+          <HomeScreen 
+            {...props} 
+            favorites={favorites}
+            playlists={playlists}
+            onPlayTrack={handlePlayTrack}
+            onViewArtist={(id) => props.navigation.navigate('ArtistDetail', { artistId: id })}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="ArtistDetail">
+        {(props) => (
+          <ArtistScreen 
+            artistId={props.route.params.artistId}
+            onBack={() => props.navigation.goBack()}
+            onPlayTrack={handlePlayTrack}
+          />
+        )}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
+
+  const SearchStack = () => (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
+      <Stack.Screen name="SearchMain">
+        {(props) => (
+          <SearchScreen 
+            {...props} 
+            onPlayTrack={(track) => handlePlayTrack(track, [])} 
+            loadingTrackId={loadingTrackId} 
+            favorites={favorites}
+            onToggleFavorite={toggleTrackFavorite}
+            onViewArtist={(id) => props.navigation.navigate('ArtistDetail', { artistId: id })}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="ArtistDetail">
+        {(props) => (
+          <ArtistScreen 
+            artistId={props.route.params.artistId}
+            onBack={() => props.navigation.goBack()}
+            onPlayTrack={handlePlayTrack}
+          />
+        )}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
+
+  const LibraryStack = () => (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
+      <Stack.Screen name="LibraryMain">
+        {(props) => (
+          <LibraryScreen 
+            {...props} 
+            playlists={playlists}
+            onPlayTrack={handlePlayTrack}
+            loadingTrackId={loadingTrackId}
+            refreshPlaylists={loadPlaylists}
+            currentTrackId={currentTrack?.id}
+            downloads={downloads}
+            activeDownloads={activeDownloads}
+            onViewArtist={(id) => props.navigation.navigate('ArtistDetail', { artistId: id })}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="ArtistDetail">
+        {(props) => (
+          <ArtistScreen 
+            artistId={props.route.params.artistId}
+            onBack={() => props.navigation.goBack()}
+            onPlayTrack={handlePlayTrack}
+          />
+        )}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
 
   if (!isPlayerReady) {
     return (
@@ -297,44 +374,9 @@ export default function App() {
             },
           })}
         >
-          <Tab.Screen name="Home">
-            {(props) => (
-              <HomeScreen 
-                {...props} 
-                favorites={favorites}
-                playlists={playlists}
-                onPlayTrack={handlePlayTrack}
-                onViewArtist={handleViewArtist}
-              />
-            )}
-          </Tab.Screen>
-          <Tab.Screen name="Search">
-            {(props) => (
-              <SearchScreen 
-                {...props} 
-                onPlayTrack={(track) => handlePlayTrack(track, [])} 
-                loadingTrackId={loadingTrackId} 
-                favorites={favorites}
-                onToggleFavorite={toggleTrackFavorite}
-                onViewArtist={handleViewArtist}
-              />
-            )}
-          </Tab.Screen>
-          <Tab.Screen name="Library">
-            {(props) => (
-              <LibraryScreen 
-                {...props} 
-                playlists={playlists}
-                onPlayTrack={handlePlayTrack}
-                loadingTrackId={loadingTrackId}
-                refreshPlaylists={loadPlaylists}
-                currentTrackId={currentTrack?.id}
-                downloads={downloads}
-                activeDownloads={activeDownloads}
-                onViewArtist={handleViewArtist}
-              />
-            )}
-          </Tab.Screen>
+          <Tab.Screen name="Home" component={HomeStack} />
+          <Tab.Screen name="Search" component={SearchStack} />
+          <Tab.Screen name="Library" component={LibraryStack} />
         </Tab.Navigator>
       </NavigationContainer>
 
@@ -492,17 +534,6 @@ export default function App() {
           </View>
         </TouchableOpacity>
       </Modal>
-
-      {/* Écran Artiste en superposition */}
-      {viewingArtistId && (
-        <View style={[StyleSheet.absoluteFill, { zIndex: 200 }]}>
-          <ArtistScreen 
-            artistId={viewingArtistId}
-            onBack={() => setViewingArtistId(null)}
-            onPlayTrack={handlePlayTrack}
-          />
-        </View>
-      )}
     </SafeAreaView>
   );
 }
