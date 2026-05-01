@@ -30,7 +30,7 @@ export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack
         style={styles.aura}
       />
 
-      <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
           <Text style={styles.appTitle}>Spotywoop</Text>
@@ -124,7 +124,7 @@ export default function HomeScreen({ favorites = [], playlists = [], onPlayTrack
              </ScrollView>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
