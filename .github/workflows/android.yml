@@ -33,7 +33,9 @@ jobs:
 
       - name: Prebuild Expo (Development Mode)
         working-directory: mobile
-        run: npx expo prebuild --platform android --no-install
+        run: |
+          npx expo prebuild --platform android --no-install
+          echo "-dontwarn expo.modules.**" >> android/app/proguard-rules.pro
 
       - name: Build Debug APK (Development Client)
         working-directory: mobile
