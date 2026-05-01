@@ -4,6 +4,10 @@ import { createAudioPlayer } from 'expo-audio';
 // On initialise avec une URL vide
 const player = createAudioPlayer('');
 
+// Configuration du lecteur pour l'arrière-plan et l'écran de verrouillage
+player.staysActiveInBackground = true;
+player.showNowPlayingNotification = true;
+
 /**
  * Interface de compatibilité pour garder le fonctionnement actuel
  * tout en utilisant le nouveau moteur expo-audio.
@@ -13,7 +17,6 @@ const audioModule = {
   
   TrackPlayer: {
     setupPlayer: async () => {
-      // expo-audio gère sa propre initialisation native
       return true;
     },
     updateOptions: async () => {},
@@ -21,6 +24,14 @@ const audioModule = {
       player.pause();
     },
     add: async (track) => {
+      // On met à jour les métadonnées pour l'écran de verrouillage
+      player.metadata = {
+        title: track.title,
+        artist: track.artist || track.artist?.name,
+        album: track.album?.title || 'Tubidy',
+        artwork: track.artwork || track.album?.cover_medium,
+      };
+
       // On remplace la source actuelle par le nouveau lien
       player.replace(track.url);
     },

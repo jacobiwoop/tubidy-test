@@ -12,7 +12,12 @@
       "backgroundColor": "#000000"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -45,7 +50,13 @@
           }
         }
       ],
-      "expo-audio"
+      [
+        "expo-audio",
+        {
+          "staysActiveInBackground": true,
+          "showNowPlayingNotification": true
+        }
+      ]
     ]
   }
 }
