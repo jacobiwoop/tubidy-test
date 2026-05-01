@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, StatusBar, TouchableOpacity, Image, Platform, Animated, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,15 +21,13 @@ import LibraryScreen from './src/screens/LibraryScreen';
 import { getPlaylists, createPlaylist, addTrackToPlaylist, removeTrackFromPlaylist } from './src/utils/playlists';
 import { getDownloadMetadata, startDownload, deleteDownload } from './src/utils/downloader';
 import { Modal, ScrollView, TextInput } from 'react-native';
+import { PlayerContext } from './src/context/PlayerContext';
 
 const { height } = Dimensions.get('window');
 const { player, TrackPlayer } = audioModule;
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const navigationRef = React.createRef();
-const PlayerContext = createContext();
-
-export const usePlayer = () => useContext(PlayerContext);
 
 export default function App() {
   const playerStatus = useAudioPlayerStatus(player);

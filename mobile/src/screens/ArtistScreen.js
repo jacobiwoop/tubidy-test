@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Play, Shuffle, Download, Heart, Disc, ListMusic } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import * as api from '../services/api';
-import { usePlayer } from '../../App';
+import { usePlayer } from '../context/PlayerContext';
 
 const { width } = Dimensions.get('window');
 

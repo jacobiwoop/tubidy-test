@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Play, Heart, Disc, Music } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import { checkHealth, BASE_URL } from '../services/api';
-import { usePlayer } from '../../App';
+import { usePlayer } from '../context/PlayerContext';
 
 const { width } = Dimensions.get('window');
 

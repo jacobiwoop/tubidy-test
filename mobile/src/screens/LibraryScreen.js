@@ -8,7 +8,7 @@ import { Heart, ListMusic, ChevronRight, Clock, Download, User, Plus, X, ArrowLe
 
 
 import { createPlaylist } from '../utils/playlists';
-import { usePlayer } from '../../App';
+import { usePlayer } from '../context/PlayerContext';
 
 export default function LibraryScreen({ navigation }) {
   const { 
