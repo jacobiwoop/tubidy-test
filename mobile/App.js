@@ -316,7 +316,10 @@ export default function App() {
             onPress={() => setShowFullPlayer(true)}
             style={[styles.miniPlayer, { bottom: 65 }]}
           >
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(28, 28, 30, 0.95)', borderRadius: 15 }]} />
+            <LinearGradient
+              colors={['#282828', '#121212']}
+              style={StyleSheet.absoluteFill}
+            />
             <Image 
               source={{ uri: currentTrack?.album?.cover_medium || '' }} 
               style={styles.miniCover} 
@@ -352,6 +355,7 @@ export default function App() {
             queue={currentQueue}
             queueIndex={currentQueueIndex}
             onSelectFromQueue={(track, idx) => handlePlayTrack(track, currentQueue)}
+            onViewArtist={handleViewArtist}
           />
         </Animated.View>
 
