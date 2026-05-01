@@ -168,9 +168,20 @@ app.get("/health", (req, res) => res.json({ status: "ok" }));
 // Service des fichiers statiques du frontend
 app.use(express.static(path.join(__dirname, "client/dist")));
 
+const fs = require('fs');
+
 // Route de secours pour le SPA (React)
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "client/dist", "index.html"));
+  const indexPath = path.join(__dirname, "client/dist", "index.html");
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.json({ 
+      status: "online", 
+      message: "Spotiwoop API is running. Mobile app should connect here.",
+      time: new Date().toISOString()
+    });
+  }
 });
 
 // 404 pour les routes API non trouvées (si besoin)

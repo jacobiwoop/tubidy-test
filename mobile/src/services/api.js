@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Replace with your local machine IP or Cloudflare tunnel URL
-export const BASE_URL = 'https://spotymood.loca.lt';
+export const BASE_URL = 'https://spotywoop-srv.onrender.com';
 
 const api = axios.create({
   baseURL: BASE_URL,
