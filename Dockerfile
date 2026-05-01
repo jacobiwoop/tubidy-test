@@ -1,27 +1,27 @@
-# Stage 1: Build the frontend
-FROM node:20-slim AS build-stage
-WORKDIR /app/client
-COPY client/package*.json ./
-RUN npm install --legacy-peer-deps
-COPY client/ .
-RUN npm run build
+# Utilise une image Node.js stable et légère
+FROM node:22-slim
 
-# Stage 2: Build the backend and serve everything
-FROM node:20-slim
+# Installation des outils de compilation nécessaires pour better-sqlite3
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Dossier de travail
 WORKDIR /app
 
-# Install backend dependencies
+# Copie des fichiers de dépendances
 COPY package*.json ./
-RUN npm install --omit=dev
 
-# Copy backend source
+# Installation des dépendances de production uniquement
+RUN npm install --production
+
+# Copie du reste du code source
 COPY . .
 
-# Copy built frontend assets from stage 1
-COPY --from=build-stage /app/client/dist ./client/dist
-
-# Expose the port (Render uses PORT env var)
+# Port utilisé par ton app.js (3000 par défaut)
 EXPOSE 3000
 
-# Start the application
-CMD ["node", "app.js"]
+# Commande de lancement
+CMD ["npm", "start"]
