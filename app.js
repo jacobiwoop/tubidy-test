@@ -50,11 +50,11 @@ function proxyAudio(url, res, req, redirectCount = 0) {
     const requestHeaders = {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Referer: "https://tubidy.com/",
+      Referer: url.includes("tubidy.cool") || url.includes("d2mefast") ? "https://tubidy.cool/" : "https://tubidy.com/",
     };
 
-    // 2. Transmettre le Range UNIQUEMENT si on n'est PAS sur l'URL de redirection initiale
-    // Certains serveurs (c.php) n'aiment pas le Range s'ils ne servent pas directement le fichier.
+    // 2. Transmettre le Range (essentiel pour le streaming/seek)
+    // On l'active pour p.php (Play) mais on reste prudent avec c.php (Download)
     if (req.headers.range && !url.includes("c.php")) {
       requestHeaders["Range"] = req.headers.range;
     }

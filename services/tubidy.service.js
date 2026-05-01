@@ -10,6 +10,10 @@ async function withRetry(fn, retries = 5) {
     try {
       return await fn();
     } catch (err) {
+      if (axios.isCancel(err)) {
+        throw err; // Ne pas retenter si c'est annulé par le client
+      }
+      
       const isNetworkError =
         err.code === "EAI_AGAIN" ||
         err.code === "ETIMEDOUT" ||
@@ -92,9 +96,10 @@ async function getDownloadLink(videoUrl, formatType = "mp3", signal = null) {
       ? "MP4 video"
       : "MP3 audio";
 
+    const config = require('../config/apis.config');
     // 1. Récupérer la page HTML
     const response = await axios.get(videoUrl, {
-      headers: { "User-Agent": "Mozilla/5.0" },
+      headers: config.tubidy.headers,
       signal,
     });
 
@@ -117,9 +122,8 @@ async function getDownloadLink(videoUrl, formatType = "mp3", signal = null) {
       new URLSearchParams({ payload: token }).toString(),
       {
         headers: {
-          "User-Agent": "Mozilla/5.0",
+          ...config.tubidy.headers,
           "X-CSRF-TOKEN": csrf,
-          Referer: "https://songs.tubidy.com/",
           "Content-Type": "application/x-www-form-urlencoded",
         },
         signal,
@@ -147,9 +151,8 @@ async function getDownloadLink(videoUrl, formatType = "mp3", signal = null) {
       new URLSearchParams({ payload: newPayload }).toString(),
       {
         headers: {
-          "User-Agent": "Mozilla/5.0",
+          ...config.tubidy.headers,
           "X-CSRF-TOKEN": csrf,
-          Referer: "https://songs.tubidy.com/",
           "Content-Type": "application/x-www-form-urlencoded",
         },
         signal,

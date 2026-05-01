@@ -9,11 +9,13 @@ import {
   TouchableOpacity, 
   ActivityIndicator 
 } from 'react-native';
-import { Search, Play } from 'lucide-react-native';
+import { Search, Heart } from 'lucide-react-native';
+
 import { theme } from '../utils/theme';
 import { searchMusic } from '../services/api';
 
-export default function SearchScreen({ onPlayTrack }) {
+export default function SearchScreen({ onPlayTrack, loadingTrackId, favorites, onToggleFavorite }) {
+
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -31,22 +33,43 @@ export default function SearchScreen({ onPlayTrack }) {
     }
   };
 
-  const renderTrack = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.trackCard}
-      onPress={() => onPlayTrack(item)}
-    >
-      <Image 
-        source={{ uri: item.album?.cover_medium }} 
-        style={styles.cover} 
-      />
-      <View style={styles.trackInfo}>
-        <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.trackArtist}>{item.artist?.name}</Text>
-      </View>
-      <Play size={20} color={theme.colors.accent} fill={theme.colors.accent} />
-    </TouchableOpacity>
-  );
+  const renderTrack = ({ item }) => {
+    const isLoading = loadingTrackId === item.id;
+    return (
+      <TouchableOpacity 
+        style={[styles.trackCard, isLoading && { opacity: 0.7 }]}
+        onPress={() => onPlayTrack(item)}
+        disabled={!!loadingTrackId}
+      >
+        <Image 
+          source={{ uri: item?.album?.cover_medium || '' }} 
+          style={styles.cover} 
+        />
+        <View style={styles.trackInfo}>
+          <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.trackArtist}>{item.artist?.name}</Text>
+        </View>
+        {isLoading ? (
+          <ActivityIndicator size="small" color={theme.colors.accent} />
+        ) : (
+          <TouchableOpacity 
+            onPress={(e) => {
+              e.stopPropagation();
+              onToggleFavorite(item);
+            }}
+            style={styles.favoriteBtn}
+          >
+            <Heart 
+              size={20} 
+              color={favorites?.some(f => f.id === item.id) ? theme.colors.accent : theme.colors.secondary} 
+              fill={favorites?.some(f => f.id === item.id) ? theme.colors.accent : 'transparent'} 
+              opacity={favorites?.some(f => f.id === item.id) ? 1 : 0.4}
+            />
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -108,7 +131,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   list: {
-    paddingBottom: 100,
+    paddingBottom: 180,
   },
   trackCard: {
     flexDirection: 'row',
@@ -141,6 +164,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  favoriteBtn: {
+    padding: 10,
   },
   emptyText: {
     color: theme.colors.secondary,

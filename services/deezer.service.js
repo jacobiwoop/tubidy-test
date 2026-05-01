@@ -16,6 +16,10 @@ async function withRetry(fn, retries = 5) {
     try {
       return await fn();
     } catch (err) {
+      if (axios.isCancel(err)) {
+        throw err; // Ne pas retenter si c'est annulé par le client
+      }
+      
       const isNetworkError =
         err.code === "EAI_AGAIN" ||
         err.code === "ETIMEDOUT" ||

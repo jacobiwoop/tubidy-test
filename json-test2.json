@@ -1,0 +1,114 @@
+{
+    "responseContext": {
+        "visitorData": "CgthQ2dDQ1A2Y3ltQSjszs_PBjIKCgJCShIEGgAgbg%3D%3D",
+        "serviceTrackingParams": [
+            {
+                "service": "CSI",
+                "params": [
+                    {
+                        "key": "c",
+                        "value": "WEB_REMIX"
+                    },
+                    {
+                        "key": "cver",
+                        "value": "1.20240101.01.00"
+                    },
+                    {
+                        "key": "yt_li",
+                        "value": "0"
+                    },
+                    {
+                        "key": "GetSearch_rid",
+                        "value": "0x101102c7b9d790c4"
+                    }
+                ]
+            },
+            {
+                "service": "GFEEDBACK",
+                "params": [
+                    {
+                        "key": "logged_in",
+                        "value": "0"
+                    }
+                ]
+            },
+            {
+                "service": "ECATCHER",
+                "params": [
+                    {
+                        "key": "client.version",
+                        "value": "1.20000101"
+                    },
+                    {
+                        "key": "client.name",
+                        "value": "WEB_REMIX"
+                    }
+                ]
+            }
+        ],
+        "maxAgeSeconds": 120,
+        "responseId": "IhMI6Irs796WlAMV85HLAR03OS1Z"
+    },
+    "contents": {
+        "tabbedSearchResultsRenderer": {
+            "tabs": [
+                {
+                    "tabRenderer": {
+                        "title": "YT Music",
+                        "selected": true,
+                        "content": {
+                            "sectionListRenderer": {
+                                "contents": [
+                                    {
+                                        "itemSectionRenderer": {
+                                            "contents": [
+                                                {
+                                                    "messageRenderer": {
+                                                        "text": {
+                                                            "runs": [
+                                                                {
+                                                                    "text": "No results for "
+                                                                },
+                                                                {
+                                                                    "text": "zara lush life",
+                                                                    "bold": true
+                                                                },
+                                                                {
+                                                                    "text": "."
+                                                                }
+                                                            ]
+                                                        },
+                                                        "icon": {
+                                                            "iconType": "SEARCH"
+                                                        },
+                                                        "trackingParams": "CAQQ-pUBGAAiEwjoiuzv3paUAxXzkcsBHTc5LVk=",
+                                                        "subtext": {
+                                                            "messageSubtextRenderer": {
+                                                                "text": {
+                                                                    "runs": [
+                                                                        {
+                                                                            "text": "Try different keywords"
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "trackingParams": "CAMQuy8YACITCOiK7O_elpQDFfORywEdNzktWQ=="
+                                        }
+                                    }
+                                ],
+                                "trackingParams": "CAIQui8iEwjoiuzv3paUAxXzkcsBHTc5LVk="
+                            }
+                        },
+                        "tabIdentifier": "music_search_catalog",
+                        "trackingParams": "CAEQ8JMBGAAiEwjoiuzv3paUAxXzkcsBHTc5LVk="
+                    }
+                }
+            ]
+        }
+    },
+    "trackingParams": "CAAQvGkiEwjoiuzv3paUAxXzkcsBHTc5LVnKAQSD9vyp"
+}

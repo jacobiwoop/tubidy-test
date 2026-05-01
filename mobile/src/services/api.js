@@ -1,11 +1,11 @@
 import axios from 'axios';
 
 // Replace with your local machine IP or Cloudflare tunnel URL
-const BASE_URL = 'http://10.45.54.54:3000';
+export const BASE_URL = 'http://10.45.54.54:3000';
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 60000,
 });
 
 export const searchMusic = async (query) => {

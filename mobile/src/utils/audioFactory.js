@@ -1,73 +1,41 @@
-import { Platform } from 'react-native';
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
 
-// --- Moteur de secours (Expo AV) pour Expo Go ---
-let expoSound = null;
+// Instance globale du lecteur pour expo-audio
+// On initialise avec une URL vide
+const player = createAudioPlayer('');
 
-const ExpoAVMock = {
-  setupPlayer: async () => {
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      staysActiveInBackground: true,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
-      playThroughEarpieceAndroid: false,
-    });
-  },
-  updateOptions: async () => {},
-  registerPlaybackService: () => {},
-  add: async (track) => {
-    if (expoSound) {
-      await expoSound.unloadAsync();
+/**
+ * Interface de compatibilité pour garder le fonctionnement actuel
+ * tout en utilisant le nouveau moteur expo-audio.
+ */
+const audioModule = {
+  player, // On expose l'objet player pour useAudioPlayerStatus
+  
+  TrackPlayer: {
+    setupPlayer: async () => {
+      // expo-audio gère sa propre initialisation native
+      return true;
+    },
+    updateOptions: async () => {},
+    reset: async () => {
+      player.pause();
+    },
+    add: async (track) => {
+      // On remplace la source actuelle par le nouveau lien
+      player.replace(track.url);
+    },
+    play: async () => {
+      player.play();
+    },
+    pause: async () => {
+      player.pause();
+    },
+    seekTo: async (seconds) => {
+      player.seekTo(seconds * 1000); // expo-audio utilise les millisecondes
     }
-    const { sound } = await Audio.Sound.createAsync(
-      { uri: track.url },
-      { shouldPlay: true }
-    );
-    expoSound = sound;
   },
-  reset: async () => {
-    if (expoSound) {
-      await expoSound.unloadAsync();
-      expoSound = null;
-    }
-  },
-  play: async () => {
-    if (expoSound) await expoSound.playAsync();
-  },
-  pause: async () => {
-    if (expoSound) await expoSound.pauseAsync();
-  },
-  skipToNext: async () => {},
-  skipToPrevious: async () => {},
+  engine: 'expo-audio',
+  isMock: false
 };
-
-// --- Logique de sélection du moteur ---
-let audioModule = {
-  TrackPlayer: ExpoAVMock,
-  Capability: {},
-  AppKilledPlaybackBehavior: {},
-  isMock: true,
-  engine: 'expo-av'
-};
-
-if (Platform.OS !== 'web') {
-  try {
-    const TrackPlayer = require('react-native-track-player').default || require('react-native-track-player');
-    const { Capability, AppKilledPlaybackBehavior } = require('react-native-track-player');
-
-    if (Capability && Capability.Play) {
-      audioModule = {
-        TrackPlayer,
-        Capability,
-        AppKilledPlaybackBehavior,
-        isMock: false,
-        engine: 'track-player'
-      };
-    }
-  } catch (e) {
-    console.log('[AudioFactory] Using Expo-AV fallback for sound support in Expo Go');
-  }
-}
 
 export default audioModule;
