@@ -108,6 +108,19 @@ export default function App() {
     await toggleTrackFavorite(currentTrack);
   };
 
+  const handleAddToPlaylist = async (playlistId) => {
+    console.log(`[App] Adding track ${currentTrack?.title} to playlist ${playlistId}`);
+    if (!currentTrack) return;
+    await toggleTrackInPlaylist(playlistId, currentTrack);
+    setShowPlaylistModal(false);
+  };
+
+  const handleCreatePlaylist = async (title) => {
+    const { createPlaylist } = require('./src/utils/playlists');
+    await createPlaylist(title);
+    await loadPlaylists();
+  };
+
   React.useEffect(() => {
     if (currentTrack) {
       setIsFavorite(favorites.some(f => f.id === currentTrack.id));
@@ -370,16 +383,26 @@ export default function App() {
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Ajouter à une playlist</Text>
               
-              <TouchableOpacity 
-                style={styles.createPlaylistBtn}
-                onPress={() => {
-                  const title = prompt("Nom de la nouvelle playlist :");
-                  if (title) handleCreatePlaylist(title);
-                }}
-              >
-                <Plus size={20} color={theme.colors.accent} />
-                <Text style={styles.createPlaylistText}>Nouvelle playlist</Text>
-              </TouchableOpacity>
+              <View style={styles.createContainer}>
+                <TextInput 
+                  style={styles.playlistInput}
+                  placeholder="Nouvelle playlist..."
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  value={newPlaylistTitle}
+                  onChangeText={setNewPlaylistTitle}
+                />
+                <TouchableOpacity 
+                  style={styles.createBtn}
+                  onPress={async () => {
+                    if (newPlaylistTitle.trim()) {
+                      await handleCreatePlaylist(newPlaylistTitle);
+                      setNewPlaylistTitle('');
+                    }
+                  }}
+                >
+                  <Plus size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
 
               <ScrollView style={styles.playlistList}>
                 {playlists.map(playlist => (
@@ -388,8 +411,13 @@ export default function App() {
                     style={styles.playlistItem}
                     onPress={() => handleAddToPlaylist(playlist.id)}
                   >
-                    <ListMusic size={20} color="#fff" />
-                    <Text style={styles.playlistItemText}>{playlist.name}</Text>
+                    <View style={styles.playlistIcon}>
+                      <ListMusic size={24} color={theme.colors.accent} />
+                    </View>
+                    <View>
+                      <Text style={styles.playlistTitle}>{playlist.title || playlist.name}</Text>
+                      <Text style={styles.playlistCount}>{playlist.tracks?.length || 0} titres</Text>
+                    </View>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -398,7 +426,7 @@ export default function App() {
                 style={styles.closeModalBtn}
                 onPress={() => setShowPlaylistModal(false)}
               >
-                <Text style={styles.closeModalText}>Annuler</Text>
+                <Text style={styles.closeModalText}>Fermer</Text>
               </TouchableOpacity>
             </View>
           </View>
