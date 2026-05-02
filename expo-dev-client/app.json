@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "ExpoWoop",
+    "slug": "expowoop-dev-client",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
+    "splash": {
+      "backgroundColor": "#000000",
+      "resizeMode": "contain"
+    },
+    "android": {
+      "package": "com.expowoop.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#000000"
+      }
+    },
+    "ios": {
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.0"
+          }
+        }
+      ]
+    ]
+  }
+}
