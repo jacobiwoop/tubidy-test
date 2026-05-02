@@ -36,10 +36,6 @@ jobs:
         working-directory: mobile
         run: |
           npx expo prebuild --platform android --no-install
-          # Forcer Kotlin 2.0.21 pour la compatibilité KSP
-          if [ -f android/build.gradle ]; then
-            sed -i 's/kotlinVersion = .*/kotlinVersion = "1.9.24"/' android/build.gradle
-          fi
           # Patch Proguard pour éviter les erreurs R8 sur les modules Expo
           mkdir -p android/app
           echo "-dontwarn expo.modules.**" >> android/app/proguard-rules.pro
