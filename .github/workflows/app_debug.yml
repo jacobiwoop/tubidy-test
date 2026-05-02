@@ -38,7 +38,7 @@ jobs:
           npx expo prebuild --platform android --no-install
           # Forcer Kotlin 2.0.21 pour la compatibilité KSP
           if [ -f android/build.gradle ]; then
-            sed -i 's/kotlinVersion = .*/kotlinVersion = "2.0.21"/' android/build.gradle
+            sed -i 's/kotlinVersion = .*/kotlinVersion = "1.9.24"/' android/build.gradle
           fi
           # Patch TrackPlayer (Null Safety Fix for Kotlin 2.0)
           TARGET_FILE="node_modules/react-native-track-player/android/src/main/java/com/doublesymmetry/trackplayer/module/MusicModule.kt"
