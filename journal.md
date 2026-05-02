@@ -86,3 +86,17 @@ Ce fichier sert à documenter les modifications importantes, les décisions arch
 86: - **Service Audio** : RNTP nécessite un cycle de vie indépendant de l'UI. L'enregistrement du service doit se faire dans le point d'entrée (`index.js`) pour être actif même si l'app est "tuée" par le système.
 87: - **Backups** : Avant une migration de cette envergure, la création d'un dossier `/backup_mobile` est une sécurité indispensable pour l'expérimentation.
 - **Automatisation du Build** : Création de `.github/workflows/app_debug.yml` pour générer un APK "Development Client" synchronisé avec le dossier `mobile/` et forçant Kotlin 2.0.21.
+
+### [2026-05-02] - Résolution des Dépendances et Nettoyage de Code (Session 2)
+
+### Modifications
+
+- **Installation de `react-native-track-player`** : Ajout de la dépendance manquante dans `package.json` qui bloquait le bundling Metro.
+- **Configuration des Plugins Expo** : Mise à jour de `app.json` pour inclure le plugin `react-native-track-player`, essentiel pour le lien natif lors du `prebuild`.
+- **Correction du conflit `TrackPlayer`** : Suppression d'une double déclaration dans `App.js` qui causait une erreur de syntaxe (conflit entre l'import direct et le wrapper `audioFactory`).
+
+### Leçons apprises
+
+- **Dépendances Natives & CI/CD** : Un build GitHub Actions peut "réussir" techniquement tout en générant un APK incomplet si une dépendance native est absente du `package.json` ou des `plugins` Expo au moment du `prebuild`.
+- **Conflits de Noms** : Lors de l'utilisation d'un wrapper (`audioFactory`), il est préférable d'éviter de redonner le même nom que la bibliothèque originale dans les imports pour éviter les erreurs de "re-declaration".
+- **Cycle de Vie du Build** : Toujours se rappeler que toute modification dans `app.json` ou l'ajout d'une bibliothèque native nécessite une reconstruction complète de l'APK (Dev Client).
