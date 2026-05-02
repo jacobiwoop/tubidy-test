@@ -45,7 +45,10 @@ jobs:
           if [ -f "$TARGET_FILE" ]; then
             echo "Patching MusicModule.kt surgically..."
             sed -i 's/index\].originalItem/index\].originalItem!!/g' "$TARGET_FILE"
+            sed -i 's/it.originalItem/it.originalItem!!/g' "$TARGET_FILE"
             sed -i 's/getCurrentTrackIndex()\].originalItem/getCurrentTrackIndex()\].originalItem!!/g' "$TARGET_FILE"
+            echo "Verification of patched lines:"
+            grep -n "originalItem!!" "$TARGET_FILE"
           fi
           # Patch Proguard pour éviter les erreurs R8 sur les modules Expo
           mkdir -p android/app
