@@ -36,6 +36,16 @@ jobs:
         working-directory: mobile
         run: |
           npx expo prebuild --platform android --no-install
+          # Forcer Kotlin 2.0.21 pour la compatibilité KSP
+          if [ -f android/build.gradle ]; then
+            sed -i 's/kotlinVersion = .*/kotlinVersion = "2.0.21"/' android/build.gradle
+          fi
+          # Patch TrackPlayer (Null Safety Fix for Kotlin 2.0)
+          TARGET_FILE="node_modules/react-native-track-player/android/src/main/java/com/doublesymmetry/trackplayer/module/MusicModule.kt"
+          if [ -f "$TARGET_FILE" ]; then
+            echo "Patching MusicModule.kt..."
+            sed -i 's/originalItem/originalItem!!/g' "$TARGET_FILE"
+          fi
           # Patch Proguard pour éviter les erreurs R8 sur les modules Expo
           mkdir -p android/app
           echo "-dontwarn expo.modules.**" >> android/app/proguard-rules.pro
