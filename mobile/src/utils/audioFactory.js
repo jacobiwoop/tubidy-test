@@ -1,54 +1,61 @@
-import { createAudioPlayer } from 'expo-audio';
+import TrackPlayer, { 
+  Capability, 
+  AppKilledPlaybackBehavior 
+} from 'react-native-track-player';
 
-// Instance globale du lecteur pour expo-audio
-// On initialise avec une URL vide
-const player = createAudioPlayer('');
-
-// Configuration du lecteur pour l'arrière-plan et l'écran de verrouillage
-player.staysActiveInBackground = true;
-player.showNowPlayingNotification = true;
-// On s'assure que le volume est à 1 par défaut
-player.volume = 1;
-
-/**
- * Interface de compatibilité pour garder le fonctionnement actuel
- * tout en utilisant le nouveau moteur expo-audio.
- */
 const audioModule = {
-  player, // On expose l'objet player pour useAudioPlayerStatus
+  // Cette instance n'est plus utilisée par RNTP mais on garde l'objet pour la compatibilité
+  player: null, 
   
   TrackPlayer: {
     setupPlayer: async () => {
-      return true;
+      try {
+        await TrackPlayer.setupPlayer();
+        await TrackPlayer.updateOptions({
+          android: {
+            appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+          },
+          capabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+            Capability.SkipToPrevious,
+            Capability.SeekTo,
+            Capability.Stop,
+          ],
+          compactCapabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+          ],
+        });
+        return true;
+      } catch (e) {
+        // Souvent déjà initialisé
+        return true;
+      }
     },
-    updateOptions: async () => {},
+    
     reset: async () => {
-      player.pause();
+      await TrackPlayer.reset();
     },
+    
     add: async (track) => {
-      // On met à jour les métadonnées pour l'écran de verrouillage
-      player.metadata = {
+      await TrackPlayer.add({
+        id: track.id,
+        url: track.url,
         title: track.title,
-        artist: track.artist?.name || track.artist || 'Unknown Artist',
-        album: track.album?.title || 'Spotywoop',
+        artist: track.artist?.name || track.artist,
         artwork: track.artwork || track.album?.cover_medium,
-      };
-
-      // On remplace la source actuelle par le nouveau lien
-      player.replace(track.url);
+        album: track.album?.title,
+      });
     },
-    play: async () => {
-      player.play();
-    },
-    pause: async () => {
-      player.pause();
-    },
-    seekTo: async (seconds) => {
-      player.seekTo(seconds); // expo-audio utilise les secondes
-    }
+    
+    play: async () => await TrackPlayer.play(),
+    pause: async () => await TrackPlayer.pause(),
+    seekTo: async (seconds) => await TrackPlayer.seekTo(seconds),
   },
-  engine: 'expo-audio',
-  isMock: false
+  engine: 'react-native-track-player',
 };
 
 export default audioModule;

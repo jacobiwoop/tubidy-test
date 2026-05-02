@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, StatusBar, TouchableOpacity, Image, Platform, A
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAudioPlayerStatus } from 'expo-audio';
+import TrackPlayer, { usePlaybackState, useProgress, State } from 'react-native-track-player';
 import { LinearGradient } from 'expo-linear-gradient';
 import audioModule from './src/utils/audioFactory';
 import { theme } from './src/utils/theme';
@@ -30,7 +31,17 @@ const Stack = createNativeStackNavigator();
 const navigationRef = React.createRef();
 
 export default function App() {
-  const playerStatus = useAudioPlayerStatus(player);
+  const playbackState = usePlaybackState();
+  const progress = useProgress();
+  
+  // Simulation de playerStatus pour la compatibilité avec le reste du code
+  const playerStatus = {
+    playing: playbackState.state === State.Playing,
+    loading: playbackState.state === State.Buffering || playbackState.state === State.Loading,
+    duration: progress.duration,
+    position: progress.position
+  };
+
   const [currentTrack, setCurrentTrack] = useState(null);
   const [showFullPlayer, setShowFullPlayer] = useState(false);
   const [loadingTrackId, setLoadingTrackId] = useState(null);
@@ -53,9 +64,13 @@ export default function App() {
   const playerPos = React.useRef(new Animated.Value(SCREEN_HEIGHT + 500)).current;
 
   React.useEffect(() => {
-    loadFavoritesList();
-    loadPlaylists();
-    loadDownloads();
+    const setup = async () => {
+      await TrackPlayer.setupPlayer();
+      loadFavoritesList();
+      loadPlaylists();
+      loadDownloads();
+    };
+    setup();
   }, []);
 
   const loadDownloads = async () => {

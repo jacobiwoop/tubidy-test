@@ -1,6 +1,8 @@
 import { registerRootComponent } from 'expo';
+import TrackPlayer from 'react-native-track-player';
 import App from './App';
 
-// registerRootComponent s'assure que l'application est lancée correctement
-// que ce soit sur Expo Go ou dans un build natif.
+// Enregistrement du service de lecture audio pour RNTP
+TrackPlayer.registerPlaybackService(() => require('./service'));
+
 registerRootComponent(App);

@@ -33,7 +33,7 @@ import {
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../utils/theme';
-import { useAudioPlayerStatus } from 'expo-audio';
+import TrackPlayer, { usePlaybackState, useProgress, State } from 'react-native-track-player';
 import audioModule from '../utils/audioFactory';
 import { isTrackFavorite, saveFavorite } from '../utils/favorites';
 
@@ -68,48 +68,22 @@ export default function PlayerScreen({
 
 
 
-  const playerStatus = useAudioPlayerStatus(player);
+  const playbackState = usePlaybackState();
+  const progress = useProgress();
   const [isSliding, setIsSliding] = useState(false);
   const [slideValue, setSlideValue] = useState(0);
 
   // Position et Durée calculées en MS pour l'interface
-  const duration = (playerStatus?.duration ? playerStatus.duration * 1000 : 0) || 
-                   (player.duration ? player.duration * 1000 : 0) || 
-                   (track?.duration ? track.duration * 1000 : 0);
-                   
-  const [currentPosition, setCurrentPosition] = useState(0);
-  const position = isSliding ? slideValue : currentPosition;
+  const duration = (progress.duration ? progress.duration * 1000 : 0) || (track?.duration ? track.duration * 1000 : 0);
+  const position = isSliding ? slideValue : (progress.position * 1000);
   
-  const isPlaying = playerStatus?.playing;
+  const isPlaying = playbackState.state === State.Playing;
   const isDownloaded = downloads.some(d => d.id === track?.id);
-  const isLoading = playerStatus?.loading || (track?.id === propStatus?.loadingTrackId);
+  const isLoading = playbackState.state === State.Buffering || playbackState.state === State.Loading || (track?.id === propStatus?.loadingTrackId);
 
-  // Debug pour comprendre pourquoi les compteurs sont à 0
+  // Si on vient de charger une nouvelle track, on remet slideValue à 0
   useEffect(() => {
-    if (isPlaying) {
-      console.log(`[Player] ${track?.title} - Status Dur: ${playerStatus?.duration}, Player Dur: ${player?.duration}, Track Dur: ${track?.duration}`);
-    }
-  }, [isPlaying, playerStatus?.duration, track?.id]);
-
-  // Synchronisation de la position en temps réel
-  useEffect(() => {
-    let interval;
-    if (isPlaying && !isSliding) {
-      interval = setInterval(() => {
-        const time = player.currentTime; // En secondes chez expo-audio
-        if (time !== undefined && time !== null) {
-          setCurrentPosition(time * 1000); // Conversion en ms
-        }
-      }, 500);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isPlaying, isSliding]);
-
-  // Si on vient de charger une nouvelle track, on remet la position à 0
-  useEffect(() => {
-    setCurrentPosition(0);
+    setSlideValue(0);
   }, [track?.id]);
 
   const albumScale = useRef(new Animated.Value(isPlaying ? 1 : 0.8)).current;
@@ -174,9 +148,8 @@ export default function PlayerScreen({
   };
 
   const handleSlidingComplete = async (value) => {
-    await player.seekTo(value / 1000); // Conversion en secondes pour expo-audio
+    await TrackPlayer.seekTo(value / 1000); // Conversion en secondes pour RNTP
     setIsSliding(false);
-    setCurrentPosition(value);
   };
 
   if (!track) return null;

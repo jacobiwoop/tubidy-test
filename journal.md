@@ -66,3 +66,23 @@ Ce fichier sert à documenter les modifications importantes, les décisions arch
 - **Navigation UX Mobile** : Le "Mini-Player" doit impérativement être placé en dehors du conteneur de navigation pour rester persistant lors du changement de page ou d'onglet.
 - **KSP & Kotlin** : Les outils de compression modernes (KSP) exigent une synchronisation parfaite des versions. Si Expo force une version trop ancienne de Kotlin, il ne faut pas hésiter à la corriger manuellement dans les fichiers de build générés.
 - **Grid Layout (React Native)** : Contrairement au Web, les grilles en React Native nécessitent une gestion précise de `flexWrap` et des largeurs en pourcentage (`width: '47%'`) pour garantir un affichage cohérent sur tous les écrans.
+69: 
+70: ## [2026-05-02] - Migration vers React Native Track Player
+71: 
+72: ### Modifications
+73: 
+74: - **Passage à `react-native-track-player`** : Abandon de `expo-audio` au profit de RNTP pour une gestion supérieure de l'audio en arrière-plan et des contrôles système.
+75: - **Création de `service.js`** : Implémentation du service de lecture audio pour gérer les événements distants (Remote Play/Pause).
+76: - **Refonte de `audioFactory.js`** : Migration du wrapper de compatibilité vers le véritable moteur RNTP.
+77: - **Enregistrement Global** : Mise à jour de `index.js` pour enregistrer le service de lecture avant le lancement de l'application.
+78: 
+79: ### Analyse et Décisions
+80: 
+81: - **Abstraction Stratégique** : Grâce au wrapper `audioFactory` créé précédemment, la migration du moteur audio n'a pas cassé immédiatement l'ensemble de l'interface, bien que des ajustements sur les hooks soient nécessaires.
+82: - **Résolution des Erreurs Natives** : L'erreur `ExpoAsset` rencontrée précédemment confirme la nécessité d'utiliser un Dev Client (`npx expo run:android`) plutôt qu'Expo Go pour les bibliothèques avec du code natif complexe.
+83: 
+84: ### Leçons apprises
+85: 
+86: - **Service Audio** : RNTP nécessite un cycle de vie indépendant de l'UI. L'enregistrement du service doit se faire dans le point d'entrée (`index.js`) pour être actif même si l'app est "tuée" par le système.
+87: - **Backups** : Avant une migration de cette envergure, la création d'un dossier `/backup_mobile` est une sécurité indispensable pour l'expérimentation.
+- **Automatisation du Build** : Création de `.github/workflows/app_debug.yml` pour générer un APK "Development Client" synchronisé avec le dossier `mobile/` et forçant Kotlin 2.0.21.
