@@ -64,8 +64,7 @@
           "staysActiveInBackground": true,
           "showNowPlayingNotification": true
         }
-      ],
-      "react-native-track-player"
+      ]
     ]
   }
 }
