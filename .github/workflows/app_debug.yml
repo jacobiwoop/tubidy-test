@@ -30,7 +30,7 @@ jobs:
 
       - name: 📦 Install dependencies
         working-directory: mobile
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: 🛠 Prebuild Expo (Dev Client Mode)
         working-directory: mobile
