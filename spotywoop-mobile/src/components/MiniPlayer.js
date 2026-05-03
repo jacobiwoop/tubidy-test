@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import { Play, Pause } from 'lucide-react-native';
 
-const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer }) => {
+const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer, loadingTrackId }) => {
   if (!currentTrack) return null;
+
+  const isLoading = loadingTrackId === currentTrack.id || playerStatus?.loading;
 
   return (
     <TouchableOpacity 
@@ -28,7 +30,7 @@ const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer
         <Text style={styles.miniArtist} numberOfLines={1}>{currentTrack.artist?.name}</Text>
       </View>
       <View style={styles.miniPlayBtn}>
-        {playerStatus?.loading ? (
+        {isLoading ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
           <TouchableOpacity onPress={onTogglePlay}>
