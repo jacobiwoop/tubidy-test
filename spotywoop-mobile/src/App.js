@@ -288,7 +288,7 @@ export default function App() {
   };
 
   const togglePlay = async () => {
-    if (playerStatus?.playing) {
+    if (playbackState.state === State.Playing) {
       await TrackPlayer.pause();
     } else {
       await TrackPlayer.play();
