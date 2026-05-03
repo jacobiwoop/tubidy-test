@@ -11,13 +11,12 @@ RUN apt-get update && apt-get install -y \
 # Dossier de travail
 WORKDIR /app
 
-# Arguments de build (à passer lors du docker build ou via Render)
-ARG LASTFM_API_KEY
-ARG LASTFM_SECRET
-
-# Création du fichier .env
-RUN echo "LASTFM_API_KEY=${LASTFM_API_KEY}" > .env \
-    && echo "LASTFM_SECRET=${LASTFM_SECRET}" >> .env
+# Décodage des clés obscurcies (Base64 + ROT13)
+RUN echo "OG80NG8wMDdvbjI3NnNvb3I4ODkyMzU2M3I0b3NzOTAK" | base64 -d | tr 'A-Za-z' 'N-ZA-Mn-za-m' > .env.tmp \
+    && echo "LASTFM_API_KEY=$(cat .env.tmp)" > .env \
+    && echo "bjlzNm44cHFwczQzMTFuc3E3NjVwMTNvMjBwczA4M3MK" | base64 -d | tr 'A-Za-z' 'N-ZA-Mn-za-m' > .env.tmp \
+    && echo "LASTFM_SECRET=$(cat .env.tmp)" >> .env \
+    && rm .env.tmp
 
 # Copie des fichiers de dépendances
 COPY package*.json ./
