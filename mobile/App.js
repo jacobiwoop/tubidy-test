@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, Image, Platform, Animated, Dimensions, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, Image, Platform, Animated, Dimensions, ActivityIndicator, PermissionsAndroid } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAudioPlayerStatus } from 'expo-audio';
@@ -65,6 +65,7 @@ export default function App() {
 
   React.useEffect(() => {
     const setup = async () => {
+      await requestPermissions();
       await TrackPlayer.setupPlayer();
       loadFavoritesList();
       loadPlaylists();
@@ -72,6 +73,18 @@ export default function App() {
     };
     setup();
   }, []);
+
+  const requestPermissions = async () => {
+    if (Platform.OS === 'android' && Platform.Version >= 33) {
+      try {
+        await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+        );
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+  };
 
   const loadDownloads = async () => {
     const list = await getDownloadMetadata();
@@ -515,22 +528,23 @@ const styles = StyleSheet.create({
   },
   miniPlayer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 95 : 80,
-    left: 8,
-    right: 8,
-    backgroundColor: 'rgba(28, 28, 30, 0.98)',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 15,
+    bottom: Platform.OS === 'ios' ? 70 : 65, // Ajusté pour coller à la TabBar (height 60 + petite marge)
+    left: 10,
+    right: 10,
+    backgroundColor: '#1c1c1e',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 10,
+    shadowRadius: 10,
+    elevation: 20, // Plus haut que la TabBar
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    zIndex: 99,
   },
   miniCover: {
     width: 45,
