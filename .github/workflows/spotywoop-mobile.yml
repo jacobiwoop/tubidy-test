@@ -1,0 +1,53 @@
+name: Build Spotywoop Mobile (Dev Client)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'spotywoop-mobile/**'
+      - '.github/workflows/spotywoop-mobile.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: spotywoop-mobile
+
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: ☕ Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🛠 Prebuild Android
+        run: npx expo prebuild --platform android --clean
+
+      - name: 🏗 Build Debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: 📤 Upload Spotywoop APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotywoop-mobile-debug
+          path: spotywoop-mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
