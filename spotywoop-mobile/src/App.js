@@ -9,7 +9,8 @@ import SearchScreen from './screens/SearchScreen';
 import PlayerScreen from './screens/PlayerScreen';
 import ArtistScreen from './screens/ArtistScreen';
 import { getTrackDownload, BASE_URL } from './services/api';
-import { Play, Pause, Heart, Home, Search, Library, Plus, ListMusic, CheckCircle, RotateCcw } from 'lucide-react-native';
+import { Play, Pause, Heart, Home, Search, Library, Plus, ListMusic, CheckCircle, RotateCcw, Music } from 'lucide-react-native';
+import MiniPlayer from './components/MiniPlayer';
 
 import { isTrackFavorite, saveFavorite } from './utils/favorites';
 import { NavigationContainer } from '@react-navigation/native';
@@ -155,10 +156,11 @@ export default function App() {
 
   React.useEffect(() => {
     Animated.spring(playerPos, {
-      toValue: showFullPlayer ? 0 : SCREEN_HEIGHT + 500,
+      toValue: showFullPlayer ? 0 : SCREEN_HEIGHT,
       useNativeDriver: true,
-      tension: 40,
-      friction: 8
+      damping: 20,
+      mass: 0.8,
+      stiffness: 100,
     }).start();
   }, [showFullPlayer]);
 
@@ -348,25 +350,14 @@ export default function App() {
           </Tab.Navigator>
 
         {/* Mini Player */}
-        {currentTrack && !showFullPlayer && (
-          <TouchableOpacity 
-            activeOpacity={0.9}
-            onPress={() => setShowFullPlayer(true)}
-            style={styles.miniPlayer}
-          >
-            {/* Pas de dégradé, on utilise le style de fond du miniPlayer */}
-            <Image 
-              source={{ uri: currentTrack?.album?.cover_medium || '' }} 
-              style={styles.miniCover} 
-            />
-            <View style={styles.miniInfo}>
-              <Text style={styles.miniTitle} numberOfLines={1}>{currentTrack.title}</Text>
-              <Text style={styles.miniArtist} numberOfLines={1}>{currentTrack.artist?.name}</Text>
-            </View>
-            <TouchableOpacity onPress={togglePlay} style={styles.miniPlayBtn}>
-              {playerStatus?.playing ? <Pause size={24} color="#fff" /> : <Play size={24} color="#fff" />}
-            </TouchableOpacity>
-          </TouchableOpacity>
+        {/* Mini Player */}
+        {!showFullPlayer && (
+          <MiniPlayer 
+            currentTrack={currentTrack}
+            playerStatus={playerStatus}
+            onTogglePlay={togglePlay}
+            onOpenFullPlayer={() => setShowFullPlayer(true)}
+          />
         )}
 
         {/* Full Player Overlay */}
