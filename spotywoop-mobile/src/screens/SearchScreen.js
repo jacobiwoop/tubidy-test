@@ -14,6 +14,9 @@ import { Search, Heart } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import { searchMusic } from '../services/api';
 import { usePlayer } from '../context/PlayerContext';
+import TrackSkeleton from '../components/TrackSkeleton';
+import { MenuView } from '@react-native-menu/menu';
+import { triggerHaptic } from '../utils/haptics';
 
 export default function SearchScreen({ navigation }) {
   const { onPlayTrack, loadingTrackId, favorites, onToggleFavorite, onViewArtist } = usePlayer();
@@ -38,43 +41,60 @@ export default function SearchScreen({ navigation }) {
   const renderTrack = ({ item }) => {
     const isLoading = loadingTrackId === item.id;
     return (
-      <TouchableOpacity 
-        style={[styles.trackCard, isLoading && { opacity: 0.7 }]}
-        onPress={() => onPlayTrack(item)}
-        disabled={!!loadingTrackId}
+      <MenuView
+        onPressAction={({ nativeEvent }) => {
+          if (nativeEvent.event === 'play') onPlayTrack(item);
+          if (nativeEvent.event === 'favorite') onToggleFavorite(item);
+          if (nativeEvent.event === 'artist') navigation.navigate('ArtistDetail', { artistId: item.artist?.id });
+        }}
+        actions={[
+          { id: 'play', title: 'Lire maintenant', image: 'play' },
+          { id: 'favorite', title: favorites?.some(f => f.id === item.id) ? 'Retirer des favoris' : 'Ajouter aux favoris', image: 'heart' },
+          { id: 'artist', title: 'Voir l\'artiste', image: 'person' },
+        ]}
+        shouldOpenOnLongPress={true}
       >
-        <Image 
-          source={{ uri: item?.album?.cover_medium || '' }} 
-          style={styles.cover} 
-        />
-        <View style={styles.trackInfo}>
-          <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('ArtistDetail', { artistId: item.artist?.id })}
-            style={styles.artistBtn}
-          >
-            <Text style={styles.trackArtist}>{item.artist?.name}</Text>
-          </TouchableOpacity>
-        </View>
-        {isLoading ? (
-          <ActivityIndicator size="small" color={theme.colors.accent} />
-        ) : (
-          <TouchableOpacity 
-            onPress={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(item);
-            }}
-            style={styles.favoriteBtn}
-          >
-            <Heart 
-              size={20} 
-              color={favorites?.some(f => f.id === item.id) ? theme.colors.accent : theme.colors.secondary} 
-              fill={favorites?.some(f => f.id === item.id) ? theme.colors.accent : 'transparent'} 
-              opacity={favorites?.some(f => f.id === item.id) ? 1 : 0.4}
-            />
-          </TouchableOpacity>
-        )}
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.trackCard, isLoading && { opacity: 0.7 }]}
+          onPress={() => {
+            triggerHaptic("impactLight");
+            onPlayTrack(item);
+          }}
+          disabled={!!loadingTrackId}
+        >
+          <Image 
+            source={{ uri: item?.album?.cover_medium || '' }} 
+            style={styles.cover} 
+          />
+          <View style={styles.trackInfo}>
+            <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('ArtistDetail', { artistId: item.artist?.id })}
+              style={styles.artistBtn}
+            >
+              <Text style={styles.trackArtist}>{item.artist?.name}</Text>
+            </TouchableOpacity>
+          </View>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.accent} />
+          ) : (
+            <TouchableOpacity 
+              onPress={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(item);
+              }}
+              style={styles.favoriteBtn}
+            >
+              <Heart 
+                size={20} 
+                color={favorites?.some(f => f.id === item.id) ? theme.colors.accent : theme.colors.secondary} 
+                fill={favorites?.some(f => f.id === item.id) ? theme.colors.accent : 'transparent'} 
+                opacity={favorites?.some(f => f.id === item.id) ? 1 : 0.4}
+              />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      </MenuView>
     );
   };
 
@@ -94,7 +114,9 @@ export default function SearchScreen({ navigation }) {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color={theme.colors.accent} style={{ marginTop: 40 }} />
+        <View style={{ padding: 10 }}>
+          {[1, 2, 3, 4, 5, 6].map(i => <TrackSkeleton key={i} />)}
+        </View>
       ) : (
         <FlatList
           data={results}

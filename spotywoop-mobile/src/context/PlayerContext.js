@@ -5,6 +5,7 @@ import { getFavorites, saveFavorite } from '../utils/favorites';
 import { getPlaylists } from '../utils/playlists';
 import { getDownloadMetadata } from '../utils/downloader';
 import { getTrackDownload } from '../services/api';
+import { triggerHaptic } from '../utils/haptics';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -96,6 +97,7 @@ export const PlayerProvider = ({ children }) => {
       });
 
       await TrackPlayer.play();
+      triggerHaptic("impactMedium");
       setCurrentTrack(track);
       if (queue.length > 0) {
         setCurrentQueue(queue);
@@ -111,6 +113,7 @@ export const PlayerProvider = ({ children }) => {
 
   const handleNext = () => {
     if (currentQueue.length > 0 && currentQueueIndex < currentQueue.length - 1) {
+      triggerHaptic("selection");
       const nextIndex = currentQueueIndex + 1;
       handlePlayTrack(currentQueue[nextIndex], currentQueue);
     }
@@ -129,10 +132,12 @@ export const PlayerProvider = ({ children }) => {
     } else {
       await TrackPlayer.play();
     }
+    triggerHaptic("impactLight");
   };
 
   const toggleFavorite = async (track) => {
     await saveFavorite(track);
+    triggerHaptic("notificationSuccess");
     await loadFavorites();
   };
 
