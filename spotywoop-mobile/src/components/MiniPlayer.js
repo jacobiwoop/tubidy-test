@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   Platform
 } from 'react-native';
-import { Play, Pause } from 'lucide-react-native';
+import { Play, Pause, ListMusic } from 'lucide-react-native';
 
-const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer, loadingTrackId }) => {
+const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer, loadingTrackId, colors, onOpenQueue }) => {
   if (!currentTrack) return null;
 
   const isLoading = loadingTrackId === currentTrack.id || playerStatus?.loading;
@@ -38,6 +38,15 @@ const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer
           </TouchableOpacity>
         )}
       </View>
+      <TouchableOpacity 
+        onPress={(e) => {
+          e.stopPropagation();
+          onOpenQueue();
+        }} 
+        style={styles.miniQueueBtn}
+      >
+        <ListMusic size={22} color={colors?.primary || "#fff"} />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 };
@@ -83,6 +92,10 @@ const styles = StyleSheet.create({
   },
   miniPlayBtn: {
     padding: 10,
+  },
+  miniQueueBtn: {
+    padding: 10,
+    marginLeft: -5,
   },
 });
 

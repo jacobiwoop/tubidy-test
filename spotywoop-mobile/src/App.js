@@ -29,6 +29,7 @@ import ArtistScreen from './screens/ArtistScreen';
 import LibraryScreen from './screens/LibraryScreen';
 
 import MiniPlayer from './components/MiniPlayer';
+import QueueModal from './components/QueueModal';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { theme } from './utils/theme';
 import { addTrackToPlaylist, createPlaylist } from './utils/playlists';
@@ -55,7 +56,13 @@ const MainApp = () => {
     downloads,
     activeDownloads,
     setActiveDownloads,
-    loadingTrackId
+    loadingTrackId,
+    currentColors,
+    suggestions,
+    isQueueVisible,
+    setIsQueueVisible,
+    onPlayTrack,
+    currentQueue
   } = usePlayer();
 
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
@@ -150,6 +157,8 @@ const MainApp = () => {
             onTogglePlay={onTogglePlay}
             onOpenFullPlayer={() => setShowFullPlayer(true)}
             loadingTrackId={loadingTrackId}
+            colors={currentColors}
+            onOpenQueue={() => setIsQueueVisible(true)}
           />
         )}
 
@@ -174,8 +183,29 @@ const MainApp = () => {
             onDownload={() => handleDownload(currentTrack)}
             downloads={downloads}
             activeDownloads={activeDownloads}
+            colors={currentColors}
+            onOpenQueue={() => setIsQueueVisible(true)}
           />
         </Animated.View>
+
+        <QueueModal 
+          isVisible={isQueueVisible}
+          onClose={() => setIsQueueVisible(false)}
+          queue={currentQueue}
+          currentTrack={currentTrack}
+          suggestions={suggestions}
+          onPlayTrackAt={async (index, isSuggestion) => {
+            let success = false;
+            if (isSuggestion) {
+              success = await onPlayTrack(suggestions[index]);
+            } else {
+              success = await onPlayTrack(currentQueue[index]);
+            }
+            if (success) setIsQueueVisible(false);
+          }}
+          onRemoveTrackAt={(index) => {}}
+          onClearQueue={() => {}}
+        />
 
         <Modal
           visible={showPlaylistModal}

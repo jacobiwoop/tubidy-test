@@ -63,7 +63,9 @@ export default function PlayerScreen({
   onRetry,
   onClose,
   onAddToPlaylist,
-  onViewArtist
+  onViewArtist,
+  colors,
+  onOpenQueue
 }) {
 
 
@@ -164,12 +166,9 @@ export default function PlayerScreen({
         <Image 
           source={{ uri: track?.album?.cover_big || track?.album?.cover_medium || '' }} 
           style={styles.backgroundImage} 
-          blurRadius={90}
+          blurRadius={60}
         />
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.8)']}
-          style={StyleSheet.absoluteFill}
-        />
+        <View style={[styles.overlay, { backgroundColor: colors?.secondary ? `${colors.secondary}99` : 'rgba(0,0,0,0.7)' }]} />
       </View>
 
       <SafeAreaView style={{ flex: 1 }}>
@@ -308,7 +307,7 @@ export default function PlayerScreen({
 
       {/* Footer Actions */}
       <View style={styles.footer}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={onOpenQueue}>
           <ListMusic size={24} color={theme.colors.secondary} />
         </TouchableOpacity>
         <Text style={styles.footerText}>Playing from Search</Text>

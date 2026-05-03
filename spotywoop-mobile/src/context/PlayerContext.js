@@ -4,8 +4,10 @@ import TrackPlayer, { usePlaybackState, useProgress, State } from 'react-native-
 import { getFavorites, saveFavorite } from '../utils/favorites';
 import { getPlaylists } from '../utils/playlists';
 import { getDownloadMetadata } from '../utils/downloader';
-import { getTrackDownload } from '../services/api';
+import { getTrackDownload, BASE_URL } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
+// import { getColors } from 'react-native-image-colors';
+import axios from 'axios';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -32,6 +34,13 @@ export const PlayerProvider = ({ children }) => {
   const [showFullPlayer, setShowFullPlayer] = useState(false);
   const [currentQueue, setCurrentQueue] = useState([]);
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
+  const [suggestions, setSuggestions] = useState([]);
+  const [isQueueVisible, setIsQueueVisible] = useState(false);
+  const [currentColors, setCurrentColors] = useState({
+    primary: '#1DB954',
+    secondary: '#191414',
+    background: '#000000'
+  });
 
   const playerPos = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
@@ -58,7 +67,63 @@ export const PlayerProvider = ({ children }) => {
       stiffness: 100,
     }).start();
   }, [showFullPlayer]);
+  useEffect(() => {
+    if (currentTrack) {
+      updateColors(currentTrack.album?.cover_medium);
+      fetchRecommendations(currentTrack);
+    }
+  }, [currentTrack]);
 
+  const updateColors = async (uri) => {
+    /* 
+    if (!uri) return;
+    try {
+      const result = await getColors(uri, {
+        fallback: '#1DB954',
+        cache: true,
+        key: uri,
+      });
+
+      if (Platform.OS === 'android') {
+        setCurrentColors({
+          primary: result.vibrant || result.dominant,
+          secondary: result.darkVibrant || result.darkMuted,
+          background: result.average || '#000'
+        });
+      } else {
+        setCurrentColors({
+          primary: result.primary,
+          secondary: result.secondary,
+          background: result.background
+        });
+      }
+    } catch (e) {
+      console.warn("Color extraction failed", e);
+    }
+    */
+    // Fallback OLED
+    setCurrentColors({
+      primary: '#1DB954',
+      secondary: '#111',
+      background: '#000'
+    });
+  };
+
+  const fetchRecommendations = async (track) => {
+    try {
+      const response = await axios.get(`${BASE_URL}/recommend`, {
+        params: {
+          artist: track.artist?.name || track.artist,
+          track: track.title
+        }
+      });
+      if (response.data && response.data.track) {
+        setSuggestions(response.data.track);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch recommendations", e);
+    }
+  };
   const loadFavorites = async () => {
     const favs = await getFavorites();
     setFavorites(favs || []);
@@ -78,22 +143,39 @@ export const PlayerProvider = ({ children }) => {
     try {
       setLoadingTrackId(track.id);
       
-      const downloadData = await getTrackDownload(track.id);
+      let finalTrack = track;
+
+      // Si c'est une suggestion (ID temporaire Last.fm), on cherche le vrai morceau sur Deezer
+      if (track.id && String(track.id).startsWith('lfm-')) {
+        const searchRes = await axios.get(`${BASE_URL}/search`, {
+          params: { q: `${track.title} ${track.artist?.name || track.artist}` }
+        });
+        if (searchRes.data && searchRes.data.length > 0) {
+          finalTrack = searchRes.data[0];
+          setLoadingTrackId(finalTrack.id);
+        } else {
+          alert("Impossible de trouver ce morceau sur les serveurs.");
+          setLoadingTrackId(null);
+          return false;
+        }
+      }
+
+      const downloadData = await getTrackDownload(finalTrack.id);
       const finalLink = downloadData?.target?.link || downloadData?.link;
 
       if (!finalLink) {
         alert("Lien non disponible");
-        return;
+        return false;
       }
 
       await TrackPlayer.reset();
       await TrackPlayer.add({
-        id: track.id,
+        id: finalTrack.id,
         url: finalLink,
-        title: track.title,
-        artist: track.artist?.name,
-        artwork: track.album?.cover_medium,
-        duration: track.duration,
+        title: finalTrack.title,
+        artist: finalTrack.artist?.name,
+        artwork: finalTrack.album?.cover_medium,
+        duration: finalTrack.duration,
       });
 
       await TrackPlayer.play();
@@ -104,8 +186,10 @@ export const PlayerProvider = ({ children }) => {
         const idx = queue.findIndex(t => t.id === track.id);
         setCurrentQueueIndex(idx !== -1 ? idx : 0);
       }
+      return true;
     } catch (error) {
       console.error(error);
+      return false;
     } finally {
       setLoadingTrackId(null);
     }
@@ -170,6 +254,10 @@ export const PlayerProvider = ({ children }) => {
       loadDownloads,
       currentQueue,
       currentQueueIndex,
+      currentColors,
+      suggestions,
+      isQueueVisible,
+      setIsQueueVisible,
       setActiveDownloads
     }}>
       {children}
