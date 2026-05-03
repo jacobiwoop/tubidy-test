@@ -99,4 +99,12 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MiniPlayer;
+export default React.memo(MiniPlayer, (prev, next) => {
+  return (
+    prev.playerStatus?.playing === next.playerStatus?.playing &&
+    prev.playerStatus?.loading === next.playerStatus?.loading &&
+    prev.loadingTrackId === next.loadingTrackId &&
+    prev.currentTrack?.id === next.currentTrack?.id &&
+    prev.colors === next.colors
+  );
+});

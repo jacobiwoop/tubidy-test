@@ -23,7 +23,6 @@ export const usePlayer = () => {
 
 export const PlayerProvider = ({ children }) => {
   const playbackState = usePlaybackState();
-  const progress = useProgress();
   
   const [currentTrack, setCurrentTrack] = useState(null);
   const [favorites, setFavorites] = useState([]);
@@ -255,12 +254,10 @@ export const PlayerProvider = ({ children }) => {
     await loadFavorites();
   };
 
-  const playerStatus = {
+  const playerStatus = React.useMemo(() => ({
     playing: playbackState.state === State.Playing,
     loading: playbackState.state === State.Buffering || playbackState.state === State.Loading,
-    duration: progress.duration,
-    position: progress.position
-  };
+  }), [playbackState.state]);
 
   return (
     <PlayerContext.Provider value={{

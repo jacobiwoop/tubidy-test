@@ -1,4 +1,5 @@
 require("dotenv").config();
+console.log("[boot] Starting Spotiwoop API...");
 const express = require("express");
 const https = require("https");
 const http = require("http");
@@ -204,8 +205,10 @@ app.use((err, req, res, next) => {
   });
 });
 
+console.log("[boot] App configured, starting server...");
 app.listen(port, "0.0.0.0", () => {
   console.log(`music-api running on port ${port}`);
+  console.log("[boot] Health check ready at /health");
 });
 
 module.exports = app;

@@ -1,5 +1,5 @@
 # Utilise une image Node.js stable et légère
-FROM node:22-slim
+FROM node:20-slim
 
 # Installation des outils de compilation nécessaires pour better-sqlite3
 RUN apt-get update && apt-get install -y \
@@ -30,5 +30,5 @@ COPY . .
 # Port utilisé par ton app.js (3000 par défaut)
 EXPOSE 3000
 
-# Commande de lancement
-CMD ["npm", "start"]
+# Commande de lancement directe (plus robuste que npm start)
+CMD ["node", "app.js"]

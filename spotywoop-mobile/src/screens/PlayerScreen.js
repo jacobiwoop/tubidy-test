@@ -48,7 +48,7 @@ const formatTime = (ms) => {
   return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 };
 
-export default function PlayerScreen({ 
+const PlayerScreen = ({ 
   track, 
   status: propStatus, // On peut recevoir le status en prop ou l'utiliser localement
   isFavorite, 
@@ -66,7 +66,7 @@ export default function PlayerScreen({
   onViewArtist,
   colors,
   onOpenQueue
-}) {
+}) => {
 
 
 
@@ -490,3 +490,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   }
 });
+export default React.memo(PlayerScreen);

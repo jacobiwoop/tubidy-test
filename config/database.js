@@ -2,7 +2,9 @@ const Database = require("better-sqlite3");
 const path = require("path");
 
 const dbPath = path.resolve(__dirname, "../music.db");
+console.log(`[db] Connecting to database at: ${dbPath}`);
 const db = new Database(dbPath);
+console.log("[db] Database connection established.");
 
 // Configuration de la base de données
 db.pragma("journal_mode = WAL");
