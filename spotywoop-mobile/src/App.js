@@ -8,10 +8,10 @@ import {
   TextInput, 
   ScrollView,
   Dimensions,
-  Platform,
-  SafeAreaView
+  Platform
 } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Home, Search, Library, Plus, ListMusic } from 'lucide-react-native';
@@ -39,6 +39,18 @@ import { getTrackDownload } from './services/api';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const navTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: '#0a0a0a',
+    card: '#121212',
+    text: '#ffffff',
+    border: 'transparent',
+    primary: theme.colors.accent,
+  },
+};
 
 const MainApp = () => {
   const { 
@@ -125,8 +137,8 @@ const MainApp = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <NavigationContainer>
+    <View style={styles.container}>
+      <NavigationContainer theme={navTheme}>
         <Tab.Navigator
           screenOptions={({ route }) => ({
             tabBarIcon: ({ color, size }) => {
@@ -194,12 +206,14 @@ const MainApp = () => {
           queue={currentQueue}
           currentTrack={currentTrack}
           suggestions={suggestions}
+          favorites={favorites}
+          onToggleFavorite={onToggleFavorite}
           onPlayTrackAt={async (index, isSuggestion) => {
             let success = false;
             if (isSuggestion) {
               success = await onPlayTrack(suggestions[index]);
             } else {
-              success = await onPlayTrack(currentQueue[index]);
+              success = await onPlayTrack(currentQueue[index], currentQueue);
             }
             if (success) setIsQueueVisible(false);
           }}
@@ -260,7 +274,7 @@ const MainApp = () => {
           </View>
         </Modal>
       </NavigationContainer>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -293,9 +307,11 @@ function LibraryStack() {
 
 export default function App() {
   return (
-    <PlayerProvider>
-      <MainApp />
-    </PlayerProvider>
+    <SafeAreaProvider>
+      <PlayerProvider>
+        <MainApp />
+      </PlayerProvider>
+    </SafeAreaProvider>
   );
 }
 

@@ -157,28 +157,41 @@ export default function LibraryScreen({ navigation }) {
               )}
               renderItem={({ item }) => {
                 const isLoading = loadingTrackId === item.id;
-                const isPlaying = currentTrackId === item.id;
+                const isPlaying = currentTrack?.id === item.id;
                 return (
                   <TouchableOpacity 
                     style={[styles.trackRow, isPlaying && styles.playingRow]}
                     onPress={() => onPlayTrack(item, selectedPlaylist.tracks)}
                   >
-                    <Image 
-                      source={{ uri: item.album?.cover_medium || '' }} 
-                      style={styles.trackThumb} 
-                    />
+                    <View style={styles.trackThumbContainer}>
+                      <Image 
+                        source={{ uri: item.album?.cover_medium || '' }} 
+                        style={styles.trackThumb} 
+                      />
+                    </View>
                     <View style={styles.trackInfo}>
                       <Text style={[styles.trackTitle, isPlaying && styles.playingText]} numberOfLines={1}>
                         {item.title}
                       </Text>
                       <Text style={styles.trackArtist}>{item.artist?.name}</Text>
                     </View>
-                    {isPlaying && !isLoading && (
-                      <Volume2 size={18} color={theme.colors.accent} />
-                    )}
-                    {isLoading && (
-                      <ActivityIndicator size="small" color={theme.colors.accent} />
-                    )}
+                    
+                    <View style={styles.trackAction}>
+                      {isLoading ? (
+                        <ActivityIndicator size="small" color={theme.colors.accent} />
+                      ) : isPlaying ? (
+                        <Volume2 size={18} color={theme.colors.accent} />
+                      ) : (
+                        <TouchableOpacity onPress={() => onToggleFavorite(item)}>
+                           <Heart 
+                             size={18} 
+                             color={favorites.some(f => f.id === item.id) ? theme.colors.accent : theme.colors.secondary}
+                             fill={favorites.some(f => f.id === item.id) ? theme.colors.accent : 'transparent'}
+                             opacity={favorites.some(f => f.id === item.id) ? 1 : 0.4}
+                           />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </TouchableOpacity>
                 );
               }}
@@ -517,5 +530,22 @@ const styles = StyleSheet.create({
   progressBarFill: {
     height: '100%',
     backgroundColor: theme.colors.accent,
+  },
+  trackThumbContainer: {
+    position: 'relative',
+    width: 45,
+    height: 45,
+    marginRight: 15,
+  },
+  trackLoaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  trackAction: {
+    padding: 10,
+    width: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 });

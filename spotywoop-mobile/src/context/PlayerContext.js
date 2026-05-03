@@ -162,7 +162,9 @@ export const PlayerProvider = ({ children }) => {
 
   const handlePlayTrack = async (track, queue = []) => {
     try {
+      if (!track) return false;
       setLoadingTrackId(track.id);
+      triggerHaptic("impactMedium");
       
       let finalTrack = track;
       let finalLink = null;
@@ -197,24 +199,29 @@ export const PlayerProvider = ({ children }) => {
         return false;
       }
 
+      // Mise à jour de la file d'attente AVANT de lancer la lecture
+      if (queue && queue.length > 0) {
+        setCurrentQueue(queue);
+        const idx = queue.findIndex(t => t.id === track.id);
+        setCurrentQueueIndex(idx !== -1 ? idx : 0);
+      } else {
+        // Si pas de file, on crée une file avec juste ce morceau
+        setCurrentQueue([track]);
+        setCurrentQueueIndex(0);
+      }
+
       await TrackPlayer.reset();
       await TrackPlayer.add({
-        id: finalTrack.id,
+        id: String(finalTrack.id),
         url: finalLink,
         title: finalTrack.title,
-        artist: finalTrack.artist?.name,
-        artwork: finalTrack.album?.cover_medium,
+        artist: finalTrack.artist?.name || finalTrack.artist,
+        artwork: finalTrack.album?.cover_medium || finalTrack.thumbnail,
         duration: finalTrack.duration,
       });
 
       await TrackPlayer.play();
-      triggerHaptic("impactMedium");
       setCurrentTrack(track);
-      if (queue.length > 0) {
-        setCurrentQueue(queue);
-        const idx = queue.findIndex(t => t.id === track.id);
-        setCurrentQueueIndex(idx !== -1 ? idx : 0);
-      }
       return true;
     } catch (error) {
       console.error(error);
@@ -225,16 +232,17 @@ export const PlayerProvider = ({ children }) => {
   };
 
   const handleNext = () => {
-    if (currentQueue.length > 0 && currentQueueIndex < currentQueue.length - 1) {
+    if (currentQueue.length > 0) {
+      const nextIndex = (currentQueueIndex + 1) % currentQueue.length;
       triggerHaptic("selection");
-      const nextIndex = currentQueueIndex + 1;
       handlePlayTrack(currentQueue[nextIndex], currentQueue);
     }
   };
 
   const handlePrevious = () => {
-    if (currentQueue.length > 0 && currentQueueIndex > 0) {
-      const prevIndex = currentQueueIndex - 1;
+    if (currentQueue.length > 0) {
+      const prevIndex = (currentQueueIndex - 1 + currentQueue.length) % currentQueue.length;
+      triggerHaptic("selection");
       handlePlayTrack(currentQueue[prevIndex], currentQueue);
     }
   };
@@ -251,7 +259,7 @@ export const PlayerProvider = ({ children }) => {
   const toggleFavorite = async (track) => {
     await saveFavorite(track);
     triggerHaptic("notificationSuccess");
-    await loadFavorites();
+    await Promise.all([loadFavorites(), loadPlaylists()]);
   };
 
   const playerStatus = React.useMemo(() => ({

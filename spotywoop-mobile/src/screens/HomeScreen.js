@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { Play, Heart, Disc, Music } from 'lucide-react-native';
+import { Play, Heart, Disc, Music, Volume2 } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import { checkHealth, BASE_URL } from '../services/api';
 import { usePlayer } from '../context/PlayerContext';
@@ -10,7 +10,7 @@ import { usePlayer } from '../context/PlayerContext';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
-  const { favorites, playlists, onPlayTrack, onViewArtist } = usePlayer();
+  const { favorites, playlists, onPlayTrack, onViewArtist, currentTrack, loadingTrackId } = usePlayer();
   const [serverStatus, setServerStatus] = useState('checking');
   const [debugLogs, setDebugLogs] = useState([]);
 
@@ -67,7 +67,7 @@ export default function HomeScreen({ navigation }) {
   ];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Aura de fond style Monochrome */}
       <LinearGradient
         colors={['rgba(255,255,255,0.08)', 'transparent']}
@@ -140,13 +140,34 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Made For You</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {favorites.slice(0, 5).map((track, i) => (
-                <TouchableOpacity key={track.id} style={styles.albumCard} onPress={() => onPlayTrack(track)}>
-                  <Image source={{ uri: track.album?.cover_medium }} style={styles.albumCover} />
-                  <Text style={styles.albumTitle} numberOfLines={1}>{track.title}</Text>
-                  <Text style={styles.albumArtist} numberOfLines={1}>{track.artist?.name}</Text>
-                </TouchableOpacity>
-              ))}
+              {favorites.slice(0, 5).map((track, i) => {
+                const isLoading = loadingTrackId === track.id;
+                const isPlaying = currentTrack?.id === track.id;
+                
+                return (
+                  <TouchableOpacity 
+                    key={track.id} 
+                    style={[styles.albumCard, isPlaying && { opacity: 0.8 }]} 
+                    onPress={() => onPlayTrack(track, favorites)}
+                  >
+                    <View style={styles.albumCoverContainer}>
+                      <Image source={{ uri: track.album?.cover_medium }} style={[styles.albumCover, isPlaying && styles.activeAlbumCover]} />
+                      {isLoading && (
+                        <View style={styles.loaderOverlay}>
+                          <ActivityIndicator size="small" color={theme.colors.accent} />
+                        </View>
+                      )}
+                      {isPlaying && !isLoading && (
+                        <View style={styles.loaderOverlay}>
+                           <Volume2 size={24} color={theme.colors.accent} />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.albumTitle, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>{track.title}</Text>
+                    <Text style={styles.albumArtist} numberOfLines={1}>{track.artist?.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
               {/* Fallback si pas de favoris */}
               {favorites.length === 0 && [1, 2, 3].map(i => (
                 <View key={i} style={styles.albumCard}>
@@ -185,7 +206,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </ScrollView>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -416,5 +437,22 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.5)',
     fontSize: 13,
     lineHeight: 18,
+  },
+  albumCoverContainer: {
+    position: 'relative',
+    width: 140,
+    height: 140,
+    marginBottom: 10,
+  },
+  loaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  activeAlbumCover: {
+    borderColor: theme.colors.accent,
+    borderWidth: 2,
   }
 });

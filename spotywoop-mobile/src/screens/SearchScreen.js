@@ -9,7 +9,8 @@ import {
   TouchableOpacity, 
   ActivityIndicator 
 } from 'react-native';
-import { Search, Heart } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Search, Heart, Volume2 } from 'lucide-react-native';
 
 import { theme } from '../utils/theme';
 import { searchMusic } from '../services/api';
@@ -19,7 +20,7 @@ import { MenuView } from '@react-native-menu/menu';
 import { triggerHaptic } from '../utils/haptics';
 
 export default function SearchScreen({ navigation }) {
-  const { onPlayTrack, loadingTrackId, favorites, onToggleFavorite, onViewArtist } = usePlayer();
+  const { onPlayTrack, loadingTrackId, favorites, onToggleFavorite, onViewArtist, currentTrack } = usePlayer();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -40,10 +41,12 @@ export default function SearchScreen({ navigation }) {
 
   const renderTrack = ({ item }) => {
     const isLoading = loadingTrackId === item.id;
+    const isPlaying = currentTrack?.id === item.id;
+    
     return (
       <MenuView
         onPressAction={({ nativeEvent }) => {
-          if (nativeEvent.event === 'play') onPlayTrack(item);
+          if (nativeEvent.event === 'play') onPlayTrack(item, results);
           if (nativeEvent.event === 'favorite') onToggleFavorite(item);
           if (nativeEvent.event === 'artist') navigation.navigate('ArtistDetail', { artistId: item.artist?.id });
         }}
@@ -55,19 +58,20 @@ export default function SearchScreen({ navigation }) {
         shouldOpenOnLongPress={true}
       >
         <TouchableOpacity 
-          style={[styles.trackCard, isLoading && { opacity: 0.7 }]}
+          style={[styles.trackCard, isPlaying && styles.playingCard]}
           onPress={() => {
             triggerHaptic("impactLight");
-            onPlayTrack(item);
+            onPlayTrack(item, results);
           }}
-          disabled={!!loadingTrackId}
         >
-          <Image 
-            source={{ uri: item?.album?.cover_medium || '' }} 
-            style={styles.cover} 
-          />
+          <View style={styles.coverContainer}>
+            <Image 
+              source={{ uri: item?.album?.cover_medium || '' }} 
+              style={styles.cover} 
+            />
+          </View>
           <View style={styles.trackInfo}>
-            <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
+            <Text style={[styles.trackTitle, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>{item.title}</Text>
             <TouchableOpacity 
               onPress={() => navigation.navigate('ArtistDetail', { artistId: item.artist?.id })}
               style={styles.artistBtn}
@@ -75,31 +79,35 @@ export default function SearchScreen({ navigation }) {
               <Text style={styles.trackArtist}>{item.artist?.name}</Text>
             </TouchableOpacity>
           </View>
-          {isLoading ? (
-            <ActivityIndicator size="small" color={theme.colors.accent} />
-          ) : (
-            <TouchableOpacity 
-              onPress={(e) => {
-                e.stopPropagation();
-                onToggleFavorite(item);
-              }}
-              style={styles.favoriteBtn}
-            >
-              <Heart 
-                size={20} 
-                color={favorites?.some(f => f.id === item.id) ? theme.colors.accent : theme.colors.secondary} 
-                fill={favorites?.some(f => f.id === item.id) ? theme.colors.accent : 'transparent'} 
-                opacity={favorites?.some(f => f.id === item.id) ? 1 : 0.4}
-              />
-            </TouchableOpacity>
-          )}
+          
+          <View style={styles.favoriteBtn}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={theme.colors.accent} />
+            ) : isPlaying ? (
+              <Volume2 size={20} color={theme.colors.accent} />
+            ) : (
+              <TouchableOpacity 
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite(item);
+                }}
+              >
+                <Heart 
+                  size={20} 
+                  color={favorites?.some(f => f.id === item.id) ? theme.colors.accent : theme.colors.secondary} 
+                  fill={favorites?.some(f => f.id === item.id) ? theme.colors.accent : 'transparent'} 
+                  opacity={favorites?.some(f => f.id === item.id) ? 1 : 0.4}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
         </TouchableOpacity>
       </MenuView>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.searchContainer}>
         <Search size={20} color={theme.colors.secondary} style={styles.searchIcon} />
         <TextInput
@@ -128,7 +136,7 @@ export default function SearchScreen({ navigation }) {
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -201,6 +209,23 @@ const styles = StyleSheet.create({
   },
   favoriteBtn: {
     padding: 10,
+  },
+  coverContainer: {
+    position: 'relative',
+    width: 50,
+    height: 50,
+    marginRight: 15,
+  },
+  loaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  playingCard: {
+    backgroundColor: 'rgba(29, 185, 84, 0.05)',
+    borderColor: 'rgba(29, 185, 84, 0.2)',
   },
   emptyText: {
     color: theme.colors.secondary,

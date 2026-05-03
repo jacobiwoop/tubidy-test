@@ -25,10 +25,13 @@ const QueueModal = ({
   onPlayTrackAt, 
   onRemoveTrackAt, 
   onClearQueue,
-  suggestions = [] 
+  suggestions = [],
+  favorites = [],
+  onToggleFavorite
 }) => {
   const renderTrackItem = ({ item, index, isSuggestion = false }) => {
     const isPlaying = currentTrack?.id === item.id && !isSuggestion;
+    const isFavorite = favorites.some(f => f.id === item.id);
     const coverUri = item.album?.cover_medium || item.album?.cover_small || item.cover_url;
 
     return (
@@ -36,10 +39,12 @@ const QueueModal = ({
         key={isSuggestion ? `sugg-${index}` : `track-${index}`}
         onPressAction={({ nativeEvent }) => {
           if (nativeEvent.event === 'play') onPlayTrackAt(index, isSuggestion);
+          if (nativeEvent.event === 'favorite') onToggleFavorite(item);
           if (nativeEvent.event === 'remove' && !isSuggestion) onRemoveTrackAt(index);
         }}
         actions={[
           { id: 'play', title: 'Lire maintenant', image: 'play' },
+          { id: 'favorite', title: isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris', image: isFavorite ? 'heart.fill' : 'heart' },
           ...(!isSuggestion ? [{ id: 'remove', title: 'Retirer de la file', image: 'trash', attributes: { destructive: true } }] : []),
         ]}
         shouldOpenOnLongPress={true}
@@ -67,8 +72,16 @@ const QueueModal = ({
           </View>
           
           <View style={styles.actions}>
-            <TouchableOpacity onPress={() => triggerHaptic("notificationSuccess")}>
-              <Heart size={18} color={theme.colors.secondary} style={{ marginRight: 10, opacity: 0.5 }} />
+            <TouchableOpacity onPress={() => {
+              triggerHaptic("notificationSuccess");
+              onToggleFavorite(item);
+            }}>
+              <Heart 
+                size={18} 
+                color={isFavorite ? theme.colors.accent : theme.colors.secondary} 
+                fill={isFavorite ? theme.colors.accent : 'transparent'} 
+                style={{ marginRight: 10, opacity: isFavorite ? 1 : 0.5 }} 
+              />
             </TouchableOpacity>
             <MoreVertical size={18} color={theme.colors.secondary} style={{ opacity: 0.3 }} />
           </View>

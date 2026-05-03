@@ -13,26 +13,35 @@ router.get('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Missing artist or track parameter' });
     }
 
+    if (!process.env.LASTFM_API_KEY) {
+      console.warn('[Recommend] LASTFM_API_KEY is not set. Returning empty suggestions.');
+      return res.json({ track: [] });
+    }
+
     console.log(`[Recommend] Searching similar tracks for: ${artist} - ${track}`);
 
     lastfm.trackSimilar({ name: track, artistName: artist, limit: 10 }, (err, data) => {
       if (err) {
         console.error('[LastFM Error Detail]', err);
-        return res.status(500).json({ error: 'Failed to fetch recommendations', details: err.message || err });
+        // On ne renvoie pas une 500 pour ne pas planter l'app, juste une liste vide
+        return res.json({ track: [], error: 'LastFM request failed' });
       }
       
-      // On formate les résultats de Last.fm pour qu'ils ressemblent à ce que l'App attend (format Deezer)
+      if (!data || !data.track) {
+        return res.json({ track: [] });
+      }
+      
       const tracks = data.track || [];
       const formattedTracks = tracks.map(t => {
-        // Extraction de l'image (on cherche 'mega', puis 'extralarge')
+        // Extraction de l'image
         const images = t.image || [];
         const bestImage = images.find(img => img.size === 'mega') || 
                           images.find(img => img.size === 'extralarge') || 
                           images[images.length - 1];
-        const imageUrl = bestImage ? bestImage['#text'] : '';
+        const imageUrl = bestImage ? (bestImage['#text'] || '') : '';
 
         return {
-          id: `lfm-${t.name}-${t.artist.name}`, // ID temporaire
+          id: `lfm-${encodeURIComponent(t.name)}-${encodeURIComponent(t.artist.name)}`, // ID temporaire safe
           title: t.name,
           artist: {
             name: t.artist.name,
@@ -41,7 +50,7 @@ router.get('/', async (req, res, next) => {
             cover_medium: imageUrl,
             cover_small: imageUrl,
           },
-          duration: 0, // Last.fm ne donne pas toujours la durée ici
+          duration: 0,
           isSuggestion: true
         };
       });
