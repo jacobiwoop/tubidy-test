@@ -42,7 +42,8 @@ jobs:
       - name: 🔧 Fix Gradle Compatibility
         run: |
           # Correction de l'erreur "unknown property release" fréquente sur SDK 50 + Gradle 8
-          find . -name "build.gradle" -exec sed -i 's/components.release/components.findByName("release")/g' {} +
+          # On cherche dans tous les fichiers .gradle, pas seulement build.gradle
+          find . -name "*.gradle" -exec sed -i 's/components.release/components.findByName("release")/g' {} +
           # S'assurer que le wrapper est exécutable
           chmod +x android/gradlew
 
