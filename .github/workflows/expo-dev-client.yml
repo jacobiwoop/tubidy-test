@@ -4,7 +4,8 @@ on:
   workflow_dispatch: # Permet de lancer le build manuellement
   push:
     paths:
-      - 'expo-dev-client/**' # Se déclenche si tu modifies ce dossier
+      - 'expo-dev-client/**'
+      - '.github/workflows/expo-dev-client.yml'
 
 jobs:
   build:
