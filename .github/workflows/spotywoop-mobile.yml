@@ -39,10 +39,15 @@ jobs:
       - name: 🛠 Prebuild Android
         run: npx expo prebuild --platform android --clean
 
+      - name: 🔧 Fix Gradle Compatibility
+        run: |
+          # Correction de l'erreur "unknown property release" fréquente sur SDK 50 + Gradle 8
+          find . -name "*.gradle" -exec sed -i 's/components.release/components.findByName("release")/g' {} +
+          chmod +x android/gradlew
+
       - name: 🏗 Build Debug APK
         run: |
           cd android
-          chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: 📤 Upload Spotywoop APK
