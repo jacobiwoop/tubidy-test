@@ -95,7 +95,7 @@ export default function App() {
   };
 
   const loadFavoritesList = async () => {
-    const { getFavorites } = require('./src/utils/favorites');
+    const { getFavorites } = require('./utils/favorites');
     const favs = await getFavorites();
     setFavorites(favs || []);
     
@@ -111,7 +111,7 @@ export default function App() {
     const exists = playlist?.tracks?.some(t => t.id === track.id);
     
     if (exists) {
-      const { removeTrackFromPlaylist } = require('./src/utils/playlists');
+      const { removeTrackFromPlaylist } = require('./utils/playlists');
       await removeTrackFromPlaylist(playlistId, track.id);
     } else {
       await addTrackToPlaylist(playlistId, track);
@@ -142,7 +142,7 @@ export default function App() {
   };
 
   const handleCreatePlaylist = async (title) => {
-    const { createPlaylist } = require('./src/utils/playlists');
+    const { createPlaylist } = require('./utils/playlists');
     await createPlaylist(title);
     await loadPlaylists();
   };

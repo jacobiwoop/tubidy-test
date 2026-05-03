@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Image, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// import { LinearGradient } from 'expo-linear-gradient';
+import LinearGradient from 'react-native-linear-gradient';
 import { ChevronLeft, Play, Shuffle, Download, Heart, Disc, ListMusic } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import * as api from '../services/api';
@@ -63,8 +63,9 @@ export default function ArtistScreen({ navigation, route }) {
             style={styles.bannerImage} 
             blurRadius={20}
           />
-          <View
-            style={[styles.headerGradient, { backgroundColor: 'rgba(0,0,0,0.4)' }]}
+          <LinearGradient
+            colors={['transparent', '#0a0a0a']}
+            style={styles.headerGradient}
           />
           
           <SafeAreaView style={styles.headerContent}>

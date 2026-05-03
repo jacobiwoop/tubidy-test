@@ -31,7 +31,7 @@ import {
   RotateCcw
 } from 'lucide-react-native';
 
-// import { LinearGradient } from 'expo-linear-gradient';
+import LinearGradient from 'react-native-linear-gradient';
 import { theme } from '../utils/theme';
 import TrackPlayer, { usePlaybackState, useProgress, State } from 'react-native-track-player';
 import audioModule from '../utils/audioFactory';
@@ -166,8 +166,9 @@ export default function PlayerScreen({
           style={styles.backgroundImage} 
           blurRadius={90}
         />
-        <View
-          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.8)']}
+          style={StyleSheet.absoluteFill}
         />
       </View>
 
