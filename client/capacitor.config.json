@@ -1,9 +1,0 @@
-{
-  "appId": "com.spoty.woop",
-  "appName": "spotywoop",
-  "webDir": "dist",
-  "server": {
-    "url": "http://10.45.54.54:5173",
-    "cleartext": true
-  }
-}

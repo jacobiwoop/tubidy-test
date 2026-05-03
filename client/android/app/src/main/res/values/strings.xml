@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">spotywoop</string>
-    <string name="title_activity_main">spotywoop</string>
-    <string name="package_name">com.spoty.woop</string>
-    <string name="custom_url_scheme">com.spoty.woop</string>
-</resources>
