@@ -222,3 +222,33 @@ Voici les éléments "Premium" de Spotify qu'on pourrait intégrer à **Spotywoo
 
 **Lequel de ces éléments te tente le plus pour la suite ?** 
 *Perso, je commencerais par la **Couleur Adaptative (1)** ou le **Swipe to Queue (3)**, c'est ce qui "claque" le plus visuellement !*on est repartis.
+---
+---
+---
+Tu as tout à fait raison. Ce que tu as vu dans les applications pro, c'est un processus en deux étapes qu'on appelle l'**Extraction de Palette** et le **Glaçage (Glassmorphism)**. 
+
+Voici comment l'algorithme fonctionne techniquement :
+
+### 1. L'Extraction (L'intelligence)
+L'algorithme parcourt tous les pixels de la pochette d'album. Il ne cherche pas juste la couleur la plus présente, mais il cherche des catégories :
+*   **Vibrant** : La couleur la plus "flashy".
+*   **Muted** : Une version plus douce et sombre.
+*   **Dominant** : La couleur de fond principale.
+
+### 2. La Création du Flou "Élégant"
+Une fois qu'on a la couleur (disons un Bleu Nuit), on ne se contente pas de peindre le fond en bleu. On superpose trois couches :
+1.  **Le Fond OLED** : Un noir pur (#000).
+2.  **L'Aura** : On prend l'image de l'album, on l'agrandit énormément (200% de la taille de l'écran) et on lui applique un **Flou Gaussien** très fort (entre 60 et 100 pixels). 
+3.  **Le Masque** : On ajoute un dégradé noir par-dessus pour que le bas de l'écran reste sombre (pour bien voir les boutons blancs).
+
+### Pourquoi c'est mieux que ce qu'on a là ?
+Actuellement, dans Spotywoop, on utilise une version simplifiée : on floute l'image mais on ne choisit pas encore *quelle* couleur extraire pour l'accentuer.
+
+### On peut l'améliorer !
+Pour faire comme sur Spotify ou Monochrome, on doit installer un module appelé **`react-native-image-colors`**. 
+Il permet au code de dire : *"Hé, donne-moi le code Hexadécimal de la couleur la plus belle de cette image"*. Ensuite, on peut utiliser cette couleur pour :
+*   Colorer la barre de progression (Slider).
+*   Colorer le bouton Play.
+*   Teinter légèrement le flou de fond.
+
+**Veux-tu que j'ajoute cette "intelligence" de couleur dans le prochain build ?** Ça rendrait l'appli vraiment unique à chaque chanson.on est repartis.

@@ -55,7 +55,8 @@ const MainApp = () => {
     downloads,
     activeDownloads,
     setActiveDownloads,
-    loadingTrackId
+    loadingTrackId,
+    currentColors
   } = usePlayer();
 
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
@@ -150,6 +151,7 @@ const MainApp = () => {
             onTogglePlay={onTogglePlay}
             onOpenFullPlayer={() => setShowFullPlayer(true)}
             loadingTrackId={loadingTrackId}
+            colors={currentColors}
           />
         )}
 
@@ -174,6 +176,7 @@ const MainApp = () => {
             onDownload={() => handleDownload(currentTrack)}
             downloads={downloads}
             activeDownloads={activeDownloads}
+            colors={currentColors}
           />
         </Animated.View>
 

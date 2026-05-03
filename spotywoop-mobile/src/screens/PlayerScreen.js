@@ -63,7 +63,8 @@ export default function PlayerScreen({
   onRetry,
   onClose,
   onAddToPlaylist,
-  onViewArtist
+  onViewArtist,
+  colors
 }) {
 
 
@@ -164,12 +165,9 @@ export default function PlayerScreen({
         <Image 
           source={{ uri: track?.album?.cover_big || track?.album?.cover_medium || '' }} 
           style={styles.backgroundImage} 
-          blurRadius={90}
+          blurRadius={60}
         />
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.8)']}
-          style={StyleSheet.absoluteFill}
-        />
+        <View style={[styles.overlay, { backgroundColor: colors?.secondary ? `${colors.secondary}99` : 'rgba(0,0,0,0.7)' }]} />
       </View>
 
       <SafeAreaView style={{ flex: 1 }}>
@@ -217,7 +215,7 @@ export default function PlayerScreen({
                 <Text style={styles.progressText}>{Math.round(activeDownloads[track.id] * 100)}%</Text>
               </View>
             ) : (
-              <Download size={24} color={isDownloaded ? theme.colors.accent : theme.colors.primary} />
+              <Download size={24} color={isDownloaded ? (colors?.primary || theme.colors.accent) : theme.colors.primary} />
             )}
           </TouchableOpacity>
 
@@ -236,8 +234,8 @@ export default function PlayerScreen({
           >
             <Heart 
               size={26} 
-              color={localIsFavorite ? theme.colors.accent : theme.colors.primary} 
-              fill={localIsFavorite ? theme.colors.accent : 'transparent'}
+              color={localIsFavorite ? (colors?.primary || theme.colors.accent) : theme.colors.primary} 
+              fill={localIsFavorite ? (colors?.primary || theme.colors.accent) : 'transparent'}
             />
           </TouchableOpacity>
         </View>
@@ -250,9 +248,9 @@ export default function PlayerScreen({
           minimumValue={0}
           maximumValue={duration}
           value={position}
-          minimumTrackTintColor={theme.colors.primary}
-          maximumTrackTintColor="rgba(255,255,255,0.1)"
-          thumbTintColor={theme.colors.primary}
+          minimumTrackTintColor={colors?.primary || theme.colors.accent}
+          maximumTrackTintColor="rgba(255,255,255,0.2)"
+          thumbTintColor={colors?.primary || theme.colors.accent}
           onSlidingStart={handleSlidingStart}
           onValueChange={setSlideValue}
           onSlidingComplete={handleSlidingComplete}
@@ -275,8 +273,8 @@ export default function PlayerScreen({
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.playButton}
-          onPress={playbackError ? onRetry : onPlayPause}
+          onPress={playbackError ? onRetry : onPlayPause} 
+          style={[styles.playButton, { backgroundColor: colors?.primary || theme.colors.primary }]}
           disabled={isLoading}
         >
           {isLoading ? (
@@ -330,10 +328,12 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   backgroundImage: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.65,
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.35,
     transform: [{ scale: 1.4 }],
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   header: {
     flexDirection: 'row',
