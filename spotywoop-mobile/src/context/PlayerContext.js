@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Animated, Dimensions, Platform } from 'react-native';
-import TrackPlayer, { usePlaybackState, useProgress, State } from 'react-native-track-player';
+import TrackPlayer, { usePlaybackState, useProgress, State, Capability } from 'react-native-track-player';
 import { getFavorites, saveFavorite } from '../utils/favorites';
 import { getPlaylists } from '../utils/playlists';
 import { getDownloadMetadata } from '../utils/downloader';
@@ -48,6 +48,28 @@ export const PlayerProvider = ({ children }) => {
     const setup = async () => {
       try {
         await TrackPlayer.setupPlayer();
+        await TrackPlayer.updateOptions({
+          capabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+            Capability.SkipToPrevious,
+            Capability.Stop,
+            Capability.SeekTo,
+          ],
+          compactCapabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+          ],
+          notificationCapabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+            Capability.SkipToPrevious,
+            Capability.Stop,
+          ],
+        });
       } catch (e) {
         // Player already setup
       }
@@ -144,15 +166,21 @@ export const PlayerProvider = ({ children }) => {
       setLoadingTrackId(track.id);
       
       let finalTrack = track;
+      let finalLink = null;
 
-      // Si c'est une suggestion (ID temporaire Last.fm), on cherche le vrai morceau sur Deezer
+      // Si c'est une suggestion (ID temporaire Last.fm), on cherche DIRECTEMENT le lien
       if (track.id && String(track.id).startsWith('lfm-')) {
-        const searchRes = await axios.get(`${BASE_URL}/search`, {
-          params: { q: `${track.title} ${track.artist?.name || track.artist}` }
+        const query = `${track.title} ${track.artist?.name || track.artist}`;
+        const res = await axios.get(`${BASE_URL}/search/play`, {
+          params: { q: query }
         });
-        if (searchRes.data && searchRes.data.length > 0) {
-          finalTrack = searchRes.data[0];
-          setLoadingTrackId(finalTrack.id);
+        
+        if (res.data && res.data.link) {
+          finalLink = res.data.link;
+          finalTrack = {
+            ...track,
+            title: res.data.title || track.title
+          };
         } else {
           alert("Impossible de trouver ce morceau sur les serveurs.");
           setLoadingTrackId(null);
@@ -160,8 +188,10 @@ export const PlayerProvider = ({ children }) => {
         }
       }
 
-      const downloadData = await getTrackDownload(finalTrack.id);
-      const finalLink = downloadData?.target?.link || downloadData?.link;
+      if (!finalLink) {
+        const downloadData = await getTrackDownload(finalTrack.id);
+        finalLink = downloadData?.target?.link || downloadData?.link;
+      }
 
       if (!finalLink) {
         alert("Lien non disponible");

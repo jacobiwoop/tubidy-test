@@ -128,4 +128,51 @@ async function getTubidyDownloadByDeezerId(deezerId, format = "mp3", signal = nu
   }
 }
 
-module.exports = { getTubidyDownloadByDeezerId };
+async function getDirectLinkByQuery(query, format = "mp3", signal = null) {
+  try {
+    // 1. TENTATIVE TURBO (Tubidy.cool)
+    console.log(`[mapping] Tentative Turbo pour: ${query}`);
+    try {
+      // On sépare le query si possible ou on le passe tel quel
+      const turboResult = await tubidyCoolService.findBestDirectLink(query, "");
+      if (turboResult && turboResult.link) {
+        const alive = await isLinkReachable(turboResult.link, signal);
+        if (alive) {
+          return {
+            title: turboResult.title,
+            link: turboResult.link,
+            format: "MP3 audio",
+            source: "tubidy.cool"
+          };
+        }
+      }
+    } catch (e) {
+      console.warn(`[mapping] Échec Turbo: ${e.message}`);
+    }
+
+    // 2. FALLBACK CLASSIQUE
+    console.log(`[mapping] Fallback classique pour: ${query}`);
+    const searchRes = await tubidyService.search(query, { page: 1 }, signal);
+    const results = searchRes.results;
+
+    if (!results || results.length === 0) throw new Error("Aucun résultat sur Tubidy");
+
+    const match = results[0];
+    const downloadData = await tubidyService.getDownloadLink(match.download_page, format, signal);
+    
+    if (!downloadData.link) throw new Error("Impossible d'extraire le lien");
+
+    return {
+      title: match.title,
+      link: downloadData.link,
+      format: format === "video" ? "MP4 video" : "MP3 audio",
+      source: "tubidy"
+    };
+  } catch (error) {
+    console.error("[mapping] Error DirectLinkByQuery:", error.message);
+    throw error;
+  }
+}
+
+module.exports = { getTubidyDownloadByDeezerId, getDirectLinkByQuery };
+
