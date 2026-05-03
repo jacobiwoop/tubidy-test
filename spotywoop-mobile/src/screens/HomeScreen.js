@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+// import { LinearGradient } from 'expo-linear-gradient';
 import { Play, Heart, Disc, Music } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import { checkHealth, BASE_URL } from '../services/api';
@@ -69,9 +69,8 @@ export default function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* Aura de fond style Monochrome */}
-      <LinearGradient
-        colors={['rgba(255,255,255,0.08)', 'transparent']}
-        style={styles.aura}
+      <View
+        style={[styles.aura, { backgroundColor: 'rgba(255,255,255,0.05)' }]}
       />
 
       <View style={{ flex: 1 }}>
@@ -121,9 +120,9 @@ export default function HomeScreen({ navigation }) {
               >
                 <View style={styles.quickThumbContainer}>
                   {item.isLiked ? (
-                    <LinearGradient colors={['#450af5', '#c4efd9']} style={styles.likedGradient}>
+                    <View style={[styles.likedGradient, { backgroundColor: '#450af5' }]}>
                       <Heart size={20} color="white" fill="white" />
-                    </LinearGradient>
+                    </View>
                   ) : (
                     <Image 
                       source={{ uri: item.tracks?.[0]?.album?.cover_medium || 'https://via.placeholder.com/150' }} 
@@ -172,13 +171,12 @@ export default function HomeScreen({ navigation }) {
                       source={{ uri: `https://picsum.photos/seed/${i + 10}/400/250` }} 
                       style={styles.trendingImage} 
                     />
-                    <LinearGradient
-                      colors={['transparent', 'rgba(0,0,0,0.8)']}
-                      style={styles.trendingOverlay}
+                    <View
+                      style={[styles.trendingOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}
                     >
                       <Text style={styles.trendingTag}>TRENDING</Text>
                       <Text style={styles.trendingTitle}>Global Top Hits {i}</Text>
-                    </LinearGradient>
+                    </View>
                  </TouchableOpacity>
                ))}
              </ScrollView>

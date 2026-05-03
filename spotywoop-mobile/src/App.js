@@ -3,7 +3,6 @@ import { StyleSheet, Text, View, StatusBar, TouchableOpacity, Image, Platform, A
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { usePlaybackState, useProgress, State, Capability } from 'react-native-track-player';
-import { LinearGradient } from 'expo-linear-gradient';
 import audioModule from './utils/audioFactory';
 import { theme } from './utils/theme';
 import SearchScreen from './screens/SearchScreen';
