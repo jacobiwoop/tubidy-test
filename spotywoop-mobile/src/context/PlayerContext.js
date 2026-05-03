@@ -6,7 +6,6 @@ import { getPlaylists } from '../utils/playlists';
 import { getDownloadMetadata } from '../utils/downloader';
 import { getTrackDownload } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
-import { getColors } from 'react-native-image-colors';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -33,11 +32,6 @@ export const PlayerProvider = ({ children }) => {
   const [showFullPlayer, setShowFullPlayer] = useState(false);
   const [currentQueue, setCurrentQueue] = useState([]);
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
-  const [currentColors, setCurrentColors] = useState({
-    primary: '#1DB954',
-    secondary: '#191414',
-    background: '#000000'
-  });
 
   const playerPos = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
@@ -64,39 +58,6 @@ export const PlayerProvider = ({ children }) => {
       stiffness: 100,
     }).start();
   }, [showFullPlayer]);
-
-  useEffect(() => {
-    if (currentTrack) {
-      updateColors(currentTrack.album?.cover_medium);
-    }
-  }, [currentTrack]);
-
-  const updateColors = async (uri) => {
-    if (!uri) return;
-    try {
-      const result = await getColors(uri, {
-        fallback: '#1DB954',
-        cache: true,
-        key: uri,
-      });
-
-      if (Platform.OS === 'android') {
-        setCurrentColors({
-          primary: result.vibrant || result.dominant,
-          secondary: result.darkVibrant || result.darkMuted,
-          background: result.average || '#000'
-        });
-      } else {
-        setCurrentColors({
-          primary: result.primary,
-          secondary: result.secondary,
-          background: result.background
-        });
-      }
-    } catch (e) {
-      console.warn("Color extraction failed", e);
-    }
-  };
 
   const loadFavorites = async () => {
     const favs = await getFavorites();
@@ -209,7 +170,6 @@ export const PlayerProvider = ({ children }) => {
       loadDownloads,
       currentQueue,
       currentQueueIndex,
-      currentColors,
       setActiveDownloads
     }}>
       {children}

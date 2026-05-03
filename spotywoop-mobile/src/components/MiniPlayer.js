@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Play, Pause } from 'lucide-react-native';
 
-const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer, loadingTrackId, colors }) => {
+const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer, loadingTrackId }) => {
   if (!currentTrack) return null;
 
   const isLoading = loadingTrackId === currentTrack.id || playerStatus?.loading;
@@ -26,7 +26,7 @@ const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer
         style={styles.miniCover} 
       />
       <View style={styles.miniInfo}>
-        <Text style={[styles.miniTitle, colors?.primary && { color: colors.primary }]} numberOfLines={1}>{currentTrack.title}</Text>
+        <Text style={styles.miniTitle} numberOfLines={1}>{currentTrack.title}</Text>
         <Text style={styles.miniArtist} numberOfLines={1}>{currentTrack.artist?.name}</Text>
       </View>
       <View style={styles.miniPlayBtn}>
