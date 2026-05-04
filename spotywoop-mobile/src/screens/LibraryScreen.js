@@ -31,6 +31,12 @@ export default function LibraryScreen({ navigation }) {
   const [newTitle, setNewTitle] = useState('');
   
   const likedSongs = playlists.find(p => p.id === 'liked');
+  const downloadsPlaylist = {
+    id: 'downloads',
+    title: 'Téléchargements',
+    tracks: downloads,
+    isDownloads: true
+  };
   const otherPlaylists = playlists.filter(p => p.id !== 'liked');
 
   const QuickAction = ({ icon: Icon, title, color }) => (
@@ -42,11 +48,15 @@ export default function LibraryScreen({ navigation }) {
     </TouchableOpacity>
   );
 
-  const PlaylistCard = ({ item, isLiked }) => (
+  const PlaylistCard = ({ item, isLiked, isDownloads }) => (
     <TouchableOpacity style={styles.playlistCard} onPress={() => setSelectedPlaylist(item)}>
       {isLiked ? (
         <LinearGradient colors={['#450af5', '#c4efd9']} style={styles.cardThumb}>
            <Heart size={32} color="white" fill="white" />
+        </LinearGradient>
+      ) : isDownloads ? (
+        <LinearGradient colors={['#00d2ff', '#3a7bd5']} style={styles.cardThumb}>
+           <Download size={32} color="white" />
         </LinearGradient>
       ) : (
         <View style={styles.cardThumb}>
@@ -118,13 +128,8 @@ export default function LibraryScreen({ navigation }) {
 
           <View style={styles.playlistGrid}>
             {likedSongs && <PlaylistCard item={likedSongs} isLiked={true} />}
-            {otherPlaylists.length > 0 ? (
-              otherPlaylists.map(pl => <PlaylistCard key={pl.id} item={pl} />)
-            ) : !likedSongs && (
-              <View style={styles.emptyPlaylists}>
-                <Text style={styles.emptyText}>No playlists created yet</Text>
-              </View>
-            )}
+            {downloadsPlaylist && <PlaylistCard item={downloadsPlaylist} isDownloads={true} />}
+            {otherPlaylists.length > 0 && otherPlaylists.map(pl => <PlaylistCard key={pl.id} item={pl} />)}
           </View>
         </View>
       </ScrollView>
@@ -149,14 +154,21 @@ export default function LibraryScreen({ navigation }) {
               contentContainerStyle={styles.detailList}
               ListHeaderComponent={() => {
                 const isLiked = selectedPlaylist?.id === 'liked';
+                const isDownloads = selectedPlaylist?.id === 'downloads';
+                let colors = ['rgba(255,255,255,0.1)', 'transparent'];
+                if (isLiked) colors = ['#450af5', '#c4efd9'];
+                if (isDownloads) colors = ['#00d2ff', '#3a7bd5'];
+
                 return (
                   <View style={styles.detailInfoContainer}>
                     <LinearGradient 
-                      colors={isLiked ? ['#450af5', '#c4efd9'] : ['rgba(255,255,255,0.1)', 'transparent']}
+                      colors={colors}
                       style={styles.bigIcon}
                     >
                       {isLiked ? (
                         <Heart size={60} color="white" fill="white" />
+                      ) : isDownloads ? (
+                        <Download size={60} color="white" />
                       ) : (
                         <ListMusic size={60} color={theme.colors.secondary} />
                       )}

@@ -199,11 +199,47 @@ export const PlayerProvider = ({ children }) => {
         fetchRecommendations(track); // charge la liste une seule fois
       }
 
-      // ── Résolution du lien (appel réseau) ──────────────────────────────────
+      // ─── Vérification Connectivité & Local ─────────────────────────────────
+      const isDownloaded = downloads.some(d => String(d.id) === String(track.id));
+      let isOffline = false;
+      try {
+        await axios.get(`${BASE_URL}/health`, { timeout: 1500 });
+      } catch (e) {
+        isOffline = true;
+      }
+
+      // Si Hors-ligne et non téléchargé -> on cherche le prochain téléchargé
+      if (isOffline && !isDownloaded) {
+        console.log(`[Offline] Skip: ${track.title}`);
+        const queue = queueRef.current;
+        if (queue && queue.length > 1) {
+          const currentIndex = queue.findIndex(t => String(t.id) === String(track.id));
+          for (let i = 1; i < queue.length; i++) {
+            const nextIdx = (currentIndex + i) % queue.length;
+            const nextTrack = queue[nextIdx];
+            if (downloads.some(d => String(d.id) === String(nextTrack.id))) {
+              return handlePlayTrack(nextTrack, queue);
+            }
+          }
+        }
+        alert('Mode Hors-ligne : Seuls vos téléchargements sont disponibles.');
+        return false;
+      }
+
+      // ── Résolution du lien (Local ou Réseau) ────────────────────────────────
       let finalTrack = track;
       let finalLink  = null;
 
-      if (String(track.id).startsWith('lfm-') || String(track.id).startsWith('cho-')) {
+      // Priorité au fichier local si téléchargé
+      if (isDownloaded) {
+        const metadata = await getDownloadMetadata(track.id);
+        if (metadata && metadata.fileUri) {
+          finalLink = metadata.fileUri;
+          console.log(`[Local] Playing from storage: ${track.title}`);
+        }
+      }
+
+      if (!finalLink && (String(track.id).startsWith('lfm-') || String(track.id).startsWith('cho-'))) {
         const q = `${track.title} ${track.artist?.name || track.artist}`;
         const res = await axios.get(`${BASE_URL}/search/play`, { params: { q } });
         if (res.data?.link) {
