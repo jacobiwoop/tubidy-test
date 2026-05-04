@@ -81,10 +81,7 @@ async function getTrack(id, signal = null) {
       return {
         id: cached.id,
         title: cached.title,
-        artist: { 
-          id: cached.artist_id,
-          name: cached.artist 
-        },
+        artist: { name: cached.artist },
         album: {
           title: cached.album,
           cover_medium: cached.cover_url,
@@ -100,10 +97,7 @@ async function getTrack(id, signal = null) {
 
   return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/track/${id}`, {
-      timeout: DEFAULT_TIMEOUT,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      },
+      timeout: DEFAULT_TIMEOUT, // FIX
       signal,
     });
     const track = response.data;
@@ -111,13 +105,12 @@ async function getTrack(id, signal = null) {
     if (track && !track.error) {
       try {
         db.prepare(
-          `INSERT OR REPLACE INTO tracks (id, title, artist, artist_id, album, cover_url, preview_url, duration)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT OR REPLACE INTO tracks (id, title, artist, album, cover_url, preview_url, duration)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
         ).run(
           String(track.id),
           track.title,
           track.artist.name,
-          String(track.artist.id),
           track.album.title,
           track.album.cover_medium,
           track.preview,
@@ -236,17 +229,8 @@ async function getRelatedAlbums(id, { limit = 6 } = {}) {
 }
 
 async function getTrackRadio(id) {
-  const track = await getTrack(id);
-  if (!track || track.error || !track.artist) {
-    return { data: [] };
-  }
   return withRetry(async () => {
-    const response = await axios.get(`${BASE_URL}/artist/${track.artist.id || track.artist}/radio`, {
-      timeout: DEFAULT_TIMEOUT,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      },
-    });
+    const response = await axios.get(`${BASE_URL}/track/${id}/radio`, { timeout: DEFAULT_TIMEOUT });
     return response.data;
   });
 }

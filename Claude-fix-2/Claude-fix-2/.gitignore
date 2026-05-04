@@ -1,0 +1,9 @@
+node_modules/
+.env
+cookies.txt
+*.db
+*.db-shm
+*.db-wal
+dist/
+client/dist/
+*.log

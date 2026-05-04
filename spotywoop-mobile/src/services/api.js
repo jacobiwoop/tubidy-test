@@ -80,4 +80,14 @@ export const getRelatedArtists = async (id) => {
   }
 };
 
+export const getTrackRadio = async (id) => {
+  try {
+    const response = await api.get(`/deezer/track/${id}/radio`);
+    return response.data;
+  } catch (error) {
+    console.error('Get Track Radio error:', error);
+    throw error;
+  }
+};
+
 export default api;

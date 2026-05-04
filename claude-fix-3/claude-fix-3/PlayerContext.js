@@ -9,7 +9,7 @@ import TrackPlayer, {
 import { getFavorites, saveFavorite } from '../utils/favorites';
 import { getPlaylists } from '../utils/playlists';
 import { getDownloadMetadata } from '../utils/downloader';
-import { getTrackDownload, getTrackRadio, BASE_URL } from '../services/api';
+import { getTrackDownload, BASE_URL } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
 import axios from 'axios';
 
@@ -317,14 +317,11 @@ export const PlayerProvider = ({ children }) => {
   //   → joue nouvelles_sugg[0] automatiquement → continue
   const fetchRecommendations = async (track, autoPlay = false) => {
     try {
-      console.log(`[Radio] Fetching suggestions for track: ${track.title}`);
-      const res = await getTrackRadio(track.id);
-      const tracks = res?.data;
-      
-      if (!tracks || tracks.length === 0) {
-        console.warn('[Radio] No suggestions found');
-        return;
-      }
+      const res = await axios.get(`${BASE_URL}/recommend`, {
+        params: { artist: track.artist?.name || track.artist, track: track.title },
+      });
+      const tracks = res.data?.track;
+      if (!tracks || tracks.length === 0) return;
 
       setSuggestions(tracks);
 
@@ -336,12 +333,9 @@ export const PlayerProvider = ({ children }) => {
 
       // Si appelé en fin de queue → lancer automatiquement la 1ère suggestion
       if (autoPlay && newQueue[1]) {
-        console.log('[Radio] Auto-playing first suggestion');
         playTrackAtIndex(newQueue, 1);
       }
-    } catch (err) {
-      console.error('[Radio] Error fetching recommendations:', err.message);
-    }
+    } catch (_) {}
   };
 
   // ─── Loaders ───────────────────────────────────────────────────────────────
