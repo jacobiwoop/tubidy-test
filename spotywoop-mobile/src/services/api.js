@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-export const BASE_URL = 'https://spotywoop-srv.onrender.com/api';
-// export const BASE_URL = 'http://192.168.1.113:3000/api';
+export const BASE_URL = 'http://10.29.82.54:3000/api';
+// export const BASE_URL = 'https://spotywoop-srv.onrender.com/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
