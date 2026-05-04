@@ -33,7 +33,8 @@ router.get('/', async (req, res, next) => {
       
       const tracks = data.track || [];
       const formattedTracks = tracks.map(t => {
-        // Extraction de l'image
+        const artistName = t.artist.name || 'Unknown Artist';
+        
         const images = t.image || [];
         const bestImage = images.find(img => img.size === 'mega') || 
                           images.find(img => img.size === 'extralarge') || 
@@ -41,10 +42,10 @@ router.get('/', async (req, res, next) => {
         const imageUrl = bestImage ? (bestImage['#text'] || '') : '';
 
         return {
-          id: `lfm-${encodeURIComponent(t.name)}-${encodeURIComponent(t.artist.name)}`, // ID temporaire safe
+          id: `lfm-${encodeURIComponent(t.name)}-${encodeURIComponent(artistName)}`,
           title: t.name,
           artist: {
-            name: t.artist.name,
+            name: artistName,
           },
           album: {
             cover_medium: imageUrl,

@@ -11,6 +11,7 @@ import { getPlaylists } from '../utils/playlists';
 import { getDownloadMetadata } from '../utils/downloader';
 import { getTrackDownload, getTrackRadio, BASE_URL } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
+import StatsService from '../services/StatsService';
 import axios from 'axios';
 
 // ─── Modes de lecture ────────────────────────────────────────────────────────
@@ -39,6 +40,7 @@ export const PlayerProvider = ({ children }) => {
   const [currentQueue, setCurrentQueue]       = useState([]);
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
   const [suggestions, setSuggestions]         = useState([]);
+  const [musicDNA, setMusicDNA]               = useState(null);
 
   // Musique source de la radio (celle choisie par l'user depuis la recherche)
   // Affichée en haut du QueueModal, réinitialisée à chaque choix manuel
@@ -81,8 +83,14 @@ export const PlayerProvider = ({ children }) => {
       loadFavorites();
       loadPlaylists();
       loadDownloads();
+      refreshDNA();
     })();
   }, []);
+
+  const refreshDNA = async () => {
+    const dna = await StatsService.getDNA();
+    setMusicDNA(dna);
+  };
 
   // ─── Calcul index suivant / précédent ──────────────────────────────────────
   const getNextIndex = (queue, idx, shuffle) => {
@@ -229,6 +237,9 @@ export const PlayerProvider = ({ children }) => {
         duration: finalTrack.duration,
       });
       await TrackPlayer.play();
+      
+      // Enregistrement dans l'ADN musical
+      StatsService.recordTrackPlay(finalTrack).then(() => refreshDNA());
 
       // fetchRecommendations n'est PAS appelé ici.
       // Il est appelé uniquement quand on est au dernier morceau de la queue
@@ -303,6 +314,8 @@ export const PlayerProvider = ({ children }) => {
     saveFavorite(track).then(() => {
       loadFavorites();
       loadPlaylists();
+      // On enregistre l'action dans l'ADN (plus de poids qu'une simple écoute)
+      StatsService.recordTrackLike(track, !isAlreadyFav).then(() => refreshDNA());
     });
   }, [favorites]);
 
@@ -372,7 +385,9 @@ export const PlayerProvider = ({ children }) => {
       currentQueueIndex,
       suggestions,
       radioSource,
+      musicDNA,
       setActiveDownloads,
+      refreshDNA,
       // Modes de lecture
       isShuffle,
       repeatMode,

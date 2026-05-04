@@ -40,24 +40,35 @@ async function search(query, limit = 10) {
 }
 
 /**
- * Récupère des recommandations basées sur un ID Spotify
+ * Récupère des recommandations basées sur des IDs Spotify, des genres ou les deux.
+ * @param {Object} options 
+ * @param {string|string[]} options.seedTracks - ID ou tableau d'IDs Spotify
+ * @param {string|string[]} options.seedGenres - Genre ou tableau de genres
+ * @param {number} options.limit - Nombre de résultats (max 100)
  */
-async function getRecommendations(seedTrackId, limit = 20) {
+async function getRecommendations({ seedTracks = [], seedGenres = [], limit = 20 }) {
     try {
-        console.log(`[Chosic] Récupération des recommandations pour l'ID : ${seedTrackId}`);
+        const tracksParam = Array.isArray(seedTracks) ? seedTracks.join(',') : seedTracks;
+        const genresParam = Array.isArray(seedGenres) ? seedGenres.join(',') : seedGenres;
+
+        console.log(`[Chosic] Récupération des recommandations. Tracks: ${tracksParam} | Genres: ${genresParam}`);
+        
+        const params = { limit };
+        if (tracksParam) params.seed_tracks = tracksParam;
+        if (genresParam) params.seed_genres = genresParam;
+
         const response = await axios.get('https://www.chosic.com/api/tools/recommendations', {
-            params: { seed_tracks: seedTrackId, limit },
+            params,
             headers: {
                 ...COMMON_HEADERS,
                 'Cookie': CHOSIC_COOKIE
             }
         });
         
-        // Chosic renvoie un objet { tracks: [...] }
         return response.data;
     } catch (error) {
         if (error.response?.data === 'Missing token') {
-            console.error('[Chosic Recommend Error] Le cookie est expiré ou invalide (Missing token).');
+            console.error('[Chosic Recommend Error] Le cookie est expiré ou invalide.');
         } else {
             console.error('[Chosic Recommend Error]', error.message);
         }
@@ -65,7 +76,31 @@ async function getRecommendations(seedTrackId, limit = 20) {
     }
 }
 
+/**
+ * Recommandations basées uniquement sur un genre
+ */
+async function getGenreRecommendations(genre, limit = 50) {
+    try {
+        console.log(`[Chosic] Découvertes pour le genre : ${genre}`);
+        const response = await axios.get('https://www.chosic.com/api/tools/recommendations', {
+            params: { 
+                seed_genres: genre,
+                limit 
+            },
+            headers: {
+                ...COMMON_HEADERS,
+                'Cookie': CHOSIC_COOKIE
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('[Chosic Genre Error]', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     search,
-    getRecommendations
+    getRecommendations,
+    getGenreRecommendations
 };

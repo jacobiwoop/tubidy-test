@@ -4,8 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { Play, Heart, Disc, Music, Volume2 } from 'lucide-react-native';
 import { theme } from '../utils/theme';
-import { checkHealth, BASE_URL } from '../services/api';
+import { checkHealth, BASE_URL, getChosicRecommendations } from '../services/api';
 import { usePlayer } from '../context/PlayerContext';
+import StatsService from '../services/StatsService';
 
 const { width } = Dimensions.get('window');
 
@@ -13,14 +14,25 @@ export default function HomeScreen({ navigation }) {
   const { favorites, playlists, onPlayTrack, onViewArtist, currentTrack, loadingTrackId } = usePlayer();
   const [serverStatus, setServerStatus] = useState('checking');
   const [debugLogs, setDebugLogs] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recSource, setRecSource] = useState(null);
+  const [loadingRecs, setLoadingRecs] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState(null);
+  const [recentTracks, setRecentTracks] = useState([]);
+  const [topArtists, setTopArtists] = useState([]);
+  const [genreMix, setGenreMix] = useState([]);
+  const [genreMixTitle, setGenreMixTitle] = useState('');
 
   const GENRES = [
-    { id: 'hip_hop', name: 'Hip-Hop', color: '#FF416C' },
-    { id: 'rnb', name: 'R&B / Soul', color: '#4facfe' },
-    { id: 'pop', name: 'Pop', color: '#00f2fe' },
-    { id: 'dance_electronic', name: 'Electronic', color: '#f093fb' },
-    { id: 'indierock', name: 'Rock', color: '#fccb90' },
-    { id: 'jazz', name: 'Jazz', color: '#84fab0' },
+    { id: 'hip-hop', name: 'Hip-Hop', color: '#FF416C' },
+    { id: 'r-n-b', name: 'R&B', color: '#8E2DE2' },
+    { id: 'afrobeat', name: 'Afrobeat', color: '#F7971E' },
+    { id: 'deep-house', name: 'Deep House', color: '#00c6ff' },
+    { id: 'chill', name: 'Chill', color: '#11998e' },
+    { id: 'anime', name: 'Anime', color: '#ff00cc' },
+    { id: 'dancehall', name: 'Dancehall', color: '#f8ff00' },
+    { id: 'jazz', name: 'Jazz', color: '#3a7bd5' },
+    { id: 'rock', name: 'Rock', color: '#f44336' },
   ];
 
   useEffect(() => {
@@ -51,6 +63,65 @@ export default function HomeScreen({ navigation }) {
     };
     check();
   }, []);
+
+  useEffect(() => {
+    const fetchRecs = async () => {
+      if (serverStatus !== 'online') return;
+      setLoadingRecs(true);
+      try {
+        const smartSeeds = await StatsService.getSmartSeeds();
+        const dna = await StatsService.getDNA();
+        
+        // 1. Mettre à jour l'historique et les artistes
+        setRecentTracks(dna.history.slice(0, 10));
+        setTopArtists(Object.entries(dna.topArtists)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 8)
+          .map(e => e[0]));
+
+        // 2. Recommandations principales
+        let seedParams = { artist: 'The Weeknd', track: 'Blinding Lights' }; 
+        if (selectedGenre) {
+          seedParams = { genre: selectedGenre.id };
+          setRecSource(selectedGenre.name);
+        } else if (smartSeeds.topArtists.length > 0 || smartSeeds.topGenres.length > 0) {
+          const topArtist = smartSeeds.topArtists[0];
+          const topGenre = smartSeeds.topGenres[0];
+          setRecSource(topGenre ? `Spécial ${topGenre}` : `Inspiré par ${topArtist}`);
+          seedParams = { artist: topArtist, genre: topGenre, track: smartSeeds.lastTrack?.title };
+        } else if (favorites && favorites.length > 0) {
+          const seeds = favorites.slice(-3);
+          setRecSource(seeds[seeds.length - 1].artist?.name || 'vos favoris');
+          seedParams = { artist: seeds[seeds.length - 1].artist?.name, track: seeds[seeds.length - 1].title };
+        }
+
+        const mainData = await getChosicRecommendations(seedParams);
+        if (mainData && mainData.track) setRecommendations(mainData.track);
+
+        // 3. Créer un Mix Genre secondaire (différent du premier)
+        if (smartSeeds.topGenres.length > 1 && !selectedGenre) {
+          const secondGenre = smartSeeds.topGenres[1];
+          setGenreMixTitle(`Mix ${secondGenre}`);
+          const mixData = await getChosicRecommendations({ genre: secondGenre, limit: 10 });
+          if (mixData && mixData.track) setGenreMix(mixData.track);
+        } else {
+          // Fallback sur un genre populaire
+          setGenreMixTitle("Vibe Afrobeat");
+          const mixData = await getChosicRecommendations({ genre: 'afrobeat', limit: 10 });
+          if (mixData && mixData.track) setGenreMix(mixData.track);
+        }
+
+      } catch (err) {
+        console.error('Failed to fetch recommendations:', err);
+      } finally {
+        setLoadingRecs(false);
+      }
+    };
+
+    if (serverStatus === 'online') {
+      fetchRecs();
+    }
+  }, [serverStatus, favorites.length, selectedGenre]);
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -87,31 +158,39 @@ export default function HomeScreen({ navigation }) {
 
         {/* Genres Chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.genreScroll}>
-          {GENRES.map(genre => (
-            <TouchableOpacity key={genre.id} style={styles.genreChip}>
-              <View style={[styles.genreDot, { backgroundColor: genre.color }]} />
-              <Text style={styles.genreText}>{genre.name}</Text>
-            </TouchableOpacity>
-          ))}
+          {GENRES.map(genre => {
+            const isActive = selectedGenre?.id === genre.id;
+            return (
+              <TouchableOpacity 
+                key={genre.id} 
+                style={[styles.genreChip, isActive && { backgroundColor: genre.color, borderColor: genre.color }]}
+                onPress={() => setSelectedGenre(isActive ? null : genre)}
+              >
+                <View style={[styles.genreDot, { backgroundColor: isActive ? '#fff' : genre.color }]} />
+                <Text style={[styles.genreText, isActive && { color: '#000' }]}>{genre.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         {/* Hero Section */}
-        <TouchableOpacity style={styles.heroCard} activeOpacity={0.9}>
-          <Image 
-            source={{ uri: 'https://picsum.photos/seed/music/800/400' }} 
-            style={styles.heroImage} 
+        <View style={styles.heroContainer}>
+          <LinearGradient 
+            colors={['rgba(29, 185, 84, 0.4)', 'transparent']} 
+            style={styles.heroGradient} 
           />
-          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={styles.heroOverlay}>
-            <View style={styles.heroBadge}>
-              <Music size={12} color="#000" />
-              <Text style={styles.heroBadgeText}>À LA UNE</Text>
-            </View>
-            <Text style={styles.heroTitle}>Top Hits 2026</Text>
-            <Text style={styles.heroSubtitle}>Les morceaux les plus écoutés en ce moment</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+          <View style={styles.heroContent}>
+            <Text style={styles.heroLabel}>DAILY MIX</Text>
+            <Text style={styles.heroTitle}>Ton mix du jour</Text>
+            <Text style={styles.heroSub}>Basé sur tes écoutes récentes</Text>
+            <TouchableOpacity style={styles.playAllBtn} onPress={() => recommendations[0] && onPlayTrack(recommendations[0], recommendations)}>
+              <Play size={20} color="black" fill="black" />
+              <Text style={styles.playAllText}>Tout lire</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        {/* Quick Grid (Titres Likés + Playlists) */}
+        {/* Quick Grid (Accès rapide aux favoris) */}
         <View style={styles.quickGrid}>
           {quickActions.map((item, index) => (
             <TouchableOpacity 
@@ -126,7 +205,7 @@ export default function HomeScreen({ navigation }) {
                   </LinearGradient>
                 ) : (
                   <Image 
-                    source={{ uri: item.tracks?.[0]?.album?.cover_medium || 'https://via.placeholder.com/150' }} 
+                    source={{ uri: item.tracks?.[0]?.album?.cover_big || item.tracks?.[0]?.album?.cover_medium || 'https://via.placeholder.com/150' }} 
                     style={styles.quickThumb} 
                   />
                 )}
@@ -136,51 +215,108 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Section: Recommandations */}
+        {/* Section: Récemment écoutés */}
+        {recentTracks.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Récemment écoutés</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              {recentTracks.slice(0, 8).map((track, i) => (
+                <TouchableOpacity key={`${track.id}-${i}`} style={styles.recentItem} onPress={() => onPlayTrack(track)}>
+                   <Image 
+                     source={{ uri: track.artwork || 'https://via.placeholder.com/150' }} 
+                     style={styles.recentThumb} 
+                   />
+                   <Text style={styles.recentTitle} numberOfLines={1}>{track.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Section: Spécialement pour toi (Recommandations Principales) */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Spécialement pour toi</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>Voir tout</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('Library')}>
+              <Text style={styles.seeAll}>Voir tout</Text>
+            </TouchableOpacity>
           </View>
+          <Text style={styles.recSource}>{recSource ? `Inspiré par ${recSource}` : 'Tes découvertes'}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {favorites.slice(0, 6).map((track, i) => {
-              const isPlaying = currentTrack?.id === track.id;
-              return (
-                <TouchableOpacity 
-                  key={track.id} 
-                  style={styles.albumCard} 
-                  onPress={() => onPlayTrack(track, favorites)}
-                >
-                  <View style={styles.albumCoverContainer}>
-                    <Image source={{ uri: track.album?.cover_medium }} style={[styles.albumCover, isPlaying && styles.activeAlbumCover]} />
-                    {isPlaying && (
-                      <View style={styles.loaderOverlay}>
-                         <Volume2 size={24} color={theme.colors.accent} />
-                      </View>
-                    )}
+            {loadingRecs && recommendations.length === 0 ? (
+              [1, 2, 3].map(i => (
+                <View key={i} style={styles.trackCard}>
+                  <View style={[styles.cardImageContainer, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
+                    <ActivityIndicator size="small" color={theme.colors.accent} />
                   </View>
-                  <Text style={[styles.albumTitle, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>{track.title}</Text>
-                  <Text style={styles.albumArtist} numberOfLines={1}>{track.artist?.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
-            {favorites.length === 0 && [1, 2, 3].map(i => (
-              <View key={i} style={styles.albumCard}>
-                <View style={[styles.albumCover, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
-                  <Disc size={40} color="#333" />
                 </View>
-                <Text style={styles.albumTitle}>Mix Découverte {i}</Text>
-              </View>
-            ))}
+              ))
+            ) : (
+              recommendations.slice(0, 10).map((track) => {
+                const isPlaying = currentTrack?.id === track.id;
+                return (
+                  <TouchableOpacity 
+                    key={track.id} 
+                    style={styles.trackCard}
+                    onPress={() => onPlayTrack(track, recommendations)}
+                  >
+                    <View style={styles.cardImageContainer}>
+                      <Image source={{ uri: track.album?.cover_big || track.album?.cover_medium }} style={styles.cardImage} />
+                      {isPlaying && (
+                        <View style={styles.playingOverlay}>
+                          <Volume2 size={24} color="white" />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.cardTitle, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>{track.title}</Text>
+                    <Text style={styles.cardArtist} numberOfLines={1}>{track.artist?.name}</Text>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </ScrollView>
         </View>
 
+        {/* Section: Tes Artistes */}
+        {topArtists.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Tes artistes du moment</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              {topArtists.map((artist, i) => (
+                <TouchableOpacity key={i} style={styles.artistCircleItem}>
+                   <View style={styles.artistCircle}>
+                      <Text style={styles.artistInitial}>{artist.charAt(0)}</Text>
+                   </View>
+                   <Text style={styles.artistName} numberOfLines={1}>{artist}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Section: Mix Genre Surprise */}
+        {genreMix.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{genreMixTitle}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              {genreMix.map((track, i) => (
+                <TouchableOpacity 
+                  key={track.id} 
+                  style={styles.genreMixCard}
+                  onPress={() => onPlayTrack(track, genreMix)}
+                >
+                  <Image source={{ uri: track.album?.cover_big || track.album?.cover_medium }} style={styles.genreMixImage} />
+                  <View style={styles.genreMixInfo}>
+                     <Text style={styles.cardTitle} numberOfLines={1}>{track.title}</Text>
+                     <Text style={styles.cardArtist} numberOfLines={1}>{track.artist?.name}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
       </ScrollView>
-    </SafeAreaView>
-  );
-}
-        </ScrollView>
-      </View>
     </SafeAreaView>
   );
 }
@@ -263,57 +399,59 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  heroCard: {
+  heroContainer: {
     marginHorizontal: 20,
-    height: 200,
+    height: 180,
     borderRadius: 24,
+    backgroundColor: '#111',
     overflow: 'hidden',
     marginBottom: 30,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
-  heroOverlay: {
+  heroGradient: {
     ...StyleSheet.absoluteFillObject,
-    padding: 20,
-    justifyContent: 'flex-end',
   },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.accent,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 10,
-    gap: 4,
+  heroContent: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
   },
-  heroBadgeText: {
-    color: '#000',
-    fontSize: 10,
+  heroLabel: {
+    color: theme.colors.accent,
+    fontSize: 12,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 2,
+    marginBottom: 8,
   },
   heroTitle: {
     color: '#fff',
     fontSize: 28,
     fontWeight: '900',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    letterSpacing: -0.5,
   },
-  heroSubtitle: {
-    color: 'rgba(255,255,255,0.7)',
+  heroSub: {
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
     fontWeight: '600',
     marginTop: 4,
+    marginBottom: 20,
+  },
+  playAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 30,
+    alignSelf: 'flex-start',
+    gap: 8,
+  },
+  playAllText: {
+    color: '#000',
+    fontSize: 15,
+    fontWeight: '800',
   },
 
   quickGrid: {
@@ -345,11 +483,100 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
   seeAll: { color: theme.colors.accent, fontSize: 14, fontWeight: '700' },
   horizontalScroll: { marginLeft: -20, paddingLeft: 20 },
-  albumCard: { marginRight: 16, width: 140 },
-  albumCoverContainer: { position: 'relative', width: 140, height: 140, marginBottom: 10 },
-  albumCover: { width: 140, height: 140, borderRadius: 16 },
-  activeAlbumCover: { borderColor: theme.colors.accent, borderWidth: 2 },
-  loaderOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', borderRadius: 16 },
-  albumTitle: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  albumArtist: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
+  recSource: {
+    color: theme.colors.secondary,
+    fontSize: 13,
+    marginBottom: 15,
+    marginTop: -10,
+  },
+  recentItem: {
+    width: 100,
+    marginRight: 15,
+  },
+  recentThumb: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  recentTitle: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  artistCircleItem: {
+    alignItems: 'center',
+    marginRight: 20,
+    width: 80,
+  },
+  artistCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#333',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  artistInitial: {
+    color: 'white',
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  artistName: {
+    color: 'white',
+    fontSize: 11,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  genreMixCard: {
+    width: 160,
+    marginRight: 15,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  genreMixImage: {
+    width: '100%',
+    aspectRatio: 1,
+  },
+  genreMixInfo: {
+    padding: 10,
+  },
+  trackCard: {
+    width: 150,
+    marginRight: 15,
+  },
+  cardImageContainer: {
+    width: 150,
+    height: 150,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#1a1a1a',
+    marginBottom: 10,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  playingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(29, 185, 84, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  cardArtist: {
+    color: theme.colors.secondary,
+    fontSize: 12,
+  },
 });

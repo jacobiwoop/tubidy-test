@@ -25,7 +25,7 @@ const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer
       style={styles.miniPlayer}
     >
       <Image 
-        source={{ uri: currentTrack?.album?.cover_medium || '' }} 
+        source={{ uri: currentTrack?.album?.cover_big || currentTrack?.album?.cover_medium || '' }} 
         style={styles.miniCover} 
       />
       <View style={styles.miniInfo}>

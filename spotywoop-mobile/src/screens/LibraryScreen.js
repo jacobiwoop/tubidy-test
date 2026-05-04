@@ -165,7 +165,7 @@ export default function LibraryScreen({ navigation }) {
                   >
                     <View style={styles.trackThumbContainer}>
                       <Image 
-                        source={{ uri: item.album?.cover_medium || '' }} 
+                        source={{ uri: item.album?.cover_big || item.album?.cover_medium || '' }} 
                         style={styles.trackThumb} 
                       />
                     </View>
@@ -247,7 +247,7 @@ export default function LibraryScreen({ navigation }) {
                         style={[styles.trackRow, isPlaying && styles.playingRow]}
                         onPress={() => onPlayTrack(item, downloads)}
                       >
-                        <Image source={{ uri: item.album?.cover_medium }} style={styles.trackThumb} />
+                        <Image source={{ uri: item.album?.cover_big || item.album?.cover_medium }} style={styles.trackThumb} />
                         <View style={styles.trackInfo}>
                           <Text style={[styles.trackTitle, isPlaying && styles.playingText]} numberOfLines={1}>
                             {item.title}

@@ -90,4 +90,33 @@ export const getTrackRadio = async (id) => {
   }
 };
 
+export const getRecommendations = async (artist, track) => {
+  try {
+    const response = await api.get('/recommend', {
+      params: { artist, track }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Get Recommendations error:', error);
+    return { track: [] };
+  }
+};
+
+export const getChosicRecommendations = async (params = {}) => {
+  try {
+    const response = await api.get('/chosic/recommend', {
+      params: {
+        artist: params.artist,
+        track: params.track,
+        genre: params.genre,
+        limit: params.limit || 15
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Get Chosic Recommendations error:', error);
+    return { track: [] };
+  }
+};
+
 export default api;

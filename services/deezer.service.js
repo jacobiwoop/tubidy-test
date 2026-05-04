@@ -119,7 +119,7 @@ async function getTrack(id, signal = null) {
           track.artist.name,
           String(track.artist.id),
           track.album.title,
-          track.album.cover_medium,
+          track.album.cover_big || track.album.cover_xl || track.album.cover_medium,
           track.preview,
           track.duration
         );
