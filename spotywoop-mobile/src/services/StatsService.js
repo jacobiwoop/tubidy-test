@@ -49,6 +49,7 @@ class StatsService {
       id: track.id,
       title: track.title,
       artist: artistName,
+      artwork: track.album?.cover_medium || track.thumbnail || track.artwork,
       timestamp: Date.now()
     };
     dna.history = [historyEntry, ...dna.history.filter(t => t.id !== track.id)].slice(0, 50);
