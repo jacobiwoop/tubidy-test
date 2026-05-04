@@ -51,8 +51,10 @@ function proxyAudio(url, res, req, redirectCount = 0) {
 
     const requestHeaders = {
       "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Referer: url.includes("tubidy.cool") || url.includes("d2mefast") ? "https://tubidy.cool/" : "https://tubidy.com/",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "*/*",
+      "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+      "Referer": url.includes("tubidy.cool") || url.includes("d2mefast") ? "https://tubidy.cool/" : "https://tubidy.com/",
     };
 
     // 2. Transmettre le Range (essentiel pour le streaming/seek)
