@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, ScrollView, Modal, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import LinearGradient from 'react-native-linear-gradient';
 import { theme } from '../utils/theme';
 import { Heart, ListMusic, ChevronRight, Clock, Download, User, Plus, X, ArrowLeft, Volume2, Play } from 'lucide-react-native';
 
