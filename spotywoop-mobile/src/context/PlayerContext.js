@@ -49,6 +49,7 @@ export const PlayerProvider = ({ children }) => {
   const repeatRef     = useRef(REPEAT_MODE.NONE);
   const queueRef      = useRef([]);
   const queueIdxRef   = useRef(0);
+  const currentTrackRef = useRef(null);
 
   useEffect(() => { shuffleRef.current  = isShuffle;   }, [isShuffle]);
   useEffect(() => { repeatRef.current   = repeatMode;  }, [repeatMode]);

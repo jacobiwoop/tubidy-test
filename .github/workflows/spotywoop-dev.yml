@@ -50,7 +50,6 @@ jobs:
 
       - name: 🔧 Fix Gradle Compatibility
         run: |
-          find . -type f -name "*.gradle" -exec sed -i 's/components.release/components.findByName("release")/g' {} +
           chmod +x android/gradlew
 
       - name: 🏗 Build Debug APK
