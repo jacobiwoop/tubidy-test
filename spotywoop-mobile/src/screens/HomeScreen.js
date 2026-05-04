@@ -11,14 +11,16 @@ import StatsService from '../services/StatsService';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
-  const { favorites, playlists, onPlayTrack, onViewArtist, currentTrack, loadingTrackId } = usePlayer();
+  const { 
+    favorites, playlists, onPlayTrack, onViewArtist, 
+    currentTrack, loadingTrackId, musicDNA 
+  } = usePlayer();
   const [serverStatus, setServerStatus] = useState('checking');
   const [debugLogs, setDebugLogs] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [recSource, setRecSource] = useState(null);
   const [loadingRecs, setLoadingRecs] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState(null);
-  const [recentTracks, setRecentTracks] = useState([]);
   const [topArtists, setTopArtists] = useState([]);
   const [genreMix, setGenreMix] = useState([]);
   const [genreMixTitle, setGenreMixTitle] = useState('');
@@ -70,14 +72,14 @@ export default function HomeScreen({ navigation }) {
       setLoadingRecs(true);
       try {
         const smartSeeds = await StatsService.getSmartSeeds();
-        const dna = await StatsService.getDNA();
         
-        // 1. Mettre à jour l'historique et les artistes
-        setRecentTracks(dna.history.slice(0, 10));
-        setTopArtists(Object.entries(dna.topArtists)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 8)
-          .map(e => e[0]));
+        // 1. Calculer les artistes du moment
+        if (musicDNA) {
+          setTopArtists(Object.entries(musicDNA.topArtists)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8)
+            .map(e => e[0]));
+        }
 
         // 2. Recommandations principales
         let seedParams = { artist: 'The Weeknd', track: 'Blinding Lights' }; 
@@ -98,14 +100,13 @@ export default function HomeScreen({ navigation }) {
         const mainData = await getChosicRecommendations(seedParams);
         if (mainData && mainData.track) setRecommendations(mainData.track);
 
-        // 3. Créer un Mix Genre secondaire (différent du premier)
+        // 3. Créer un Mix Genre secondaire
         if (smartSeeds.topGenres.length > 1 && !selectedGenre) {
           const secondGenre = smartSeeds.topGenres[1];
           setGenreMixTitle(`Mix ${secondGenre}`);
           const mixData = await getChosicRecommendations({ genre: secondGenre, limit: 10 });
           if (mixData && mixData.track) setGenreMix(mixData.track);
         } else {
-          // Fallback sur un genre populaire
           setGenreMixTitle("Vibe Afrobeat");
           const mixData = await getChosicRecommendations({ genre: 'afrobeat', limit: 10 });
           if (mixData && mixData.track) setGenreMix(mixData.track);
@@ -121,7 +122,7 @@ export default function HomeScreen({ navigation }) {
     if (serverStatus === 'online') {
       fetchRecs();
     }
-  }, [serverStatus, favorites.length, selectedGenre]);
+  }, [serverStatus, favorites.length, selectedGenre, musicDNA]);
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -216,11 +217,11 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* Section: Récemment écoutés */}
-        {recentTracks.length > 0 && (
+        {musicDNA?.history?.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Récemment écoutés</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {recentTracks.slice(0, 8).map((track, i) => (
+              {musicDNA.history.slice(0, 8).map((track, i) => (
                 <TouchableOpacity key={`${track.id}-${i}`} style={styles.recentItem} onPress={() => onPlayTrack(track)}>
                    <Image 
                      source={{ uri: track.artwork || 'https://via.placeholder.com/150' }} 

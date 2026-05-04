@@ -45,11 +45,13 @@ class StatsService {
     }
 
     // 3. Ajouter à l'historique (max 50)
+    const artwork = track.album?.cover_big || track.album?.cover_medium || track.thumbnail || track.artwork || track.image;
+    
     const historyEntry = {
       id: track.id,
       title: track.title,
       artist: artistName,
-      artwork: track.album?.cover_medium || track.thumbnail || track.artwork,
+      artwork: artwork,
       timestamp: Date.now()
     };
     dna.history = [historyEntry, ...dna.history.filter(t => t.id !== track.id)].slice(0, 50);
