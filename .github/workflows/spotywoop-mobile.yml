@@ -60,20 +60,38 @@ jobs:
           cd android
           ./gradlew assembleRelease
 
-      - name: ✍️ Sign Android Release
-        uses: r0adkll/sign-android-release@v1
+      - name: ✍️ Sign and Align APK (Manual)
         id: sign_app
-        with:
-          releaseDirectory: spotywoop-mobile/android/app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
-          alias: ${{ secrets.ANDROID_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          buildToolsVersion: "34.0.0"
+        run: |
+          # 1. Localiser les outils Android
+          ZIPALIGN=$(find $ANDROID_HOME/build-tools -name zipalign | sort -r | head -n 1)
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -r | head -n 1)
+          echo "Using zipalign: $ZIPALIGN"
+          echo "Using apksigner: $APKSIGNER"
+          
+          # 2. Préparer les fichiers
+          cd android/app/build/outputs/apk/release
+          APK_UNSIGNED=$(ls *-unsigned.apk | head -n 1)
+          
+          # 3. Aligner l'APK
+          $ZIPALIGN -v 4 "$APK_UNSIGNED" app-release-aligned.apk
+          
+          # 4. Décoder la clé de signature
+          echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 -d > release.jks
+          
+          # 5. Signer l'APK
+          $APKSIGNER sign --ks release.jks \
+            --ks-key-alias "${{ secrets.ANDROID_ALIAS }}" \
+            --ks-pass pass:"${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            --key-pass pass:"${{ secrets.ANDROID_KEY_PASSWORD }}" \
+            --out spotywoop-release-signed.apk \
+            app-release-aligned.apk
+            
+          echo "signed_file=spotywoop-mobile/android/app/build/outputs/apk/release/spotywoop-release-signed.apk" >> $GITHUB_OUTPUT
 
       - name: 📤 Upload Production APK
         uses: actions/upload-artifact@v4
         with:
           name: spotywoop-production-release
-          path: ${{ steps.sign_app.outputs.signedReleaseFile }}
+          path: spotywoop-mobile/android/app/build/outputs/apk/release/spotywoop-release-signed.apk
           retention-days: 30
