@@ -1,4 +1,4 @@
-name: Build Spotywoop Production (Release)
+name: Build Spotywoop Dev (Debug)
 
 on:
   workflow_dispatch:
@@ -8,11 +8,11 @@ on:
       - master
     paths:
       - 'spotywoop-mobile/**'
-      - '.github/workflows/spotywoop-mobile.yml'
+      - '.github/workflows/spotywoop-dev.yml'
 
 jobs:
-  build-production:
-    name: 🚀 Build Production Release
+  build-dev-client:
+    name: 🧪 Build Expo Dev Client
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -39,6 +39,12 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: 🪄 Customize for Dev Client
+        run: |
+          # Modification du nom et retrait du logo pour le Dev Client
+          jq '.expo.name = "Expo Dev Client" | del(.expo.icon) | del(.expo.android.adaptiveIcon)' app.json > app.json.tmp && mv app.json.tmp app.json
+          echo "App.json patched for Dev Client"
+
       - name: 🛠 Prebuild Android
         run: npx expo prebuild --platform android --clean
 
@@ -47,24 +53,14 @@ jobs:
           find . -type f -name "*.gradle" -exec sed -i 's/components.release/components.findByName("release")/g' {} +
           chmod +x android/gradlew
 
-      - name: 🏗 Build Release APK
+      - name: 🏗 Build Debug APK
         run: |
           cd android
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
 
-      - name: ✍️ Sign Android Release
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: spotywoop-mobile/android/app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
-          alias: ${{ secrets.ANDROID_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-
-      - name: 📤 Upload Production APK
+      - name: 📤 Upload Dev Client APK
         uses: actions/upload-artifact@v4
         with:
-          name: spotywoop-production-release
-          path: ${{ steps.sign_app.outputs.signedReleaseFile }}
-          retention-days: 30
+          name: spotywoop-dev-client
+          path: spotywoop-mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
