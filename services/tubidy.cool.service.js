@@ -144,37 +144,40 @@ async function findBestDirectLink(title, artist) {
     return null;
   }
   
-  // 2. Get Formats for the first result
-  const targetUrl = results[0].url;
-  console.log(`[tubidy.cool] Target URL: ${targetUrl}`);
-  const formats = await getFormats(targetUrl);
-  
-  if (formats.length === 0) {
-    console.log(`[tubidy.cool] No formats found for this URL.`);
-    return null;
-  }
+  // On tente les 3 premiers résultats
+  for (const result of results.slice(0, 3)) {
+    const targetUrl = result.url;
+    console.log(`[tubidy.cool] Checking URL: ${targetUrl}`);
+    
+    try {
+      const formats = await getFormats(targetUrl);
+      if (formats.length === 0) continue;
 
-  // On cherche le format MP3 Audio
-  const mp3Format = formats.find(f => f.label.includes("MP3 Audio"));
-  if (!mp3Format) {
-    console.log(`[tubidy.cool] No MP3 format available.`);
-    return null;
-  }
-  
-  // 3. Get Final Link
-  console.log(`[tubidy.cool] Extracting final link from: ${mp3Format.url}`);
-  const finals = await getFinalLink(mp3Format.url);
-  
-  // On cherche le lien "Play" ou "Download"
-  const bestFinal = finals.find(f => f.label.includes("Download") || f.label.includes("Play"));
-  
-  if (bestFinal) {
-    console.log(`[tubidy.cool] Success! Final link: ${bestFinal.url.substring(0, 50)}...`);
-    return {
-      title: results[0].title,
-      link: bestFinal.url,
-      size: bestFinal.size
-    };
+      // On cherche le format MP3 Audio
+      const mp3Format = formats.find(f => f.label.toLowerCase().includes("mp3"));
+      if (!mp3Format) {
+        console.log(`[tubidy.cool] No MP3 format available for this result.`);
+        continue;
+      }
+      
+      // 3. Get Final Link
+      console.log(`[tubidy.cool] Extracting final link from: ${mp3Format.url}`);
+      const finals = await getFinalLink(mp3Format.url);
+      
+      // On cherche le lien "Play" ou "Download"
+      const bestFinal = finals.find(f => f.label.includes("Download") || f.label.includes("Play"));
+      
+      if (bestFinal) {
+        console.log(`[tubidy.cool] Success! Final link found.`);
+        return {
+          title: result.title,
+          link: bestFinal.url,
+          size: bestFinal.size
+        };
+      }
+    } catch (e) {
+      console.warn(`[tubidy.cool] Error processing result: ${e.message}`);
+    }
   }
   
   return null;
