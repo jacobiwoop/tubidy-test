@@ -233,7 +233,7 @@ export const PlayerProvider = ({ children }) => {
         url:      finalLink,
         title:    finalTrack.title,
         artist:   finalTrack.artist?.name || finalTrack.artist,
-        artwork:  finalTrack.album?.cover_medium || finalTrack.thumbnail,
+        artwork:  finalTrack.album?.cover_big || finalTrack.album?.cover_medium || finalTrack.thumbnail || finalTrack.artwork,
         duration: finalTrack.duration,
       });
       await TrackPlayer.play();
