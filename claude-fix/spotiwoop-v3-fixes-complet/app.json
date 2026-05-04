@@ -14,9 +14,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": [
-          "audio"
-        ]
+        "UIBackgroundModes": ["audio"]
       }
     },
     "android": {
@@ -44,8 +42,7 @@
             "newArchEnabled": false
           }
         }
-      ],
-      "react-native-track-player"
+      ]
     ]
   }
 }

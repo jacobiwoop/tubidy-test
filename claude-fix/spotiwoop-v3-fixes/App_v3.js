@@ -68,7 +68,6 @@ const MainApp = () => {
     toggleShuffle,
     cycleRepeatMode,
     onRemoveDownload,
-    loadDownloads,
   } = usePlayer();
 
   // ─── États locaux (pas dans le Context → pas de re-render global) ──────────
@@ -103,9 +102,12 @@ const MainApp = () => {
       await startDownload(track, link, (progress) => {
         setActiveDownloads(prev => ({ ...prev, [track.id]: progress }));
       });
-      loadDownloads(); // Rafraîchir l'UI pour montrer l'icône "téléchargé"
+      // FIX : recharger la liste des téléchargements après succès
+      // Sans ça, l'UI ne sait pas que le fichier existe → icône ne change pas
+      await loadDownloads();
     } catch (e) {
       console.error(e);
+      alert('Téléchargement échoué. Réessaie.');
     } finally {
       setActiveDownloads(prev => { const n = { ...prev }; delete n[track.id]; return n; });
     }

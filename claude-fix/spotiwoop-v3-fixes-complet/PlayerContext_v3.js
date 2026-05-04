@@ -56,14 +56,9 @@ export const PlayerProvider = ({ children }) => {
   const queueRef      = useRef([]);
   const queueIdxRef   = useRef(0);
   const currentTrackRef = useRef(null);
-  const handlePlayTrackRef = useRef(null);
 
   useEffect(() => { shuffleRef.current  = isShuffle;   }, [isShuffle]);
   useEffect(() => { repeatRef.current   = repeatMode;  }, [repeatMode]);
-  
-  // Cache pour le prefetch (évite de re-résoudre les liens)
-  const prefetchCache = useRef({}); 
-  
   useEffect(() => { queueRef.current    = currentQueue; }, [currentQueue]);
   useEffect(() => { queueIdxRef.current = currentQueueIndex; }, [currentQueueIndex]);
 
@@ -81,8 +76,7 @@ export const PlayerProvider = ({ children }) => {
           compactCapabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext],
           notificationCapabilities: [
             Capability.Play, Capability.Pause,
-            Capability.SkipToNext, Capability.SkipToPrevious,
-            Capability.Stop,
+            Capability.SkipToNext, Capability.SkipToPrevious, Capability.Stop,
           ],
         });
       } catch (_) { /* déjà initialisé */ }
@@ -129,32 +123,27 @@ export const PlayerProvider = ({ children }) => {
       const idx     = queueIdxRef.current;
       const shuffle = shuffleRef.current;
       const repeat  = repeatRef.current;
-      const playFn  = handlePlayTrackRef.current; // Utilise la ref pour éviter les stale closures
 
-      if (!playFn) return;
-
-      // Fin naturelle du morceau
+      // Fin naturelle du morceau (RNTP queue épuisée car on ne met qu'1 track)
       if (event.type === Event.PlaybackTrackChanged && event.nextTrack == null) {
         if (repeat === REPEAT_MODE.ONE) {
           await TrackPlayer.seekTo(0);
           await TrackPlayer.play();
           return;
         }
-        
         const isLast = !shuffle && idx >= queue.length - 1;
-        // Si c'est le dernier et qu'on est pas en repeat ONE, on fetch la suite
-        if (isLast) {
+        if (isLast && repeat === REPEAT_MODE.NONE) {
+          // Queue épuisée → recharger Last.fm depuis le dernier morceau joué
           const lastTrack = queue[idx];
-          if (lastTrack) fetchRecommendations(lastTrack, true);
+          if (lastTrack) fetchRecommendations(lastTrack, true); // autoPlay=true
           return;
         }
-
         const nextIdx = getNextIndex(queue, idx, shuffle);
-        playFn(queue[nextIdx], queue, nextIdx);
+        playTrackAtIndex(queue, nextIdx);
         return;
       }
 
-      // Bouton Suivant
+      // Bouton Suivant (notif ou app)
       if (event.type === Event.RemoteNext) {
         if (repeat === REPEAT_MODE.ONE) {
           await TrackPlayer.seekTo(0);
@@ -162,18 +151,11 @@ export const PlayerProvider = ({ children }) => {
           return;
         }
         const nextIdx = getNextIndex(queue, idx, shuffle);
-        const isLast = !shuffle && idx >= queue.length - 1;
-        
-        if (isLast) {
-          const lastTrack = queue[idx];
-          if (lastTrack) fetchRecommendations(lastTrack, true);
-        } else {
-          playFn(queue[nextIdx], queue, nextIdx);
-        }
+        playTrackAtIndex(queue, nextIdx);
         return;
       }
 
-      // Bouton Précédent
+      // Bouton Précédent (notif ou app)
       if (event.type === Event.RemotePrevious) {
         const prevIdx = getPrevIndex(queue, idx, shuffle);
         playTrackAtIndex(queue, prevIdx);
@@ -182,43 +164,52 @@ export const PlayerProvider = ({ children }) => {
     }
   );
 
+  // ─── Ref sur handlePlayTrack pour éviter les stale closures dans les events ─
+  const handlePlayTrackRef = useRef(null);
+
   // ─── Joue un morceau de la queue par index (interne) ──────────────────────
-  const prefetchNext = useCallback(async (queue, currentIndex) => {
-    if (!queue || queue.length === 0) return;
-    // On prefetch les 3 suivants
-    for (let i = 1; i <= 3; i++) {
-      const nextIdx = (currentIndex + i) % queue.length;
-      const nextTrack = queue[nextIdx];
-      if (!nextTrack || prefetchCache.current[nextTrack.id]) continue;
+  const playTrackAtIndex = useCallback((queue, index) => {
+    if (!queue || !queue[index]) return;
+    // On passe par la ref pour toujours avoir la dernière version de handlePlayTrack
+    handlePlayTrackRef.current?.(queue[index], queue, index);
+  }, []);
 
-      // Si c'est déjà téléchargé, pas besoin de prefetch
-      if (downloads.some(d => String(d.id) === String(nextTrack.id))) continue;
+  // ─── Cache de prefetch (liens pré-résolus pour les 3 prochains morceaux) ───
+  const prefetchCache = useRef(new Map());
+  const PREFETCH_TTL  = 10 * 60 * 1000; // 10 min
 
-      // Résolution silencieuse du lien
+  const getPrefetched = (trackId) => {
+    const entry = prefetchCache.current.get(String(trackId));
+    if (!entry) return null;
+    if (Date.now() - entry.resolvedAt > PREFETCH_TTL) {
+      prefetchCache.current.delete(String(trackId));
+      return null;
+    }
+    return entry.link;
+  };
+
+  const prefetchNext = useCallback(async (queue, currentIdx, count = 3) => {
+    const toFetch = queue.slice(currentIdx + 1, currentIdx + 1 + count);
+    for (const track of toFetch) {
+      if (!track || getPrefetched(track.id)) continue;
       (async () => {
         try {
           let link = null;
-          if (String(nextTrack.id).startsWith('lfm-') || String(nextTrack.id).startsWith('cho-')) {
-            const q = `${nextTrack.title} ${nextTrack.artist?.name || nextTrack.artist}`;
+          if (String(track.id).startsWith('lfm-') || String(track.id).startsWith('cho-')) {
+            const q = `${track.title} ${track.artist?.name || track.artist}`;
             const res = await axios.get(`${BASE_URL}/search/play`, { params: { q } });
-            link = res.data.link;
+            link = res.data?.link || null;
           } else {
-            const res = await getTrackDownload(nextTrack.id);
-            link = res?.target?.link || res?.link;
+            const dl = await getTrackDownload(track.id);
+            link = dl?.target?.link || dl?.link || null;
           }
           if (link) {
-            prefetchCache.current[nextTrack.id] = { link, expires: Date.now() + 600000 }; // 10 min
+            prefetchCache.current.set(String(track.id), { link, resolvedAt: Date.now() });
+            console.log(`[prefetch] ✓ ${track.title}`);
           }
-        } catch (e) {
-          console.log(`[Prefetch] Failed for ${nextTrack.title}`);
-        }
+        } catch (_) {}
       })();
     }
-  }, [downloads]);
-
-  const playTrackAtIndex = useCallback((queue, index) => {
-    if (!queue || !queue[index]) return;
-    handlePlayTrack(queue[index], queue, index);
   }, []);
 
   // ─── Lecture principale ────────────────────────────────────────────────────
@@ -226,6 +217,10 @@ export const PlayerProvider = ({ children }) => {
     try {
       if (!track) return false;
       triggerHaptic('impactMedium');
+
+      // ── Arrêt immédiat ──────────────────────────────────────────────────────
+      // Le reset est fait APRÈS le check offline (voir plus bas) pour ne pas
+      // couper le son si on ne peut finalement pas jouer le morceau demandé.
 
       // ── Optimistic update immédiat ──────────────────────────────────────────
       // Pochette + titre changent tout de suite. Le spinner n'apparaît que
@@ -250,21 +245,26 @@ export const PlayerProvider = ({ children }) => {
         fetchRecommendations(track); // charge la liste une seule fois
       }
 
-      // ─── Mise à jour de la ref pour les events headless ───────────────────
-      handlePlayTrackRef.current = handlePlayTrack;
-
       // ─── Vérification Connectivité & Local ─────────────────────────────────
       const isDownloaded = downloads.some(d => String(d.id) === String(track.id));
       let isOffline = false;
-      try {
-        await axios.get(`${BASE_URL}/health`, { timeout: 1500 });
-      } catch (e) {
-        isOffline = true;
+
+      // On ne fait le check réseau que si le morceau n'est pas déjà téléchargé
+      if (!isDownloaded) {
+        try {
+          await axios.get(`${BASE_URL}/health`, { timeout: 1500 });
+        } catch (e) {
+          isOffline = true;
+        }
       }
 
-      // Si Hors-ligne et non téléchargé -> on cherche le prochain téléchargé
+      // Si hors-ligne et non téléchargé → cherche le prochain dispo localement
+      // FIX : on remet la musique précédente si on ne peut pas jouer (pas de reset inutile)
       if (isOffline && !isDownloaded) {
         console.log(`[Offline] Skip: ${track.title}`);
+        // Rollback optimistic : remettre l'état précédent
+        setCurrentTrack(currentTrackRef.current);
+        setLoadingTrackId(null);
         const q = queueRef.current;
         if (q && q.length > 1) {
           const currentIndex = q.findIndex(t => String(t.id) === String(track.id));
@@ -272,7 +272,7 @@ export const PlayerProvider = ({ children }) => {
             const nextIdx = (currentIndex + i) % q.length;
             const nextTrack = q[nextIdx];
             if (downloads.some(d => String(d.id) === String(nextTrack.id))) {
-              return handlePlayTrack(nextTrack, q, nextIdx);
+              return handlePlayTrackRef.current?.(nextTrack, q, nextIdx);
             }
           }
         }
@@ -280,19 +280,14 @@ export const PlayerProvider = ({ children }) => {
         return false;
       }
 
-      // ─── Reset immédiat APRES le check offline ──────────────────────────
+      // ── Arrêt de la lecture précédente ─────────────────────────────────────
+      // FIX : reset ici (après le check offline) pour ne pas couper le son
+      // si le check offline échoue et qu'on ne peut finalement pas jouer.
       await TrackPlayer.reset();
 
       // ── Résolution du lien (Local ou Réseau) ────────────────────────────────
       let finalTrack = track;
       let finalLink  = null;
-
-      // On vérifie d'abord le cache du prefetch
-      const cached = prefetchCache.current[track.id];
-      if (cached && cached.expires > Date.now()) {
-        finalLink = cached.link;
-        console.log(`[Cache] Hit for: ${track.title}`);
-      }
 
       // Priorité au fichier local si téléchargé
       if (isDownloaded) {
@@ -328,25 +323,23 @@ export const PlayerProvider = ({ children }) => {
       if (!finalLink) { alert('Lien non disponible'); return false; }
 
       // ── Lancement RNTP ─────────────────────────────────────────────────────
+      // Pas de reset() ici — il a déjà été fait au début de la fonction
       await TrackPlayer.add({
         id:       String(finalTrack.id),
         url:      finalLink,
         title:    finalTrack.title,
         artist:   finalTrack.artist?.name || finalTrack.artist,
-        artwork:  finalTrack.artwork || finalTrack.album?.cover_big || finalTrack.album?.cover_medium || finalTrack.thumbnail,
+        artwork:  finalTrack.album?.cover_big || finalTrack.album?.cover_medium || finalTrack.thumbnail || finalTrack.artwork,
         duration: finalTrack.duration,
       });
       await TrackPlayer.play();
       
-      // Prefetch les suivants pour une lecture instantanée plus tard
-      prefetchNext(newQueue, newIdx);
-
       // Enregistrement dans l'ADN musical
       StatsService.recordTrackPlay(finalTrack).then(() => refreshDNA());
 
-      // fetchRecommendations n'est PAS appelé ici.
-      // Il est appelé uniquement quand on est au dernier morceau de la queue
-      // (dans le handler PlaybackTrackChanged) pour éviter des requêtes inutiles.
+      // Prefetch des 3 prochains liens en arrière-plan
+      prefetchNext(queueRef.current, queueIdxRef.current);
+
       return true;
     } catch (err) {
       console.error('handlePlayTrack error:', err);
@@ -355,6 +348,10 @@ export const PlayerProvider = ({ children }) => {
       setLoadingTrackId(null);
     }
   };
+
+  // Mise à jour de la ref après chaque render pour que playTrackAtIndex
+  // ait toujours la dernière version de handlePlayTrack (évite stale closure)
+  handlePlayTrackRef.current = handlePlayTrack;
 
   // ─── Next / Prev depuis l'UI (boutons PlayerScreen) ───────────────────────
   const handleNext = useCallback(() => {
@@ -427,48 +424,59 @@ export const PlayerProvider = ({ children }) => {
   //   1. Au choix manuel d'une musique (autoPlay = false, le morceau joue déjà)
   //   2. Quand la queue est épuisée (autoPlay = true, relancer sur sugg1)
   //
-  // Comportement normal :
-  //   DNA → sugg1 → sugg2 → ... → sugg10 (fin)
-  //   → fetchRecommendations(sugg10, true) → [sugg10, nouvelles_sugg...]
-  //   → joue nouvelles_sugg[0] automatiquement → continue
+  // Stratégie : Chosic en premier → fallback Deezer radio si Chosic échoue
   const fetchRecommendations = async (track, autoPlay = false) => {
+    let tracks = null;
+
+    // ── Tentative Chosic ────────────────────────────────────────────────────
     try {
-      console.log(`[Radio] Fetching suggestions for: ${track.title}`);
-      let tracks = [];
-      
-      // Essai Chosic avec timeout 8s
-      try {
-        const res = await axios.get(`${BASE_URL}/chosic/recommend`, {
-          params: { artist: track.artist?.name || track.artist, track: track.title },
-          timeout: 8000
-        });
-        tracks = res.data?.track || [];
-      } catch (e) {
-        console.warn('[Radio] Chosic failed, trying Deezer fallback...');
-        // Fallback sur Deezer Radio native
-        const res = await getTrackRadio(track.id);
-        tracks = res || [];
-      }
-
-      if (!tracks || tracks.length === 0) return;
-
-      setSuggestions(tracks);
-
-      const newQueue = [track, ...tracks];
-      setCurrentQueue(newQueue);
-      queueRef.current    = newQueue;
-      setCurrentQueueIndex(0);
-      queueIdxRef.current = 0;
-
-      // Prefetch les nouveaux venus
-      prefetchNext(newQueue, 0);
-
-      // Si appelé en fin de queue → lancer automatiquement la 1ère suggestion
-      if (autoPlay && newQueue[1]) {
-        handlePlayTrack(newQueue[1], newQueue, 1);
+      console.log(`[Radio] Chosic → ${track.title}`);
+      const res = await axios.get(`${BASE_URL}/chosic/recommend`, {
+        params: { artist: track.artist?.name || track.artist, track: track.title },
+        timeout: 8000,
+      });
+      if (res.data?.track?.length > 0) {
+        tracks = res.data.track;
+        console.log(`[Radio] Chosic OK — ${tracks.length} suggestions`);
       }
     } catch (err) {
-      console.error('[Radio] Recommendation error:', err.message);
+      console.warn(`[Radio] Chosic échoué: ${err.message}`);
+    }
+
+    // ── Fallback : Deezer radio ─────────────────────────────────────────────
+    // Avantage : IDs natifs Deezer → résolution directe, pas de pipeline lfm-/cho-
+    if (!tracks && track.id && !String(track.id).startsWith('lfm-') && !String(track.id).startsWith('cho-')) {
+      try {
+        console.log(`[Radio] Fallback Deezer radio → ${track.title}`);
+        const res = await getTrackRadio(track.id);
+        if (res?.data?.length > 0) {
+          tracks = res.data.slice(0, 10);
+          console.log(`[Radio] Deezer radio OK — ${tracks.length} suggestions`);
+        }
+      } catch (err) {
+        console.warn(`[Radio] Deezer radio échoué: ${err.message}`);
+      }
+    }
+
+    if (!tracks || tracks.length === 0) {
+      console.warn('[Radio] Aucune suggestion disponible.');
+      return;
+    }
+
+    setSuggestions(tracks);
+
+    const newQueue = [track, ...tracks];
+    setCurrentQueue(newQueue);
+    queueRef.current    = newQueue;
+    setCurrentQueueIndex(0);
+    queueIdxRef.current = 0;
+
+    // Prefetch immédiat des 3 premiers de la nouvelle liste
+    prefetchNext(newQueue, 0);
+
+    // Si appelé en fin de queue → lancer automatiquement la 1ère suggestion
+    if (autoPlay && newQueue[1]) {
+      playTrackAtIndex(newQueue, 1);
     }
   };
 
