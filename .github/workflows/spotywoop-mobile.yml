@@ -42,9 +42,14 @@ jobs:
       - name: 🛠 Prebuild Android
         run: |
           npx expo prebuild --platform android --clean
-          # Patch Proguard pour éviter les erreurs de type R8 en Release
+          # --- SUPER FIX KOTLIN ---
+          # 1. Injection du classpath Kotlin dans le buildscript racine
+          sed -i 's/dependencies {/dependencies {\n        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0")/' android/build.gradle
+          # 2. Forcer la variable kotlinVersion (utilisée par les plugins Expo)
+          sed -i 's/kotlinVersion = .*/kotlinVersion = "1.9.0"/' android/build.gradle
+          # 3. Patch Proguard pour éviter les erreurs de type R8 en Release
           echo "-dontwarn expo.modules.**" >> android/app/proguard-rules.pro
-          echo "Prebuild and Proguard patch applied"
+          echo "Super Fix Applied"
 
       - name: 🔧 Fix Gradle Compatibility
         run: |
