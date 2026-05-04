@@ -48,8 +48,6 @@ jobs:
       - name: 🛠 Prebuild Android
         run: |
           npx expo prebuild --platform android --clean
-          # Forcer la version de Kotlin dans le fichier généré
-          sed -i 's/kotlinVersion = .*/kotlinVersion = "2.0.21"/' android/build.gradle
 
       - name: 🔧 Fix Gradle Compatibility
         run: |

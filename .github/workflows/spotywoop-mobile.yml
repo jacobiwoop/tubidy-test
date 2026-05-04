@@ -42,10 +42,6 @@ jobs:
       - name: 🛠 Prebuild Android
         run: |
           npx expo prebuild --platform android --clean
-          # Forcer la version de Kotlin dans le fichier généré (Solution prouvée)
-          sed -i 's/kotlinVersion = .*/kotlinVersion = "2.0.21"/' android/build.gradle
-          # Ajouter la règle Proguard pour corriger l'erreur R8 fréquente en mode Release
-          echo "-dontwarn expo.modules.**" >> android/app/proguard-rules.pro
 
       - name: 🔧 Fix Gradle Compatibility
         run: |
