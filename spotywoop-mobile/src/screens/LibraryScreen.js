@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, ScrollView, Modal, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../utils/theme';
-import { Heart, ListMusic, ChevronRight, Clock, Download, User, Plus, X, ArrowLeft, Volume2 } from 'lucide-react-native';
+import { Heart, ListMusic, ChevronRight, Clock, Download, User, Plus, X, ArrowLeft, Volume2, Play } from 'lucide-react-native';
 
 
 
@@ -43,16 +44,18 @@ export default function LibraryScreen({ navigation }) {
 
   const PlaylistCard = ({ item, isLiked }) => (
     <TouchableOpacity style={styles.playlistCard} onPress={() => setSelectedPlaylist(item)}>
-      <View style={[styles.cardThumb, isLiked && styles.likedThumb]}>
-        {isLiked ? (
-          <Heart size={32} color="white" fill="white" />
-        ) : (
-          <ListMusic size={32} color={theme.colors.secondary} />
-        )}
-      </View>
+      {isLiked ? (
+        <LinearGradient colors={['#450af5', '#c4efd9']} style={styles.cardThumb}>
+           <Heart size={32} color="white" fill="white" />
+        </LinearGradient>
+      ) : (
+        <View style={styles.cardThumb}>
+           <ListMusic size={32} color={theme.colors.secondary} />
+        </View>
+      )}
       <View style={styles.cardInfo}>
         <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.cardCount}>{item.tracks?.length || 0} tracks</Text>
+        <Text style={styles.cardCount}>{item.tracks?.length || 0} titres</Text>
       </View>
     </TouchableOpacity>
   );
@@ -144,19 +147,32 @@ export default function LibraryScreen({ navigation }) {
               data={selectedPlaylist?.tracks || []}
               keyExtractor={(item, index) => `${item.id}-${index}`}
               contentContainerStyle={styles.detailList}
-              ListHeaderComponent={() => (
-                <View style={styles.detailInfoContainer}>
-                  <View style={[styles.bigIcon, selectedPlaylist?.id === 'liked' && styles.likedThumb]}>
-                    {selectedPlaylist?.id === 'liked' ? (
-                      <Heart size={60} color="white" fill="white" />
-                    ) : (
-                      <ListMusic size={60} color={theme.colors.secondary} />
-                    )}
+              ListHeaderComponent={() => {
+                const isLiked = selectedPlaylist?.id === 'liked';
+                return (
+                  <View style={styles.detailInfoContainer}>
+                    <LinearGradient 
+                      colors={isLiked ? ['#450af5', '#c4efd9'] : ['rgba(255,255,255,0.1)', 'transparent']}
+                      style={styles.bigIcon}
+                    >
+                      {isLiked ? (
+                        <Heart size={60} color="white" fill="white" />
+                      ) : (
+                        <ListMusic size={60} color={theme.colors.secondary} />
+                      )}
+                    </LinearGradient>
+                    <Text style={styles.bigTitle}>{selectedPlaylist?.title}</Text>
+                    <Text style={styles.bigCount}>{selectedPlaylist?.tracks?.length || 0} titres</Text>
+                    
+                    <TouchableOpacity 
+                      style={styles.mainPlayBtn}
+                      onPress={() => selectedPlaylist?.tracks?.[0] && onPlayTrack(selectedPlaylist.tracks[0], selectedPlaylist.tracks)}
+                    >
+                      <Play size={24} color="black" fill="black" />
+                    </TouchableOpacity>
                   </View>
-                  <Text style={styles.bigTitle}>{selectedPlaylist?.title}</Text>
-                  <Text style={styles.bigCount}>{selectedPlaylist?.tracks?.length || 0} tracks</Text>
-                </View>
-              )}
+                );
+              }}
               renderItem={({ item }) => {
                 const isLoading = loadingTrackId === item.id;
                 const isPlaying = currentTrack?.id === item.id;
@@ -549,5 +565,19 @@ const styles = StyleSheet.create({
     width: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  }
+  },
+  mainPlayBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    shadowColor: theme.colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
 });
