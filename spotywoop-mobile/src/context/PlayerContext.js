@@ -195,7 +195,7 @@ export const PlayerProvider = ({ children }) => {
       let finalTrack = track;
       let finalLink  = null;
 
-      if (String(track.id).startsWith('lfm-')) {
+      if (String(track.id).startsWith('lfm-') || String(track.id).startsWith('cho-')) {
         const q = `${track.title} ${track.artist?.name || track.artist}`;
         const res = await axios.get(`${BASE_URL}/search/play`, { params: { q } });
         if (res.data?.link) {
@@ -317,8 +317,8 @@ export const PlayerProvider = ({ children }) => {
   //   → joue nouvelles_sugg[0] automatiquement → continue
   const fetchRecommendations = async (track, autoPlay = false) => {
     try {
-      console.log(`[Radio] Fetching Last.fm suggestions for: ${track.title}`);
-      const res = await axios.get(`${BASE_URL}/recommend`, {
+      console.log(`[Radio] Fetching Chosic suggestions for: ${track.title}`);
+      const res = await axios.get(`${BASE_URL}/chosic/recommend`, {
         params: { artist: track.artist?.name || track.artist, track: track.title },
       });
       const tracks = res.data?.track;
