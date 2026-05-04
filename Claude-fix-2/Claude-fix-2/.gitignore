@@ -1,7 +1,7 @@
 node_modules/
 .env
 cookies.txt
-!music.db
+*.db
 *.db-shm
 *.db-wal
 dist/

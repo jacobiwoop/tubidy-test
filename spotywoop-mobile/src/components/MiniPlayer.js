@@ -9,11 +9,14 @@ import {
   Platform
 } from 'react-native';
 import { Play, Pause, ListMusic } from 'lucide-react-native';
+import { useProgress } from 'react-native-track-player';
 
 const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer, loadingTrackId, colors, onOpenQueue }) => {
+  const progress = useProgress();
   if (!currentTrack) return null;
 
   const isLoading = loadingTrackId === currentTrack.id || playerStatus?.loading;
+  const progressPercent = progress.duration > 0 ? (progress.position / progress.duration) * 100 : 0;
 
   return (
     <TouchableOpacity 
@@ -22,7 +25,7 @@ const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer
       style={styles.miniPlayer}
     >
       <Image 
-        source={{ uri: currentTrack?.album?.cover_medium || '' }} 
+        source={{ uri: currentTrack?.album?.cover_big || currentTrack?.album?.cover_medium || '' }} 
         style={styles.miniCover} 
       />
       <View style={styles.miniInfo}>
@@ -47,6 +50,11 @@ const MiniPlayer = ({ currentTrack, playerStatus, onTogglePlay, onOpenFullPlayer
       >
         <ListMusic size={22} color={colors?.primary || "#fff"} />
       </TouchableOpacity>
+
+      {/* Barre de progression en bas */}
+      <View style={styles.miniProgressBarContainer}>
+        <View style={[styles.miniProgressBar, { width: `${progressPercent}%` }]} />
+      </View>
     </TouchableOpacity>
   );
 };
@@ -97,14 +105,21 @@ const styles = StyleSheet.create({
     padding: 10,
     marginLeft: -5,
   },
+  miniProgressBarContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 12,
+    right: 12,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    overflow: 'hidden',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  miniProgressBar: {
+    height: '100%',
+    backgroundColor: '#1DB954', // Couleur accent (Spotify Green)
+  },
 });
 
-export default React.memo(MiniPlayer, (prev, next) => {
-  return (
-    prev.playerStatus?.playing === next.playerStatus?.playing &&
-    prev.playerStatus?.loading === next.playerStatus?.loading &&
-    prev.loadingTrackId === next.loadingTrackId &&
-    prev.currentTrack?.id === next.currentTrack?.id &&
-    prev.colors === next.colors
-  );
-});
+export default MiniPlayer;

@@ -20,6 +20,7 @@ function initDB() {
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       artist TEXT NOT NULL,
+      artist_id TEXT,
       album TEXT,
       cover_url TEXT,
       preview_url TEXT,
@@ -28,6 +29,13 @@ function initDB() {
     )
   `,
   ).run();
+
+  // Patch pour ajouter la colonne si elle n'existe pas déjà (au cas où la table existe déjà)
+  try {
+    db.prepare("ALTER TABLE tracks ADD COLUMN artist_id TEXT").run();
+  } catch (e) {
+    // La colonne existe probablement déjà
+  }
 
   // Table des titres aimés (Likes)
   db.prepare(

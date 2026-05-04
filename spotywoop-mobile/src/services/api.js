@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// export const BASE_URL = 'http://10.29.82.54:3000/api';
 export const BASE_URL = 'https://spotywoop-srv.onrender.com/api';
+// export const BASE_URL = 'http://192.168.1.113:3000/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -77,6 +77,45 @@ export const getRelatedArtists = async (id) => {
   } catch (error) {
     console.error('Get Related Artists error:', error);
     throw error;
+  }
+};
+
+export const getTrackRadio = async (id) => {
+  try {
+    const response = await api.get(`/deezer/track/${id}/radio`);
+    return response.data;
+  } catch (error) {
+    console.error('Get Track Radio error:', error);
+    throw error;
+  }
+};
+
+export const getRecommendations = async (artist, track) => {
+  try {
+    const response = await api.get('/recommend', {
+      params: { artist, track }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Get Recommendations error:', error);
+    return { track: [] };
+  }
+};
+
+export const getChosicRecommendations = async (params = {}) => {
+  try {
+    const response = await api.get('/chosic/recommend', {
+      params: {
+        artist: params.artist,
+        track: params.track,
+        genre: params.genre,
+        limit: params.limit || 15
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Get Chosic Recommendations error:', error);
+    return { track: [] };
   }
 };
 

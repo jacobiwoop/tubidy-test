@@ -8,10 +8,9 @@ import TrackPlayer, {
 } from 'react-native-track-player';
 import { getFavorites, saveFavorite } from '../utils/favorites';
 import { getPlaylists } from '../utils/playlists';
-import { getDownloadMetadata, deleteDownload } from '../utils/downloader';
-import { getTrackDownload, getTrackRadio, BASE_URL } from '../services/api';
+import { getDownloadMetadata } from '../utils/downloader';
+import { getTrackDownload, BASE_URL } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
-import StatsService from '../services/StatsService';
 import axios from 'axios';
 
 // ─── Modes de lecture ────────────────────────────────────────────────────────
@@ -40,7 +39,6 @@ export const PlayerProvider = ({ children }) => {
   const [currentQueue, setCurrentQueue]       = useState([]);
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
   const [suggestions, setSuggestions]         = useState([]);
-  const [musicDNA, setMusicDNA]               = useState(null);
 
   // Musique source de la radio (celle choisie par l'user depuis la recherche)
   // Affichée en haut du QueueModal, réinitialisée à chaque choix manuel
@@ -48,11 +46,11 @@ export const PlayerProvider = ({ children }) => {
 
   // Modes de lecture (exposés à l'UI)
   const [isShuffle, setIsShuffle]   = useState(false);
-  const [repeatMode, setRepeatMode] = useState(REPEAT_MODE.ALL);
+  const [repeatMode, setRepeatMode] = useState(REPEAT_MODE.NONE);
 
   // Refs pour les callbacks headless / event listeners (évite les stale closures)
   const shuffleRef    = useRef(false);
-  const repeatRef     = useRef(REPEAT_MODE.ALL);
+  const repeatRef     = useRef(REPEAT_MODE.NONE);
   const queueRef      = useRef([]);
   const queueIdxRef   = useRef(0);
   const currentTrackRef = useRef(null);
@@ -83,14 +81,8 @@ export const PlayerProvider = ({ children }) => {
       loadFavorites();
       loadPlaylists();
       loadDownloads();
-      refreshDNA();
     })();
   }, []);
-
-  const refreshDNA = async () => {
-    const dna = await StatsService.getDNA();
-    setMusicDNA(dna);
-  };
 
   // ─── Calcul index suivant / précédent ──────────────────────────────────────
   const getNextIndex = (queue, idx, shuffle) => {
@@ -199,48 +191,11 @@ export const PlayerProvider = ({ children }) => {
         fetchRecommendations(track); // charge la liste une seule fois
       }
 
-      // ─── Vérification Connectivité & Local ─────────────────────────────────
-      const isDownloaded = downloads.some(d => String(d.id) === String(track.id));
-      let isOffline = false;
-      try {
-        await axios.get(`${BASE_URL}/health`, { timeout: 1500 });
-      } catch (e) {
-        isOffline = true;
-      }
-
-      // Si Hors-ligne et non téléchargé -> on cherche le prochain téléchargé
-      if (isOffline && !isDownloaded) {
-        console.log(`[Offline] Skip: ${track.title}`);
-        const queue = queueRef.current;
-        if (queue && queue.length > 1) {
-          const currentIndex = queue.findIndex(t => String(t.id) === String(track.id));
-          for (let i = 1; i < queue.length; i++) {
-            const nextIdx = (currentIndex + i) % queue.length;
-            const nextTrack = queue[nextIdx];
-            if (downloads.some(d => String(d.id) === String(nextTrack.id))) {
-              return handlePlayTrack(nextTrack, queue);
-            }
-          }
-        }
-        alert('Mode Hors-ligne : Seuls vos téléchargements sont disponibles.');
-        return false;
-      }
-
-      // ── Résolution du lien (Local ou Réseau) ────────────────────────────────
+      // ── Résolution du lien (appel réseau) ──────────────────────────────────
       let finalTrack = track;
       let finalLink  = null;
 
-      // Priorité au fichier local si téléchargé
-      if (isDownloaded) {
-        const localTrack = downloads.find(d => String(d.id) === String(track.id));
-        if (localTrack) {
-          finalTrack = { ...localTrack }; // Contient le localUri et l'artwork local
-          finalLink = localTrack.localUri;
-          console.log(`[Local] Playing from storage: ${track.title}`);
-        }
-      }
-
-      if (!finalLink && (String(track.id).startsWith('lfm-') || String(track.id).startsWith('cho-'))) {
+      if (String(track.id).startsWith('lfm-')) {
         const q = `${track.title} ${track.artist?.name || track.artist}`;
         const res = await axios.get(`${BASE_URL}/search/play`, { params: { q } });
         if (res.data?.link) {
@@ -270,13 +225,10 @@ export const PlayerProvider = ({ children }) => {
         url:      finalLink,
         title:    finalTrack.title,
         artist:   finalTrack.artist?.name || finalTrack.artist,
-        artwork:  finalTrack.album?.cover_big || finalTrack.album?.cover_medium || finalTrack.thumbnail || finalTrack.artwork,
+        artwork:  finalTrack.album?.cover_medium || finalTrack.thumbnail,
         duration: finalTrack.duration,
       });
       await TrackPlayer.play();
-      
-      // Enregistrement dans l'ADN musical
-      StatsService.recordTrackPlay(finalTrack).then(() => refreshDNA());
 
       // fetchRecommendations n'est PAS appelé ici.
       // Il est appelé uniquement quand on est au dernier morceau de la queue
@@ -351,8 +303,6 @@ export const PlayerProvider = ({ children }) => {
     saveFavorite(track).then(() => {
       loadFavorites();
       loadPlaylists();
-      // On enregistre l'action dans l'ADN (plus de poids qu'une simple écoute)
-      StatsService.recordTrackLike(track, !isAlreadyFav).then(() => refreshDNA());
     });
   }, [favorites]);
 
@@ -367,8 +317,7 @@ export const PlayerProvider = ({ children }) => {
   //   → joue nouvelles_sugg[0] automatiquement → continue
   const fetchRecommendations = async (track, autoPlay = false) => {
     try {
-      console.log(`[Radio] Fetching Chosic suggestions for: ${track.title}`);
-      const res = await axios.get(`${BASE_URL}/chosic/recommend`, {
+      const res = await axios.get(`${BASE_URL}/recommend`, {
         params: { artist: track.artist?.name || track.artist, track: track.title },
       });
       const tracks = res.data?.track;
@@ -386,9 +335,7 @@ export const PlayerProvider = ({ children }) => {
       if (autoPlay && newQueue[1]) {
         playTrackAtIndex(newQueue, 1);
       }
-    } catch (err) {
-      console.error('[Radio] Last.fm error:', err.message);
-    }
+    } catch (_) {}
   };
 
   // ─── Loaders ───────────────────────────────────────────────────────────────
@@ -422,19 +369,12 @@ export const PlayerProvider = ({ children }) => {
       currentQueueIndex,
       suggestions,
       radioSource,
-      musicDNA,
       setActiveDownloads,
-      refreshDNA,
       // Modes de lecture
       isShuffle,
       repeatMode,
       toggleShuffle,
       cycleRepeatMode,
-      onRemoveDownload: async (id) => {
-        await deleteDownload(id);
-        loadDownloads();
-        triggerHaptic('notificationSuccess');
-      },
       // Couleurs statiques (image-colors désactivé)
       currentColors: { primary: '#1DB954', secondary: '#111', background: '#000' },
     }}>

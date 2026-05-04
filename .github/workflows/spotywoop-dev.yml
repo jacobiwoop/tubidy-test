@@ -42,7 +42,7 @@ jobs:
       - name: 🪄 Customize for Dev Client
         run: |
           # Modification du nom et retrait du logo pour le Dev Client
-          jq '.expo.name = "Expo Dev Client" | del(.expo.icon) | del(.expo.android.adaptiveIcon)' app.json > app.json.tmp && mv app.json.tmp app.json
+          jq '.expo.name = "Expo Dev Client" | .expo.android.package = "com.expodevclient.app" | del(.expo.icon) | del(.expo.android.adaptiveIcon)' app.json > app.json.tmp && mv app.json.tmp app.json
           echo "App.json patched for Dev Client"
 
       - name: 🛠 Prebuild Android

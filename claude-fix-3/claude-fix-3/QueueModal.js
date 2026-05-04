@@ -26,14 +26,12 @@ const QueueModal = ({
   onPlayTrackAt, 
   onRemoveTrackAt, 
   onClearQueue,
-  currentQueueIndex,
   suggestions = [],
   favorites = [],
   onToggleFavorite
 }) => {
-  const renderTrackItem = ({ item, index }) => {
-    const isPlaying = currentQueueIndex === index;
-    const isSuggestion = item.isSuggestion;
+  const renderTrackItem = ({ item, index, isSuggestion = false }) => {
+    const isPlaying = currentTrack?.id === item.id && !isSuggestion;
     const isFavorite = favorites.some(f => f.id === item.id);
     const coverUri = item.album?.cover_medium || item.album?.cover_small || item.cover_url;
 
@@ -41,7 +39,7 @@ const QueueModal = ({
       <MenuView
         key={isSuggestion ? `sugg-${index}` : `track-${index}`}
         onPressAction={({ nativeEvent }) => {
-          if (nativeEvent.event === 'play') onPlayTrackAt(index);
+          if (nativeEvent.event === 'play') onPlayTrackAt(index, isSuggestion);
           if (nativeEvent.event === 'favorite') onToggleFavorite(item);
           if (nativeEvent.event === 'remove' && !isSuggestion) onRemoveTrackAt(index);
         }}
@@ -57,7 +55,7 @@ const QueueModal = ({
           style={[styles.trackItem, isPlaying && styles.playingItem]}
           onPress={() => {
             triggerHaptic("impactLight");
-            onPlayTrackAt(index);
+            onPlayTrackAt(index, isSuggestion);
           }}
         >
           {!isSuggestion && <GripVertical size={20} color={theme.colors.secondary} style={{ marginRight: 8, opacity: 0.3 }} />}
@@ -65,16 +63,9 @@ const QueueModal = ({
           <View style={styles.trackContent}>
             <Image source={{ uri: coverUri }} style={styles.cover} />
             <View style={styles.info}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={[styles.title, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                {item.isSuggestion && (
-                  <View style={styles.suggestionBadge}>
-                    <Text style={styles.suggestionBadgeText}>✨</Text>
-                  </View>
-                )}
-              </View>
+              <Text style={[styles.title, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>
+                {item.title}
+              </Text>
               <Text style={styles.artist} numberOfLines={1}>
                 {item.artist?.name || item.artist}
               </Text>
@@ -152,12 +143,18 @@ const QueueModal = ({
                   </View>
                 </View>
               )}
-              <Text style={styles.sectionTitle}>À suivre</Text>
+              <Text style={styles.sectionTitle}>Up Next</Text>
             </>
           )}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>La file d'attente est vide</Text>
+              <Text style={styles.emptyText}>Queue is empty</Text>
+            </View>
+          )}
+          ListFooterComponent={() => suggestions.length > 0 && (
+            <View style={styles.suggestionsSection}>
+              <Text style={styles.sectionTitle}>Suggestions for you</Text>
+              {suggestions.map((item, index) => renderTrackItem({ item, index, isSuggestion: true }))}
             </View>
           )}
         />
@@ -302,19 +299,6 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary,
     fontSize: 12,
     marginTop: 2,
-  },
-  suggestionBadge: {
-    backgroundColor: 'rgba(29,185,84,0.15)',
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  suggestionBadgeText: {
-    color: theme.colors.accent,
-    fontSize: 9,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
   },
 });
 
