@@ -48,6 +48,10 @@ jobs:
       - name: 🛠 Prebuild Android
         run: |
           npx expo prebuild --platform android --clean
+          # --- SUPER FIX KOTLIN ---
+          sed -i 's/dependencies {/dependencies {\n        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0")/' android/build.gradle
+          sed -i 's/kotlinVersion = .*/kotlinVersion = "1.9.0"/' android/build.gradle
+          echo "Super Fix Applied"
 
       - name: 🔧 Fix Gradle Compatibility
         run: |
