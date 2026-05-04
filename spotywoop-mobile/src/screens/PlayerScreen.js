@@ -8,7 +8,7 @@ import Slider from '@react-native-community/slider';
 import {
   Play, Pause, SkipBack, SkipForward,
   ChevronDown, MoreHorizontal, Heart, ListMusic,
-  Shuffle, Repeat, ListPlus, Download, RotateCcw, Mic2
+  Shuffle, Repeat, ListPlus, Download, RotateCcw, Mic2, Trash2
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { theme } from '../utils/theme';
@@ -37,6 +37,7 @@ const PlayerScreen = ({
   onNext,
   onPrevious,
   onDownload,
+  onRemoveDownload,
   activeDownloads = {},
   downloads = [],
   playbackError,
@@ -69,7 +70,7 @@ const PlayerScreen = ({
   const position = isSliding ? slideValue : (progress.position * 1000);
 
   const isPlaying    = playbackState.state === State.Playing;
-  const isDownloaded = downloads.some(d => d.id === track?.id);
+  const isDownloaded = downloads.some(d => String(d.id) === String(track?.id));
   const isLoading    = playbackState.state === State.Buffering
     || playbackState.state === State.Loading
     || (track?.id === propStatus?.loadingTrackId);
@@ -184,7 +185,7 @@ const PlayerScreen = ({
       {/* Background immersif */}
       <View style={styles.background}>
         <Image
-          source={{ uri: track?.album?.cover_big || track?.album?.cover_medium || '' }}
+          source={{ uri: track?.artwork || track?.album?.cover_big || track?.album?.cover_medium || '' }}
           style={styles.backgroundImage}
           blurRadius={60}
         />
@@ -211,7 +212,7 @@ const PlayerScreen = ({
             <LyricsView track={track} currentTime={progress.position} />
           ) : (
             <Animated.Image
-              source={{ uri: track?.album?.cover_big || track?.album?.cover_medium || '' }}
+              source={{ uri: track?.artwork || track?.album?.cover_big || track?.album?.cover_medium || '' }}
               style={[styles.albumArt, { transform: [{ scale: albumScale }] }]}
             />
           )}
@@ -230,12 +231,18 @@ const PlayerScreen = ({
               </TouchableOpacity>
             </View>
             <View style={styles.rightActions}>
-              {/* Téléchargement */}
-              <TouchableOpacity onPress={onDownload} style={styles.actionCircle} activeOpacity={0.6}>
+              {/* Téléchargement / Suppression */}
+              <TouchableOpacity 
+                onPress={isDownloaded ? () => onRemoveDownload(track.id) : onDownload} 
+                style={styles.actionCircle} 
+                activeOpacity={0.6}
+              >
                 {activeDownloads[track?.id] !== undefined ? (
                   <Text style={styles.progressText}>{Math.round(activeDownloads[track.id] * 100)}%</Text>
+                ) : isDownloaded ? (
+                  <Trash2 size={24} color={theme.colors.accent} />
                 ) : (
-                  <Download size={24} color={isDownloaded ? theme.colors.accent : theme.colors.primary} />
+                  <Download size={24} color={theme.colors.primary} />
                 )}
               </TouchableOpacity>
               {/* Playlist */}
@@ -345,7 +352,7 @@ const PlayerScreen = ({
         {showLyrics && (
           <View style={styles.compactControlBar}>
             <Image 
-              source={{ uri: track?.album?.cover_medium || '' }} 
+              source={{ uri: track?.artwork || track?.album?.cover_medium || '' }} 
               style={styles.compactCover} 
             />
             <View style={styles.compactInfo}>

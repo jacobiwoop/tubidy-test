@@ -8,7 +8,7 @@ import TrackPlayer, {
 } from 'react-native-track-player';
 import { getFavorites, saveFavorite } from '../utils/favorites';
 import { getPlaylists } from '../utils/playlists';
-import { getDownloadMetadata } from '../utils/downloader';
+import { getDownloadMetadata, deleteDownload } from '../utils/downloader';
 import { getTrackDownload, getTrackRadio, BASE_URL } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
 import StatsService from '../services/StatsService';
@@ -232,9 +232,10 @@ export const PlayerProvider = ({ children }) => {
 
       // Priorité au fichier local si téléchargé
       if (isDownloaded) {
-        const metadata = await getDownloadMetadata(track.id);
-        if (metadata && metadata.fileUri) {
-          finalLink = metadata.fileUri;
+        const localTrack = downloads.find(d => String(d.id) === String(track.id));
+        if (localTrack) {
+          finalTrack = { ...localTrack }; // Contient le localUri et l'artwork local
+          finalLink = localTrack.localUri;
           console.log(`[Local] Playing from storage: ${track.title}`);
         }
       }
@@ -429,6 +430,11 @@ export const PlayerProvider = ({ children }) => {
       repeatMode,
       toggleShuffle,
       cycleRepeatMode,
+      onRemoveDownload: async (id) => {
+        await deleteDownload(id);
+        loadDownloads();
+        triggerHaptic('notificationSuccess');
+      },
       // Couleurs statiques (image-colors désactivé)
       currentColors: { primary: '#1DB954', secondary: '#111', background: '#000' },
     }}>

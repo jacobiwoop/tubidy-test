@@ -67,6 +67,7 @@ const MainApp = () => {
     repeatMode,
     toggleShuffle,
     cycleRepeatMode,
+    onRemoveDownload,
   } = usePlayer();
 
   // ─── États locaux (pas dans le Context → pas de re-render global) ──────────
@@ -169,6 +170,7 @@ const MainApp = () => {
               onToggleFavorite={() => onToggleFavorite(currentTrack)}
               onAddToPlaylist={() => setShowPlaylistModal(true)}
               onDownload={() => handleDownload(currentTrack)}
+              onRemoveDownload={onRemoveDownload}
               downloads={downloads}
               activeDownloads={activeDownloads}
               colors={currentColors}

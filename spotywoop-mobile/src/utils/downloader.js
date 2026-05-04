@@ -40,11 +40,27 @@ export const startDownload = async (track, downloadUrl, onProgress) => {
   try {
     const { uri } = await downloadResumable.downloadAsync();
     
-    // Sauvegarder les métadonnées pour savoir que c'est fini
+    // Télécharger aussi l'artwork pour le mode hors-ligne
+    let localArtwork = null;
+    const artworkUrl = track.album?.cover_big || track.album?.cover_medium || track.thumbnail || track.artwork;
+    if (artworkUrl && artworkUrl.startsWith('http')) {
+      try {
+        const artworkName = `thumb_${track.id}.jpg`;
+        const artworkUri = `${DOWNLOAD_DIR}${artworkName}`;
+        const artDownloader = FileSystem.createDownloadResumable(artworkUrl, artworkUri);
+        const artRes = await artDownloader.downloadAsync();
+        localArtwork = artRes.uri;
+      } catch (err) {
+        console.warn('Artwork download failed:', err);
+      }
+    }
+
+    // Sauvegarder les métadonnées complètes
     const downloads = await getDownloadMetadata();
     const newDownload = {
       ...track,
       localUri: uri,
+      artwork: localArtwork || artworkUrl, // On remplace par le lien local si dispo
       downloadedAt: new Date().toISOString()
     };
     
@@ -58,8 +74,10 @@ export const startDownload = async (track, downloadUrl, onProgress) => {
 
 export const deleteDownload = async (trackId) => {
   const fileUri = `${DOWNLOAD_DIR}${trackId}.mp3`;
+  const artworkUri = `${DOWNLOAD_DIR}thumb_${trackId}.jpg`;
   try {
     await FileSystem.deleteAsync(fileUri, { idempotent: true });
+    await FileSystem.deleteAsync(artworkUri, { idempotent: true });
     const downloads = await getDownloadMetadata();
     const filtered = downloads.filter(d => d.id !== trackId);
     await saveDownloadMetadata(filtered);
