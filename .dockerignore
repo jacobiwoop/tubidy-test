@@ -1,9 +1,0 @@
-node_modules
-npm-debug.log
-music.db
-music.db-journal
-.git
-.env
-mobile
-client/node_modules
-client/dist
