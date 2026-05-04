@@ -1,25 +1,23 @@
 const axios = require("axios");
 const db = require("../config/database");
 
-/**
- * Service pour interagir avec l'API Deezer.
- */
-
 const BASE_URL = "https://api.deezer.com";
 
+// Timeout par défaut pour tous les appels Deezer
+// FIX : avant, aucun timeout n'était configuré → requête pendante indéfiniment
+const DEFAULT_TIMEOUT = 8000;
+
 /**
- * Helper pour retenter une requête en cas d'erreur réseau (EAI_AGAIN, ETIMEDOUT).
- * Utilise désormais un backoff exponentiel (1s, 2s, 4s, 8s...).
+ * Helper pour retenter une requête en cas d'erreur réseau.
+ * Backoff exponentiel : 1s, 2s, 4s, 8s...
  */
 async function withRetry(fn, retries = 5) {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
     } catch (err) {
-      if (axios.isCancel(err)) {
-        throw err; // Ne pas retenter si c'est annulé par le client
-      }
-      
+      if (axios.isCancel(err)) throw err;
+
       const isNetworkError =
         err.code === "EAI_AGAIN" ||
         err.code === "ETIMEDOUT" ||
@@ -28,12 +26,11 @@ async function withRetry(fn, retries = 5) {
         !err.response;
 
       if (isNetworkError && i < retries - 1) {
-        // Backoff exponentiel : 1s, 2s, 4s, 8s...
         const delay = Math.pow(2, i) * 1000;
         console.warn(
-          `[deezer] Network error (${err.code}). Retrying in ${delay}ms... (${i + 1}/${retries})`,
+          `[deezer] Network error (${err.code}). Retry in ${delay}ms... (${i + 1}/${retries})`
         );
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        await new Promise((r) => setTimeout(r, delay));
         continue;
       }
       throw err;
@@ -41,53 +38,42 @@ async function withRetry(fn, retries = 5) {
   }
 }
 
-/**
- * Recherche globale sur Deezer (titres par défaut).
- */
-async function search(
-  query,
-  { index = 0, limit = 25, order = "RANKING" } = {},
-  signal = null,
-) {
+async function search(query, { index = 0, limit = 25, order = "RANKING" } = {}, signal = null) {
   return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/search`, {
       params: { q: query, index, limit, order },
+      timeout: DEFAULT_TIMEOUT, // FIX : timeout ajouté
       signal,
     });
     return response.data;
   });
 }
 
-/**
- * Recherche spécifique d'artistes.
- */
 async function searchArtist(query, { index = 0, limit = 25 } = {}) {
   return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/search/artist`, {
       params: { q: query, index, limit },
+      timeout: DEFAULT_TIMEOUT, // FIX
     });
     return response.data;
   });
 }
 
-/**
- * Recherche spécifique d'albums.
- */
 async function searchAlbum(query, { index = 0, limit = 25 } = {}) {
   return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/search/album`, {
       params: { q: query, index, limit },
+      timeout: DEFAULT_TIMEOUT, // FIX
     });
     return response.data;
   });
 }
 
 /**
- * Récupère les détails d'un titre par son ID.
- * Utilise le cache SQLite pour éviter les requêtes inutiles.
+ * Récupère un titre par son ID.
+ * Cache SQLite intégré — la 2e requête pour le même ID est instantanée.
  */
 async function getTrack(id, signal = null) {
-  // 1. Vérifier le cache SQLite
   try {
     const cached = db.prepare("SELECT * FROM tracks WHERE id = ?").get(id);
     if (cached) {
@@ -109,19 +95,18 @@ async function getTrack(id, signal = null) {
     console.error("[deezer-cache] Read error:", dbErr.message);
   }
 
-  // 2. Si pas en cache, appeler l'API avec retry
   return withRetry(async () => {
-    const response = await axios.get(`${BASE_URL}/track/${id}`, { signal });
+    const response = await axios.get(`${BASE_URL}/track/${id}`, {
+      timeout: DEFAULT_TIMEOUT, // FIX
+      signal,
+    });
     const track = response.data;
 
     if (track && !track.error) {
-      // 3. Sauvegarder dans le cache pour la prochaine fois
       try {
         db.prepare(
-          `
-          INSERT OR REPLACE INTO tracks (id, title, artist, album, cover_url, preview_url, duration)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `,
+          `INSERT OR REPLACE INTO tracks (id, title, artist, album, cover_url, preview_url, duration)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
         ).run(
           String(track.id),
           track.title,
@@ -129,7 +114,7 @@ async function getTrack(id, signal = null) {
           track.album.title,
           track.album.cover_medium,
           track.preview,
-          track.duration,
+          track.duration
         );
       } catch (dbErr) {
         console.error("[deezer-cache] Write error:", dbErr.message);
@@ -140,161 +125,124 @@ async function getTrack(id, signal = null) {
   });
 }
 
-/**
- * Récupère les détails d'un genre.
- */
 async function getGenre(id) {
   return withRetry(async () => {
-    const response = await axios.get(`${BASE_URL}/genre/${id}`);
+    const response = await axios.get(`${BASE_URL}/genre/${id}`, { timeout: DEFAULT_TIMEOUT });
     return response.data;
   });
 }
 
-/**
- * Récupère les artistes d'un genre.
- */
 async function getGenreArtists(id) {
   return withRetry(async () => {
-    const response = await axios.get(`${BASE_URL}/genre/${id}/artists`);
+    const response = await axios.get(`${BASE_URL}/genre/${id}/artists`, { timeout: DEFAULT_TIMEOUT });
     return response.data;
   });
 }
 
-/**
- * Récupère les playlists populaires pour un certain genre en utilisant les charts.
- */
 async function getGenrePlaylists(id, { limit = 10 } = {}) {
   return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/chart/${id}/playlists`, {
       params: { limit },
+      timeout: DEFAULT_TIMEOUT,
     });
     return response.data;
   });
 }
 
-/**
- * Récupère le "Top" (chart) des titres d'un genre.
- */
 async function getGenreTracks(id, { limit = 20 } = {}) {
   try {
     return await withRetry(async () => {
       const response = await axios.get(`${BASE_URL}/chart/${id}/tracks`, {
         params: { limit },
+        timeout: DEFAULT_TIMEOUT,
       });
       return response.data;
     });
-  } catch (err) {
+  } catch (_) {
     return { data: [] };
   }
 }
 
-/**
- * Récupère les nouveautés d'un genre (editorial).
- */
 async function getGenreReleases(id, { limit = 10 } = {}) {
   try {
     return await withRetry(async () => {
       const response = await axios.get(`${BASE_URL}/editorial/${id}/releases`, {
         params: { limit },
+        timeout: DEFAULT_TIMEOUT,
       });
       return response.data;
     });
-  } catch (err) {
+  } catch (_) {
     return { data: [] };
   }
 }
 
-/**
- * Récupère les détails d'un artiste.
- */
 async function getArtist(id) {
   return withRetry(async () => {
-    const response = await axios.get(`${BASE_URL}/artist/${id}`);
+    const response = await axios.get(`${BASE_URL}/artist/${id}`, { timeout: DEFAULT_TIMEOUT });
     return response.data;
   });
 }
 
-/**
- * Récupère les titres les plus populaires d'un artiste.
- */
 async function getArtistTopTracks(id, { limit = 10 } = {}) {
   return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/artist/${id}/top`, {
       params: { limit },
+      timeout: DEFAULT_TIMEOUT,
     });
     return response.data;
   });
 }
 
-/**
- * Récupère les albums d'un artiste.
- */
 async function getArtistAlbums(id, { limit = 20 } = {}) {
   return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/artist/${id}/albums`, {
       params: { limit },
+      timeout: DEFAULT_TIMEOUT,
     });
     return response.data;
   });
 }
 
-/**
- * Récupère les artistes similaires.
- */
 async function getRelatedArtists(id, { limit = 10 } = {}) {
   return withRetry(async () => {
     const response = await axios.get(`${BASE_URL}/artist/${id}/related`, {
       params: { limit },
+      timeout: DEFAULT_TIMEOUT,
     });
     return response.data;
   });
 }
 
-/**
- * Récupère les albums similaires.
- */
 async function getRelatedAlbums(id, { limit = 6 } = {}) {
-  // Note: Deezer doesn't have a direct /album/:id/related,
-  // but it has selection/smart radio or we can use recommendations based on genre.
-  // Actually, Deezer has a hidden /album/:id/related or we can use similar artists' top albums.
-  // We'll use a fallback to similar artists' top albums if direct doesn't work.
   return withRetry(async () => {
     try {
       const response = await axios.get(`${BASE_URL}/album/${id}/related`, {
         params: { limit },
+        timeout: DEFAULT_TIMEOUT,
       });
       return response.data;
-    } catch (err) {
+    } catch (_) {
       return { data: [] };
     }
   });
 }
 
-/**
- * Récupère la Smart Radio d'un titre.
- */
 async function getTrackRadio(id) {
   return withRetry(async () => {
-    const response = await axios.get(`${BASE_URL}/track/${id}/radio`);
+    const response = await axios.get(`${BASE_URL}/track/${id}/radio`, { timeout: DEFAULT_TIMEOUT });
     return response.data;
   });
 }
 
-/**
- * Récupère les détails d'un album.
- */
 async function getAlbum(id) {
   return withRetry(async () => {
-    const response = await axios.get(`${BASE_URL}/album/${id}`);
+    const response = await axios.get(`${BASE_URL}/album/${id}`, { timeout: DEFAULT_TIMEOUT });
     return response.data;
   });
 }
 
-/**
- * Récupère les paroles d'un titre via LRCLIB (Synchronisées).
- */
 async function getTrackLyrics(trackId) {
-  // 1. Récupérer les infos du titre (on a besoin du nom, artiste et durée pour LRCLIB)
   const track = await getTrack(trackId);
   if (!track || track.error) throw new Error("Track not found");
 
@@ -302,33 +250,22 @@ async function getTrackLyrics(trackId) {
 
   return withRetry(async () => {
     try {
-      // LRCLIB est très efficace pour les paroles synchronisées (LRC)
-      // On tente d'abord avec les infos précises
       const response = await axios.get("https://lrclib.net/api/get", {
         params: {
           artist_name: artist.name || artist,
           track_name: title,
           album_name: album?.title || "",
-          duration: duration,
+          duration,
         },
         timeout: 5000,
       });
-
       return response.data;
-    } catch (err) {
-      // Fallback : recherche plus souple si le "get" précis échoue
-      console.log(
-        `[lyrics] Precision match failed for ${title}, trying search...`,
-      );
+    } catch (_) {
       const searchRes = await axios.get("https://lrclib.net/api/search", {
         params: { q: `${artist.name || artist} ${title}` },
         timeout: 5000,
       });
-
-      // On prend le premier résultat qui a des paroles synchronisées
-      return (
-        searchRes.data.find((l) => l.syncedLyrics) || searchRes.data[0] || null
-      );
+      return searchRes.data.find((l) => l.syncedLyrics) || searchRes.data[0] || null;
     }
   });
 }

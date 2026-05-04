@@ -1,10 +1,9 @@
-monochrome/
 node_modules/
-.venv/
+.env
+cookies.txt
 *.db
 *.db-shm
 *.db-wal
-.env
 dist/
-cle.md
-mobile/android/
+client/dist/
+*.log
