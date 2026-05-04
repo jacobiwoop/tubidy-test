@@ -71,10 +71,11 @@ jobs:
           
           # 2. Préparer les fichiers
           cd android/app/build/outputs/apk/release
-          APK_UNSIGNED=$(ls *-unsigned.apk | head -n 1)
+          APK_FILE=$(find . -name "*.apk" -maxdepth 1 | head -n 1)
+          echo "Found APK to sign: $APK_FILE"
           
-          # 3. Aligner l'APK
-          $ZIPALIGN -v 4 "$APK_UNSIGNED" app-release-aligned.apk
+          # 3. Aligner l'APK (on crée un fichier temporaire)
+          $ZIPALIGN -v 4 "$APK_FILE" app-release-aligned.apk
           
           # 4. Décoder la clé de signature
           echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 -d > release.jks
