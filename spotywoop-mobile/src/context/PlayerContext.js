@@ -123,7 +123,7 @@ export const PlayerProvider = ({ children }) => {
 
   // ─── Fin de morceau / boutons notif → applique les règles ─────────────────
   useTrackPlayerEvents(
-    [Event.PlaybackTrackChanged, Event.RemoteNext, Event.RemotePrevious],
+    [Event.PlaybackTrackChanged, Event.RemoteNext, Event.RemotePrevious, Event.PlaybackQueueEnded],
     async (event) => {
       const queue   = queueRef.current;
       const idx     = queueIdxRef.current;
@@ -134,7 +134,7 @@ export const PlayerProvider = ({ children }) => {
       if (!playFn) return;
 
       // Fin naturelle du morceau
-      if (event.type === Event.PlaybackTrackChanged && event.nextTrack == null) {
+      if ((event.type === Event.PlaybackTrackChanged && event.nextTrack == null) || event.type === Event.PlaybackQueueEnded) {
         if (repeat === REPEAT_MODE.ONE) {
           await TrackPlayer.seekTo(0);
           await TrackPlayer.play();
