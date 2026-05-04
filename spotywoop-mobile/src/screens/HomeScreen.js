@@ -224,7 +224,7 @@ export default function HomeScreen({ navigation }) {
               {musicDNA.history.slice(0, 8).map((track, i) => (
                 <TouchableOpacity key={`${track.id}-${i}`} style={styles.recentItem} onPress={() => onPlayTrack(track)}>
                    <Image 
-                     source={{ uri: track.artwork || 'https://via.placeholder.com/150' }} 
+                     source={{ uri: track.artwork && track.artwork !== "" ? track.artwork : 'https://via.placeholder.com/300' }} 
                      style={styles.recentThumb} 
                    />
                    <Text style={styles.recentTitle} numberOfLines={1}>{track.title}</Text>
@@ -262,7 +262,10 @@ export default function HomeScreen({ navigation }) {
                     onPress={() => onPlayTrack(track, recommendations)}
                   >
                     <View style={styles.cardImageContainer}>
-                      <Image source={{ uri: track.album?.cover_big || track.album?.cover_medium }} style={styles.cardImage} />
+                      <Image 
+                        source={{ uri: (track.album?.cover_big || track.album?.cover_medium) || 'https://via.placeholder.com/300' }} 
+                        style={styles.cardImage} 
+                      />
                       {isPlaying && (
                         <View style={styles.playingOverlay}>
                           <Volume2 size={24} color="white" />
@@ -306,7 +309,10 @@ export default function HomeScreen({ navigation }) {
                   style={styles.genreMixCard}
                   onPress={() => onPlayTrack(track, genreMix)}
                 >
-                  <Image source={{ uri: track.album?.cover_big || track.album?.cover_medium }} style={styles.genreMixImage} />
+                  <Image 
+                    source={{ uri: (track.album?.cover_big || track.album?.cover_medium) || 'https://via.placeholder.com/300' }} 
+                    style={styles.genreMixImage} 
+                  />
                   <View style={styles.genreMixInfo}>
                      <Text style={styles.cardTitle} numberOfLines={1}>{track.title}</Text>
                      <Text style={styles.cardArtist} numberOfLines={1}>{track.artist?.name}</Text>
