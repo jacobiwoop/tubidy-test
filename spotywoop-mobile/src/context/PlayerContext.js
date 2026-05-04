@@ -48,11 +48,11 @@ export const PlayerProvider = ({ children }) => {
 
   // Modes de lecture (exposés à l'UI)
   const [isShuffle, setIsShuffle]   = useState(false);
-  const [repeatMode, setRepeatMode] = useState(REPEAT_MODE.NONE);
+  const [repeatMode, setRepeatMode] = useState(REPEAT_MODE.ALL);
 
   // Refs pour les callbacks headless / event listeners (évite les stale closures)
   const shuffleRef    = useRef(false);
-  const repeatRef     = useRef(REPEAT_MODE.NONE);
+  const repeatRef     = useRef(REPEAT_MODE.ALL);
   const queueRef      = useRef([]);
   const queueIdxRef   = useRef(0);
   const currentTrackRef = useRef(null);
