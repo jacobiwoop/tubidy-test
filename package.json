@@ -1,31 +1,36 @@
 {
-  "name": "spotiwoop-api",
+  "name": "expowoop-dev-client",
   "version": "1.0.0",
-  "description": "Music streaming & download API backend",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js"
+    "start": "expo start --dev-client"
   },
   "dependencies": {
-    "axios": "^1.14.0",
-    "better-sqlite3": "^12.8.0",
-    "cheerio": "^1.0.0",
-    "cors": "^2.8.6",
-    "dotenv": "^16.3.0",
-    "express": "^4.18.0",
-    "express-rate-limit": "^7.1.0",
-    "last-fm": "^5.3.0",
-    "run-parallel": "^1.2.0",
-    "simple-get": "^4.0.1"
+    "@react-native-async-storage/async-storage": "^1.21.0",
+    "@react-native-community/slider": "^4.4.3",
+    "@react-native-menu/menu": "^0.9.1",
+    "@react-navigation/bottom-tabs": "^6.0.0",
+    "@react-navigation/native": "^6.0.0",
+    "@react-navigation/native-stack": "^6.0.0",
+    "@react-navigation/stack": "^6.0.0",
+    "axios": "^1.6.7",
+    "expo": "~50.0.14",
+    "expo-build-properties": "~0.11.1",
+    "expo-dev-client": "~3.3.11",
+    "expo-file-system": "~16.0.8",
+    "expo-status-bar": "~1.11.1",
+    "lucide-react-native": "^0.344.0",
+    "react": "18.2.0",
+    "react-native": "0.73.6",
+    "react-native-gesture-handler": "~2.14.0",
+    "react-native-haptic-feedback": "^2.2.0",
+    "react-native-linear-gradient": "^2.8.3",
+    "react-native-modal": "^14.0.0-rc.1",
+    "react-native-reanimated": "~3.6.2",
+    "react-native-safe-area-context": "4.8.2",
+    "react-native-screens": "~3.29.0",
+    "react-native-svg": "14.1.0",
+    "react-native-track-player": "4.1.1"
   },
-  "devDependencies": {
-    "nodemon": "^3.0.0"
-  },
-  "nodemonConfig": {
-    "ignore": [
-      "music.db*",
-      "client/*"
-    ]
-  }
+  "private": true
 }
