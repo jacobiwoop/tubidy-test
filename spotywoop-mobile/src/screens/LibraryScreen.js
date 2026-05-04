@@ -12,8 +12,10 @@ import { usePlayer } from '../context/PlayerContext';
 
 export default function LibraryScreen({ navigation }) {
   const { 
+    favorites,
     playlists, 
     onPlayTrack, 
+    onToggleFavorite,
     loadingTrackId, 
     loadPlaylists: refreshPlaylists, 
     currentTrack,
@@ -165,7 +167,7 @@ export default function LibraryScreen({ navigation }) {
                   >
                     <View style={styles.trackThumbContainer}>
                       <Image 
-                        source={{ uri: item.album?.cover_big || item.album?.cover_medium || '' }} 
+                        source={{ uri: (item.album?.cover_big || item.album?.cover_medium || item.artwork) || 'https://via.placeholder.com/300' }} 
                         style={styles.trackThumb} 
                       />
                     </View>
