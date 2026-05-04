@@ -14,15 +14,21 @@ import { BASE_URL } from '../services/api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const LyricsView = ({ track, currentTime }) => {
-  const [lyrics, setLyrics] = useState([]);
-  const [loading, setLoading] = useState(true);
+const LyricsView = ({ track, currentTime, lyricsData }) => {
+  const [lyrics, setLyrics] = useState(lyricsData || []);
+  const [loading, setLoading] = useState(!lyricsData);
   const [error, setError] = useState(null);
   const listRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(-1);
 
-  // 1. Récupération des paroles
+  // 1. Récupération des paroles (uniquement si non fournies)
   useEffect(() => {
+    if (lyricsData && lyricsData.length > 0) {
+      setLyrics(lyricsData);
+      setLoading(false);
+      return;
+    }
+
     const fetchLyrics = async () => {
       try {
         setLoading(true);
@@ -55,7 +61,7 @@ const LyricsView = ({ track, currentTime }) => {
     };
 
     fetchLyrics();
-  }, [track.id]);
+  }, [track.id, lyricsData]);
 
   // 2. Synchronisation avec la musique
   useEffect(() => {

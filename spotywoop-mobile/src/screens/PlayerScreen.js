@@ -209,7 +209,7 @@ const PlayerScreen = ({
         {/* Pochette ou Paroles */}
         <View style={[styles.artContainer, showLyrics && { flex: 1, paddingHorizontal: 0 }]}>
           {showLyrics ? (
-            <LyricsView track={track} currentTime={progress.position} />
+            <LyricsView track={track} currentTime={progress.position} lyricsData={lyrics} />
           ) : (
             <Animated.Image
               source={{ uri: track?.artwork || track?.album?.cover_big || track?.album?.cover_medium || '' }}
