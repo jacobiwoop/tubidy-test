@@ -24,7 +24,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.expowoop.app",
+      "package": "com.spotywoop.app",
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",
