@@ -17,6 +17,7 @@ import ArtistScreen  from './screens/ArtistScreen';
 import LibraryScreen from './screens/LibraryScreen';
 import MiniPlayer    from './components/MiniPlayer';
 import QueueModal    from './components/QueueModal';
+import PlaylistModal from './components/PlaylistModal';
 
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { theme } from './utils/theme';
@@ -59,6 +60,7 @@ const MainApp = () => {
     suggestions,
     onPlayTrack,
     currentQueue,
+    currentQueueIndex,
     radioSource,
     // Modes de lecture
     isShuffle,
@@ -185,15 +187,14 @@ const MainApp = () => {
           isVisible={isQueueVisible}
           onClose={() => setIsQueueVisible(false)}
           queue={currentQueue}
+          currentQueueIndex={currentQueueIndex}
           currentTrack={currentTrack}
           radioSource={radioSource}
           suggestions={suggestions}
           favorites={favorites}
           onToggleFavorite={onToggleFavorite}
-          onPlayTrackAt={async (index, isSuggestion) => {
-            const success = isSuggestion
-              ? await onPlayTrack(suggestions[index])
-              : await onPlayTrack(currentQueue[index], currentQueue, index);
+          onPlayTrackAt={async (index) => {
+            const success = await onPlayTrack(currentQueue[index], currentQueue, index);
             if (success) setIsQueueVisible(false);
           }}
           onRemoveTrackAt={() => {}}
@@ -201,47 +202,13 @@ const MainApp = () => {
         />
 
         {/* Modal Playlist */}
-        <Modal
+        <PlaylistModal
           visible={showPlaylistModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowPlaylistModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Ajouter à une playlist</Text>
-              <View style={styles.createContainer}>
-                <TextInput
-                  style={styles.playlistInput}
-                  placeholder="Nouvelle playlist..."
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  value={newPlaylistTitle}
-                  onChangeText={setNewPlaylistTitle}
-                />
-                <TouchableOpacity
-                  style={styles.createBtn}
-                  onPress={() => { if (newPlaylistTitle.trim()) { handleCreatePlaylist(newPlaylistTitle); setNewPlaylistTitle(''); } }}
-                >
-                  <Plus size={24} color="#000" />
-                </TouchableOpacity>
-              </View>
-              <ScrollView style={styles.playlistList}>
-                {playlists.map(pl => (
-                  <TouchableOpacity key={pl.id} style={styles.playlistItem} onPress={() => handleAddToPlaylist(pl.id)}>
-                    <View style={styles.playlistIcon}><ListMusic size={24} color={theme.colors.accent} /></View>
-                    <View>
-                      <Text style={styles.playlistTitle}>{pl.title}</Text>
-                      <Text style={styles.playlistCount}>{pl.tracks?.length || 0} titres</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TouchableOpacity style={styles.closeModalBtn} onPress={() => setShowPlaylistModal(false)}>
-                <Text style={styles.closeModalText}>Fermer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+          onClose={() => setShowPlaylistModal(false)}
+          playlists={playlists}
+          onAddToPlaylist={handleAddToPlaylist}
+          onCreatePlaylist={handleCreatePlaylist}
+        />
       </NavigationContainer>
     </View>
   );
@@ -286,17 +253,4 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   fullPlayerContainer: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000', zIndex: 1000 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#1c1c1e', borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 20, maxHeight: '80%' },
-  modalTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-  createContainer: { flexDirection: 'row', marginBottom: 20 },
-  playlistInput: { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 12, color: '#fff', marginRight: 10 },
-  createBtn: { backgroundColor: theme.colors.accent, width: 50, height: 50, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  playlistList: { marginBottom: 20 },
-  playlistItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-  playlistIcon: { width: 50, height: 50, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  playlistTitle: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  playlistCount: { color: 'rgba(255,255,255,0.4)', fontSize: 12 },
-  closeModalBtn: { padding: 15, alignItems: 'center' },
-  closeModalText: { color: theme.colors.accent, fontSize: 16, fontWeight: 'bold' },
 });
