@@ -839,15 +839,31 @@ export const PlayerProvider = ({ children }) => {
       onDownloadBatch: async (tracks) => {
         if (!tracks || tracks.length === 0) return;
         triggerHaptic('notificationSuccess');
-        for (const track of tracks) {
-          try {
-            // On appelle directement la logique de download du contexte
-            if (activeDownloads[track.id] !== undefined) continue;
-            const exists = await isTrackDownloaded(track);
-            if (exists) continue;
 
-            setActiveDownloads(prev => ({ ...prev, [track.id]: 0 }));
-            setDownloadingItems(prev => ({ ...prev, [track.id]: track }));
+        // Filtrer les morceaux déjà téléchargés ou en cours
+        const toDownload = [];
+        for (const track of tracks) {
+          if (activeDownloads[track.id] !== undefined) continue;
+          const exists = await isTrackDownloaded(track);
+          if (!exists) toDownload.push(track);
+        }
+
+        if (toDownload.length === 0) return;
+
+        // ✅ Pré-inscrire TOUS les morceaux dans le flux AVANT de commencer
+        // → L'UI voit tout d'un coup
+        const initialItems = {};
+        const initialProgress = {};
+        toDownload.forEach(track => {
+          initialItems[track.id] = track;
+          initialProgress[track.id] = 0;
+        });
+        setDownloadingItems(prev => ({ ...prev, ...initialItems }));
+        setActiveDownloads(prev => ({ ...prev, ...initialProgress }));
+
+        // Téléchargement séquentiel
+        for (const track of toDownload) {
+          try {
             const dl = await getTrackDownload(track.id);
             const link = dl?.target?.link || dl?.link;
             if (link) {
@@ -858,6 +874,7 @@ export const PlayerProvider = ({ children }) => {
           } catch (e) {
             console.error('Batch item failed', e);
           } finally {
+            // Retirer uniquement ce morceau une fois terminé
             setActiveDownloads(prev => { const n = { ...prev }; delete n[track.id]; return n; });
             setDownloadingItems(prev => { const n = { ...prev }; delete n[track.id]; return n; });
             loadDownloads();

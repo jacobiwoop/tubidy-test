@@ -21,6 +21,7 @@ import { BASE_URL } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../utils/theme';
 import { REPEAT_MODE } from '../context/PlayerContext';
+import LyricsView from '../components/LyricsView';
 
 const { width } = Dimensions.get('window');
 

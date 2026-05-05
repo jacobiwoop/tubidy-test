@@ -75,33 +75,34 @@ export default function ArtistScreen({ navigation, route }) {
 
     // 2. Refresh en tâche de fond (ou premier chargement si pas de cache)
     try {
-      const [artistData, tracksData, albumsData, relatedData] = await Promise.all([
-        api.getArtist(artistId),
-        api.getArtistTopTracks(artistId),
-        api.getArtistAlbums(artistId),
-        api.getRelatedArtists(artistId)
-      ]);
+    // Promise.allSettled : même si une requête échoue, les autres continuent
+    const [artistRes, tracksRes, albumsRes, relatedRes] = await Promise.allSettled([
+      api.getArtist(artistId),
+      api.getArtistTopTracks(artistId),
+      api.getArtistAlbums(artistId),
+      api.getRelatedArtists(artistId)
+    ]);
 
-      const freshData = {
-        artist: artistData,
-        topTracks: tracksData.data || [],
-        albums: albumsData.data || [],
-        related: relatedData.data || []
-      };
+    const freshData = {
+      artist:    artistRes.status   === 'fulfilled' ? artistRes.value          : cached?.artist    || null,
+      topTracks: tracksRes.status   === 'fulfilled' ? (tracksRes.value.data  || []) : cached?.topTracks || [],
+      albums:    albumsRes.status   === 'fulfilled' ? (albumsRes.value.data  || []) : cached?.albums    || [],
+      related:   relatedRes.status  === 'fulfilled' ? (relatedRes.value.data || []) : cached?.related   || [],
+    };
 
-      setArtist(freshData.artist);
-      setTopTracks(freshData.topTracks);
-      setAlbums(freshData.albums);
-      setRelated(freshData.related);
-      
-      // Sauvegarder pour la prochaine fois
-      saveCache(cacheKey, freshData);
-      enrichTracks(freshData.topTracks); // Enrichissement en arrière-plan
-    } catch (error) {
-      console.error('Failed to load artist data:', error);
-    } finally {
-      setLoading(false);
-    }
+    setArtist(freshData.artist);
+    setTopTracks(freshData.topTracks);
+    setAlbums(freshData.albums);
+    setRelated(freshData.related);
+
+    // Sauvegarder pour la prochaine fois
+    saveCache(cacheKey, freshData);
+    enrichTracks(freshData.topTracks);
+  } catch (error) {
+    console.error('Failed to load artist data:', error);
+  } finally {
+    setLoading(false);
+  }
   };
 
   // Séparation Albums / Singles
