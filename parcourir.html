@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parcourir - Spotywoop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #080808;
+            --text-color: #ffffff;
+            --font-main: 'Outfit', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            letter-spacing: -1px;
+        }
+
+        .browse-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .category-card {
+            position: relative;
+            border-radius: 14px;
+            overflow: hidden;
+            text-decoration: none;
+            display: block;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            aspect-ratio: 245 / 98;
+            background-color: #161616;
+        }
+
+        .category-card:hover {
+            transform: scale(1.03);
+            z-index: 10;
+        }
+
+        .card-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .card-title {
+            position: absolute;
+            top: 50%;
+            left: 33%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 19px;
+            font-weight: 700;
+            text-align: center;
+            width: 60%;
+            pointer-events: none;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .browse-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .card-title {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Parcourir</h1>
+
+    <div class="browse-grid">
+        <a href="#" class="category-card">
+            <img src="parcourir/hit.webp" alt="Hits" class="card-bg">
+            <span class="card-title">Hits</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/nouveaute.webp" alt="Nouveautés" class="card-bg">
+            <span class="card-title">Nouveautés</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/rap-rnb.webp" alt="Rap RnB" class="card-bg">
+            <span class="card-title">Rap RnB</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/artist.webp" alt="Artistes" class="card-bg">
+            <span class="card-title">Artistes</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/dot-1.webp" alt="Émissions" class="card-bg">
+            <span class="card-title">Émissions</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/electro-dance.webp" alt="Dance Electro" class="card-bg">
+            <span class="card-title">Dance Electro</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/pop-rock.webp" alt="Pop Rock" class="card-bg">
+            <span class="card-title">Pop Rock</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/world.webp" alt="Made in World" class="card-bg">
+            <span class="card-title">Made in World</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/chill.webp" alt="Chill" class="card-bg">
+            <span class="card-title">Chill</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/disco.webp" alt="Disco Funk Jazz" class="card-bg">
+            <span class="card-title">Disco Funk Jazz</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/sport.webp" alt="Sport" class="card-bg">
+            <span class="card-title">Sport</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/party.webp" alt="Party" class="card-bg">
+            <span class="card-title">Party</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/good-vibes.webp" alt="Good Vibes" class="card-bg">
+            <span class="card-title">Good Vibes</span>
+        </a>
+
+        <a href="#" class="category-card">
+            <img src="parcourir/humour.webp" alt="Humour" class="card-bg">
+            <span class="card-title">Humour</span>
+        </a>
+    </div>
+</div>
+
+</body>
+</html>
