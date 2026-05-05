@@ -98,6 +98,19 @@ function initDB() {
   `,
   ).run();
 
+  // Table de cache des paroles
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS lyrics_cache (
+      track_id TEXT PRIMARY KEY,
+      plain TEXT,
+      synced TEXT,
+      instrumental BOOLEAN,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
+  ).run();
+
   console.log("[db] Database initialized successfully.");
 }
 

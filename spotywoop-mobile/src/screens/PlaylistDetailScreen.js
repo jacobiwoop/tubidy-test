@@ -45,7 +45,8 @@ export default function PlaylistDetailScreen({ navigation, route }) {
     downloadingItems,
     onDownloadBatch,
     enrichTracks,
-    enrichedMetadata
+    enrichedMetadata,
+    openActionSheet
   } = usePlayer();
 
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -108,6 +109,8 @@ export default function PlaylistDetailScreen({ navigation, route }) {
       <TouchableOpacity 
         style={[styles.trackRow, isPlaying && styles.playingRow]}
         onPress={() => onPlayTrack(item, displayTracks)}
+        onLongPress={() => openActionSheet(item, 'track', { playlistId })}
+        delayLongPress={300}
       >
         <Text style={styles.trackNumber}>{index + 1}</Text>
         <TouchableOpacity 
@@ -184,13 +187,13 @@ export default function PlaylistDetailScreen({ navigation, route }) {
         )}
         style={{ zIndex: 2 }}
         contentContainerStyle={styles.detailList}
-        ListFooterComponent={() => (
-          playlistId === 'downloads' ? (
-            <DownloadQueue 
-              downloadingItems={downloadingItems} 
-              activeDownloads={activeDownloads} 
-            />
-          ) : <View style={{ height: 100 }} />
+        ListFooterComponent={playlistId === 'downloads' ? (
+          <DownloadQueue 
+            downloadingItems={downloadingItems} 
+            activeDownloads={activeDownloads} 
+          />
+        ) : (
+          <View style={{ height: 100 }} />
         )}
         ListHeaderComponent={() => (
           <View style={styles.actionsRow}>

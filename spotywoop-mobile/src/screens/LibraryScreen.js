@@ -37,7 +37,8 @@ export default function LibraryScreen({ navigation }) {
     downloads,
     recentlyPlayed,
     followedAlbums,
-    followedArtists
+    followedArtists,
+    openActionSheet
   } = usePlayer();
   
   const [showCreate, setShowCreate] = useState(false);
@@ -67,6 +68,8 @@ export default function LibraryScreen({ navigation }) {
           tracks: item.tracks 
         });
       }}
+      onLongPress={() => openActionSheet(item, 'playlist')}
+      delayLongPress={300}
     >
       <View style={styles.cardThumbContainer}>
         {isLiked ? (
@@ -143,6 +146,8 @@ export default function LibraryScreen({ navigation }) {
                   triggerHaptic("impactLight");
                   navigation.navigate('Album', { albumId: album.id, albumTitle: album.title });
                 }}
+                onLongPress={() => openActionSheet(album, 'album')}
+                delayLongPress={300}
               >
                 <View style={styles.cardThumbContainer}>
                   <Image source={{ uri: album.cover_medium }} style={styles.cardThumb} />
@@ -163,6 +168,8 @@ export default function LibraryScreen({ navigation }) {
                   triggerHaptic("impactLight");
                   navigation.navigate('Artist', { artistId: artist.id });
                 }}
+                onLongPress={() => openActionSheet(artist, 'artist')}
+                delayLongPress={300}
               >
                 <View style={[styles.cardThumbContainer, { borderRadius: (width - 55) / 4 }]}>
                   <Image source={{ uri: artist.picture_medium }} style={styles.cardThumb} />

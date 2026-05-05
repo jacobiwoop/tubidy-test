@@ -21,6 +21,7 @@ import LibraryScreen from './screens/LibraryScreen';
 import MiniPlayer    from './components/MiniPlayer';
 import QueueModal    from './components/QueueModal';
 import PlaylistModal from './components/PlaylistModal';
+import ActionSheet from './components/ActionSheet';
 
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { theme } from './utils/theme';
@@ -72,7 +73,8 @@ const MainApp = () => {
     currentQueueIndex,
     radioSource,
     suggestions,
-    onPlayTrack
+    onPlayTrack,
+    removeFromQueue
   } = usePlayer();
 
   const onViewArtist = (artistId) => {
@@ -203,7 +205,7 @@ const MainApp = () => {
             const success = await onPlayTrack(currentQueue[index], currentQueue, index);
             if (success) setIsQueueVisible(false);
           }}
-          onRemoveTrackAt={() => {}}
+          onRemoveTrackAt={removeFromQueue}
           onClearQueue={() => {}}
         />
 
@@ -215,6 +217,8 @@ const MainApp = () => {
           onAddToPlaylist={handleAddToPlaylist}
           onCreatePlaylist={handleCreatePlaylist}
         />
+
+        <ActionSheet />
       </NavigationContainer>
     </View>
   );
@@ -255,13 +259,17 @@ function LibraryStack() {
   );
 }
 
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <PlayerProvider>
-        <MainApp />
-      </PlayerProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <PlayerProvider>
+          <MainApp />
+        </PlayerProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

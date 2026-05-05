@@ -38,7 +38,8 @@ export default function AlbumScreen({ navigation, route }) {
     followedAlbums,
     onToggleFollowAlbum,
     enrichTracks,
-    enrichedMetadata
+    enrichedMetadata,
+    openActionSheet
   } = usePlayer();
   
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -220,6 +221,8 @@ export default function AlbumScreen({ navigation, route }) {
                   triggerHaptic("impactLight");
                   onPlayTrack(track, tracks);
                 }}
+                onLongPress={() => openActionSheet(track, 'track')}
+                delayLongPress={300}
               >
                 <View style={styles.trackMain}>
                   <Text style={[styles.trackIndex, isPlaying && { color: theme.colors.accent }]}>

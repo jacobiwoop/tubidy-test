@@ -57,49 +57,13 @@ const LyricsView = ({ track, currentTime, lyricsData }) => {
   const listRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(-1);
 
+
   useEffect(() => {
     if (lyricsData && lyricsData.length > 0) {
       setLyrics(lyricsData);
       setLoading(false);
-      return;
     }
-
-    const fetchLyrics = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const res = await axios.get(`${BASE_URL}/lyrics`, {
-          params: {
-            artist: track.artist?.name || track.artist,
-            title: track.title,
-            album: track.album?.title || '',
-            duration: track.duration
-          }
-        });
-
-        if (res.data && res.data.synced) {
-          const parsed = parseLRC(res.data.synced);
-          setLyrics(parsed);
-        } else if (res.data && res.data.plain) {
-          setLyrics([{ time: 0, text: res.data.plain }]);
-        } else {
-          setError('Lyrics non trouvés');
-        }
-      } catch (err) {
-        console.error('[LyricsView] Error fetching lyrics:', err.message);
-        if (err.response && err.response.status === 404) {
-          setError('Lyrics non trouvés');
-        } else {
-          setError('Impossible de charger les paroles');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLyrics();
-  }, [track.id, lyricsData]);
+  }, [lyricsData]);
 
   useEffect(() => {
     if (lyrics.length > 0) {
@@ -115,26 +79,6 @@ const LyricsView = ({ track, currentTime, lyricsData }) => {
     }
   }, [currentTime, lyrics]);
 
-  const parseLRC = (lrc) => {
-    const lines = lrc.split('\n');
-    const result = [];
-    const timeRegex = /\[(\d+):(\d+\.\d+)\]/;
-    
-    lines.forEach(line => {
-      const match = timeRegex.exec(line);
-      if (match) {
-        const minutes = parseInt(match[1]);
-        const seconds = parseFloat(match[2]);
-        const time = minutes * 60 + seconds;
-        const text = line.replace(timeRegex, '').trim();
-        if (text) {
-          result.push({ time, text });
-        }
-      }
-    });
-    return result;
-  };
-
   const renderItem = ({ item, index }) => {
     const isActive = index === currentIndex;
     return (
@@ -149,7 +93,7 @@ const LyricsView = ({ track, currentTime, lyricsData }) => {
     );
   };
 
-  if (loading) return <LyricsSkeleton />;
+  if (loading && (!lyrics || lyrics.length === 0)) return <LyricsSkeleton />;
 
   if (error) return (
     <View style={styles.center}>
@@ -206,9 +150,12 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   lineText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
-    lineHeight: 32,
+    lineHeight: 34,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
   activeLineText: {
     color: '#fff',
@@ -216,7 +163,7 @@ const styles = StyleSheet.create({
   },
   inactiveLineText: {
     color: '#fff',
-    opacity: 0.25,
+    opacity: 0.3,
   },
   errorText: {
     color: 'rgba(255,255,255,0.4)',
