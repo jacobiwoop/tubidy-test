@@ -474,6 +474,9 @@ export const PlayerProvider = ({ children }) => {
         artist:   getArtistNames(finalTrack),
         artwork:  finalTrack.artwork || finalTrack.album?.cover_big || finalTrack.album?.cover_medium || finalTrack.thumbnail,
         duration: finalTrack.duration,
+        // Champs custom pour la navigation depuis le lecteur
+        artist_id: finalTrack.artist?.id || finalTrack.artist_id,
+        album_id:  finalTrack.album?.id,
       });
       await TrackPlayer.play();
       

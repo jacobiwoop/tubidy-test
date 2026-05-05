@@ -5,7 +5,7 @@ export const BASE_URL = "https://spotywoop-srv.onrender.com/api";
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // 30s pour les cold starts Render
 });
 
 export const checkHealth = async () => {

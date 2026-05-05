@@ -7,14 +7,15 @@ import {
   Image, 
   TouchableOpacity, 
   ActivityIndicator, 
-  SafeAreaView,
   StatusBar,
   Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, X } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import * as api from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
+import { getCache, saveCache } from '../utils/cache';
 
 const { width } = Dimensions.get('window');
 

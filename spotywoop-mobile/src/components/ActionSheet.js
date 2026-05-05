@@ -153,7 +153,7 @@ export default function ActionSheet() {
         <ActionButton 
           icon={<User size={20} color="#fff" />} 
           label="Voir l'artiste" 
-          onPress={() => handleNavigate('ArtistDetail', { artistId: data.artist?.id })} 
+          onPress={() => handleNavigate('ArtistDetail', { artistId: data.artist?.id || data.artist_id })} 
         />
         <ActionButton 
           icon={<Disc size={20} color="#fff" />} 
@@ -207,7 +207,7 @@ export default function ActionSheet() {
       <ActionButton 
         icon={<User size={20} color="#fff" />} 
         label="Voir l'artiste" 
-        onPress={() => handleNavigate('ArtistDetail', { artistId: data.artist?.id })} 
+        onPress={() => handleNavigate('ArtistDetail', { artistId: data.artist?.id || data.artist_id })} 
       />
       <ActionButton 
         icon={<Download size={20} color="#fff" />} 

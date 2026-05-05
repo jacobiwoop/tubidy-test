@@ -17,7 +17,7 @@ import {
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import axios from 'axios';
-import { BASE_URL } from '../services/api';
+import { BASE_URL, searchMusic } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../utils/theme';
 import { REPEAT_MODE } from '../context/PlayerContext';
@@ -286,7 +286,29 @@ const PlayerScreen = ({
             <View style={{ flex: 1 }}>
               <Text style={styles.title} numberOfLines={1}>{track.title}</Text>
               <TouchableOpacity
-                onPress={() => { onClose(); onViewArtist?.(track.artist?.id); }}
+                onPress={async () => {
+                  let artistId = track.artist?.id || track.artist_id;
+
+                  // Fallback : artiste sans ID (recommandations, radio...)
+                  // → on cherche via Deezer pour obtenir l'ID
+                  if (!artistId && track.artist?.name) {
+                    try {
+                      console.log('[PlayerScreen] Missing ID, searching for artist:', track.artist.name);
+                      const results = await searchMusic(track.artist.name + ' ' + track.title);
+                      artistId = results?.data?.[0]?.artist?.id;
+                      console.log('[PlayerScreen] Found artistId via search:', artistId);
+                    } catch (e) {
+                      console.warn('[PlayerScreen] Artist lookup failed:', e.message);
+                    }
+                  }
+
+                  onClose();
+                  if (artistId) {
+                    onViewArtist?.(artistId);
+                  } else {
+                    console.warn('[PlayerScreen] No artistId found even after search');
+                  }
+                }}
                 style={{ alignSelf: 'flex-start' }}
               >
                 <Text style={styles.artist}>{track.artist?.name}</Text>

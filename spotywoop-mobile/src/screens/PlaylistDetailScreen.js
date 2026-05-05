@@ -222,7 +222,7 @@ export default function PlaylistDetailScreen({ navigation, route }) {
             e.stopPropagation();
             if (isSelecting) return;
             triggerHaptic("impactLight");
-            navigation.navigate('ArtistDetail', { artistId: item.artist?.id });
+            navigation.navigate('ArtistDetail', { artistId: item.artist?.id || item.artist_id });
           }}
         >
           <Image 

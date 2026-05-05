@@ -12,7 +12,7 @@ import {
   Platform,
   StatusBar
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { 
   ChevronLeft, 
@@ -28,12 +28,13 @@ import { getArtistNames } from '../utils/formatters';
 import * as api from '../services/api';
 import { usePlayer } from '../context/PlayerContext';
 import { triggerHaptic } from '../utils/haptics';
-import { getCache, saveCache } from '../utils/cache';
+import { getCache, saveCache, clearCache } from '../utils/cache';
 
 const { width } = Dimensions.get('window');
 
 export default function ArtistScreen({ navigation, route }) {
   const { artistId } = route.params;
+  const insets = useSafeAreaInsets();
   const { 
     onPlayTrack, 
     currentTrack, 
@@ -61,16 +62,27 @@ export default function ArtistScreen({ navigation, route }) {
   }, [artistId]);
 
   const loadArtistData = async () => {
+    // Guard : si l'ID est invalide, on ne fait rien
+    if (!artistId || artistId === 'undefined') {
+      console.warn('[ArtistScreen] Invalid artistId:', artistId);
+      setLoading(false);
+      return;
+    }
     const cacheKey = `artist_${artistId}`;
     
     // 1. Essayer de charger le cache d'abord
     const cached = await getCache(cacheKey);
-    if (cached) {
+    // On n'utilise le cache QUE si les données sont valides (artist.name présent)
+    if (cached && cached.artist?.name) {
       setArtist(cached.artist);
       setTopTracks(cached.topTracks);
       setAlbums(cached.albums);
       setRelated(cached.related);
-      setLoading(false); // On enlève le loader tout de suite !
+      setLoading(false);
+    } else if (cached && !cached.artist?.name) {
+      // Cache corrompu → on le vide et on force un refresh réseau
+      console.warn('[ArtistScreen] Corrupted cache detected, clearing...');
+      await clearCache(cacheKey);
     }
 
     // 2. Refresh en tâche de fond (ou premier chargement si pas de cache)
@@ -119,6 +131,17 @@ export default function ArtistScreen({ navigation, route }) {
     );
   }
 
+  if (!artist) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 20 }}>Artiste introuvable</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <ChevronLeft size={28} color="white" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   // Animations parallaxe
   const headerTranslate = scrollY.interpolate({
     inputRange: [0, 300],
@@ -155,7 +178,7 @@ export default function ArtistScreen({ navigation, route }) {
           onPress={(e) => {
             e.stopPropagation();
             triggerHaptic("impactLight");
-            navigation.push('ArtistDetail', { artistId: track.artist?.id });
+            navigation.push('ArtistDetail', { artistId: track.artist?.id || track.artist_id });
           }}
         >
           <Image source={{ uri: track.album?.cover_small }} style={styles.trackCover} />
@@ -222,11 +245,17 @@ export default function ArtistScreen({ navigation, route }) {
         <LinearGradient colors={['rgba(10,10,10,0.1)', 'rgba(10,10,10,0.6)', '#0A0A0A']} style={styles.heroGradient} />
       </Animated.View>
 
-      <Animated.View style={[styles.floatingHeader, { opacity: headerOpacity }]}>
+      <Animated.View style={[
+        styles.floatingHeader, 
+        { opacity: headerOpacity, height: 60 + insets.top, paddingTop: insets.top }
+      ]}>
         <Text style={styles.floatingTitle}>{artist?.name}</Text>
       </Animated.View>
-
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+      
+      <TouchableOpacity 
+        style={[styles.backBtn, { top: Math.max(insets.top, 10) }]} 
+        onPress={() => navigation.goBack()}
+      >
         <ChevronLeft size={28} color="white" />
       </TouchableOpacity>
 
@@ -240,7 +269,9 @@ export default function ArtistScreen({ navigation, route }) {
 
         <View style={styles.infoSection}>
           <View style={styles.verifiedBadge}><Text style={styles.verifiedText}>Artiste Vérifié</Text></View>
-          <Text style={styles.artistName}>{artist?.name}</Text>
+          <Text style={styles.artistName}>
+            {(artist?.name && String(artist.name) !== 'undefined') ? artist.name : ''}
+          </Text>
           <Text style={styles.fanCount}>{parseInt(artist?.nb_fan).toLocaleString()} AUDITEURS MENSUELS</Text>
 
           <View style={styles.mainActions}>
@@ -299,13 +330,13 @@ const styles = StyleSheet.create({
   heroImage: { width: '100%', height: '100%', objectFit: 'cover' },
   heroGradient: { ...StyleSheet.absoluteFillObject },
   floatingHeader: {
-    position: 'absolute', top: 0, left: 0, right: 0, height: 100, backgroundColor: '#0A0A0A', zIndex: 10,
-    justifyContent: 'center', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: '#0A0A0A', zIndex: 10,
+    justifyContent: 'center', alignItems: 'center',
     borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   floatingTitle: { color: '#fff', fontSize: 16, fontWeight: '900', fontStyle: 'italic', textTransform: 'uppercase' },
   backBtn: {
-    position: 'absolute', top: Platform.OS === 'ios' ? 50 : 25, left: 20, zIndex: 15,
+    position: 'absolute', left: 20, zIndex: 15,
     width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center'
   },
   scrollContent: { flexGrow: 1 },

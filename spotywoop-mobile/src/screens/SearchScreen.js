@@ -191,7 +191,7 @@ export default function SearchScreen({ navigation }) {
               onPress={(e) => {
                 e.stopPropagation();
                 triggerHaptic("impactLight");
-                navigation.navigate('ArtistDetail', { artistId: item.artist?.id });
+                navigation.navigate('ArtistDetail', { artistId: item.artist?.id || item.artist_id });
               }}
             >
               <Image source={{ uri: item?.album?.cover_medium }} style={styles.cover} />
