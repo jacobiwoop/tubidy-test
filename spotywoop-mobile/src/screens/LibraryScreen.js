@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -27,6 +27,8 @@ import { createPlaylist } from '../utils/playlists';
 import { usePlayer } from '../context/PlayerContext';
 import { triggerHaptic } from '../utils/haptics';
 
+import { getArtistNames } from '../utils/formatters';
+
 const { width } = Dimensions.get('window');
 
 export default function LibraryScreen({ navigation }) {
@@ -37,7 +39,8 @@ export default function LibraryScreen({ navigation }) {
     downloads,
     recentlyPlayed,
     followedAlbums,
-    followedArtists
+    followedArtists,
+    openActionSheet
   } = usePlayer();
   
   const [showCreate, setShowCreate] = useState(false);
@@ -56,17 +59,48 @@ export default function LibraryScreen({ navigation }) {
   };
   const otherPlaylists = playlists.filter(p => p.id !== 'liked');
 
-  const PlaylistCard = ({ item, isLiked, isDownloads, isRecently }) => (
+  // REGROUPEMENT DES TÉLÉCHARGEMENTS PAR ALBUM
+  const downloadedAlbums = useMemo(() => {
+    const albumGroups = {};
+    downloads.forEach(track => {
+      if (track.album?.id) {
+        const albumId = String(track.album.id);
+        if (!albumGroups[albumId]) {
+          albumGroups[albumId] = {
+            id: albumId,
+            title: track.album.title || 'Album inconnu',
+            artist: getArtistNames(track),
+            cover: track.album.cover_medium || track.artwork,
+            tracks: []
+          };
+        }
+        albumGroups[albumId].tracks.push(track);
+      }
+    });
+    return Object.values(albumGroups).sort((a, b) => a.title.localeCompare(b.title));
+  }, [downloads]);
+
+  const PlaylistCard = ({ item, isLiked, isDownloads, isRecently, isAlbum }) => (
     <TouchableOpacity 
       style={styles.playlistCard} 
       onPress={() => {
         triggerHaptic("impactLight");
-        navigation.navigate('PlaylistDetail', { 
-          playlistId: item.id, 
-          title: item.title,
-          tracks: item.tracks 
-        });
+        if (isAlbum) {
+          navigation.navigate('AlbumDetail', { 
+            albumId: item.id, 
+            albumTitle: item.title,
+            localTracks: item.tracks // On passe les morceaux locaux pour éviter de re-fetch si possible
+          });
+        } else {
+          navigation.navigate('PlaylistDetail', { 
+            playlistId: item.id, 
+            title: item.title,
+            tracks: item.tracks 
+          });
+        }
       }}
+      onLongPress={() => openActionSheet(item, 'playlist')}
+      delayLongPress={300}
     >
       <View style={styles.cardThumbContainer}>
         {isLiked ? (
@@ -81,6 +115,8 @@ export default function LibraryScreen({ navigation }) {
           <LinearGradient colors={['#8e2de2', '#4a00e0']} style={styles.cardThumb}>
              <Clock size={32} color="white" />
           </LinearGradient>
+        ) : isAlbum ? (
+          <Image source={{ uri: item.cover || item.cover_medium }} style={styles.cardThumb} />
         ) : (
           <View style={styles.cardThumb}>
              <ListMusic size={32} color="rgba(255,255,255,0.2)" />
@@ -89,7 +125,9 @@ export default function LibraryScreen({ navigation }) {
       </View>
       <View style={styles.cardInfo}>
         <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.cardCount}>{item.tracks?.length || 0} titres</Text>
+        <Text style={styles.cardCount}>
+          {isAlbum ? item.artist : `${item.tracks?.length || 0} titres`}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -134,24 +172,24 @@ export default function LibraryScreen({ navigation }) {
             <PlaylistCard item={recentlyPlayedPlaylist} isRecently={true} />
             {otherPlaylists.map(pl => <PlaylistCard key={pl.id} item={pl} />)}
             
+            {/* Albums Téléchargés */}
+            {downloadedAlbums.length > 0 && (
+              <View style={{ width: '100%', marginTop: 10, marginBottom: 15 }}>
+                <Text style={styles.sectionTitle}>Albums Téléchargés</Text>
+              </View>
+            )}
+            {downloadedAlbums.map(album => (
+              <PlaylistCard key={album.id} item={album} isAlbum={true} />
+            ))}
+            
             {/* Albums Suivis */}
+            {followedAlbums.length > 0 && (
+              <View style={{ width: '100%', marginTop: 10, marginBottom: 15 }}>
+                <Text style={styles.sectionTitle}>Albums Suivis</Text>
+              </View>
+            )}
             {followedAlbums.map(album => (
-              <TouchableOpacity 
-                key={album.id} 
-                style={styles.playlistCard} 
-                onPress={() => {
-                  triggerHaptic("impactLight");
-                  navigation.navigate('Album', { albumId: album.id, albumTitle: album.title });
-                }}
-              >
-                <View style={styles.cardThumbContainer}>
-                  <Image source={{ uri: album.cover_medium }} style={styles.cardThumb} />
-                </View>
-                <View style={styles.cardInfo}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>{album.title}</Text>
-                  <Text style={styles.cardCount}>Album • {album.artist?.name}</Text>
-                </View>
-              </TouchableOpacity>
+              <PlaylistCard key={album.id} item={album} isAlbum={true} />
             ))}
 
             {/* Artistes Suivis */}
@@ -161,8 +199,10 @@ export default function LibraryScreen({ navigation }) {
                 style={styles.playlistCard} 
                 onPress={() => {
                   triggerHaptic("impactLight");
-                  navigation.navigate('Artist', { artistId: artist.id });
+                  navigation.navigate('ArtistDetail', { artistId: artist.id });
                 }}
+                onLongPress={() => openActionSheet(artist, 'artist')}
+                delayLongPress={300}
               >
                 <View style={[styles.cardThumbContainer, { borderRadius: (width - 55) / 4 }]}>
                   <Image source={{ uri: artist.picture_medium }} style={styles.cardThumb} />

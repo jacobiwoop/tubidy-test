@@ -5,18 +5,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Slider from '@react-native-community/slider';
+import TrackPlayer, {
+  usePlaybackState,
+  useProgress,
+  State
+} from 'react-native-track-player';
 import {
   Play, Pause, SkipBack, SkipForward,
   ChevronDown, MoreHorizontal, Heart, ListMusic,
   Shuffle, Repeat, ListPlus, Download, RotateCcw, Mic2, Trash2
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { theme } from '../utils/theme';
-import TrackPlayer, { usePlaybackState, useProgress, State } from 'react-native-track-player';
-import { REPEAT_MODE } from '../context/PlayerContext';
-import LyricsView from '../components/LyricsView';
 import axios from 'axios';
 import { BASE_URL } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { theme } from '../utils/theme';
+import { REPEAT_MODE } from '../context/PlayerContext';
+import LyricsView from '../components/LyricsView';
 
 const { width } = Dimensions.get('window');
 
@@ -77,36 +82,61 @@ const PlayerScreen = ({
 
   useEffect(() => { setSlideValue(0); }, [track?.id]);
   
-  // ─── Récupération des paroles ─────────────────────────────────────────────
+  // ─── Récupération des paroles avec Cache Dual-Layer ───────────────────────
   useEffect(() => {
     const fetchLyrics = async () => {
+      if (!track?.id) return;
+      
+      const cacheKey = `lyrics_${track.id}`;
+      
       try {
+        // 1. Vérifier le cache local (AsyncStorage)
+        const cached = await AsyncStorage.getItem(cacheKey);
+        if (cached) {
+          setLyrics(JSON.parse(cached));
+          return;
+        }
+
+        // 2. Récupérer du serveur (qui a son propre cache DB)
         const res = await axios.get(`${BASE_URL}/lyrics`, {
-          params: {
+          params: { 
+            id: track.id,
             artist: track.artist?.name || track.artist,
             title: track.title,
-            album: track.album?.title || '',
+            album: track.album?.title || track.album,
             duration: track.duration
           }
         });
+
         if (res.data?.synced) {
           const lines = res.data.synced.split('\n');
           const parsed = lines.map(line => {
             const match = /\[(\d+):(\d+\.\d+)\]/.exec(line);
             if (match) {
-              return { time: parseInt(match[1]) * 60 + parseFloat(match[2]), text: line.replace(/\[.*\]/, '').trim() };
+              return { 
+                time: parseInt(match[1]) * 60 + parseFloat(match[2]), 
+                text: line.replace(/\[.*\]/, '').trim() 
+              };
             }
             return null;
           }).filter(Boolean);
-          setLyrics(parsed);
+          
+          if (parsed.length > 0) {
+            setLyrics(parsed);
+            await AsyncStorage.setItem(cacheKey, JSON.stringify(parsed));
+          } else {
+            setLyrics([]);
+          }
         } else {
           setLyrics([]);
         }
       } catch (e) {
+        console.error('[Lyrics] Error:', e.message);
         setLyrics([]);
       }
     };
-    if (track?.id) fetchLyrics();
+
+    fetchLyrics();
   }, [track?.id]);
 
   // ─── Synchro paroles (mini zone) ──────────────────────────────────────────
@@ -204,8 +234,8 @@ const PlayerScreen = ({
   };
 
   // ─── Icône repeat ──────────────────────────────────────────────────────────
-  const repeatColor   = repeatMode > REPEAT_MODE.NONE ? theme.colors.accent : theme.colors.primary;
-  const repeatOpacity = repeatMode > REPEAT_MODE.NONE ? 1 : 0.5;
+  const repeatColor   = repeatMode !== REPEAT_MODE.STOP_CURRENT ? theme.colors.accent : theme.colors.primary;
+  const repeatOpacity = repeatMode !== REPEAT_MODE.STOP_CURRENT ? 1 : 0.5;
 
   if (!track) return null;
 
@@ -241,7 +271,7 @@ const PlayerScreen = ({
         {/* Pochette ou Paroles */}
         <View style={[styles.artContainer, showLyrics && { flex: 1, paddingHorizontal: 0 }]}>
           {showLyrics ? (
-            <LyricsView track={track} currentTime={progress.position} />
+            <LyricsView track={track} currentTime={progress.position} lyricsData={lyrics} />
           ) : (
             <Animated.Image
               source={{ uri: track?.artwork || track?.album?.cover_big || track?.album?.cover_medium || '' }}
@@ -372,7 +402,7 @@ const PlayerScreen = ({
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Repeat size={24} color={repeatColor} opacity={repeatOpacity} />
-              {repeatMode === REPEAT_MODE.ONE && (
+              {repeatMode === REPEAT_MODE.STOP_CURRENT && (
                 <View style={styles.repeatBadge}>
                   <Text style={styles.repeatBadgeText}>1</Text>
                 </View>
@@ -412,7 +442,11 @@ const PlayerScreen = ({
             <ListMusic size={24} color={theme.colors.secondary} />
           </TouchableOpacity>
           <Text style={styles.footerText}>
-            {isShuffle ? '🔀 Aléatoire' : repeatMode === REPEAT_MODE.ONE ? '🔂 Répéter 1' : repeatMode === REPEAT_MODE.ALL ? '🔁 Répéter tout' : 'En ordre'}
+            {`${isShuffle ? 'Aléatoire' : ''}${isShuffle ? ' • ' : ''}${
+              repeatMode === REPEAT_MODE.LOOP_ALL ? 'Tout en boucle' : 
+              repeatMode === REPEAT_MODE.PLAY_ALL_ONCE ? 'Tout une fois' : 
+              'Arrêt après titre'
+            }`}
           </Text>
           <TouchableOpacity onPress={() => setShowLyrics(!showLyrics)}>
             <Mic2 size={24} color={showLyrics ? theme.colors.accent : theme.colors.secondary} />

@@ -8,8 +8,8 @@ import TrackPlayer, {
 } from 'react-native-track-player';
 import { getArtistNames } from '../utils/formatters';
 import { getFavorites, saveFavorite } from '../utils/favorites';
-import { getPlaylists } from '../utils/playlists';
-import { getDownloadMetadata, deleteDownload, isTrackDownloaded, startDownload } from '../utils/downloader';
+import { getPlaylists, removeTrackFromPlaylist } from '../utils/playlists';
+import { getDownloadMetadata, deleteDownload, isTrackDownloaded, startDownload, getTrackPath } from '../utils/downloader';
 import { getTrackDownload, getTrackRadio, getTrack, BASE_URL } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
 import StatsService from '../services/StatsService';
@@ -19,9 +19,9 @@ import * as FileSystem from 'expo-file-system';
 
 // ─── Modes de lecture ────────────────────────────────────────────────────────
 export const REPEAT_MODE = {
-  NONE: 0, // pas de repeat
-  ALL: 1,  // toute la liste en boucle
-  ONE: 2,  // morceau en cours en boucle
+  STOP_CURRENT: 0, // S'arrête juste après l'élément en cours
+  LOOP_ALL: 1,     // Parcourt toute la liste et reprend en boucle
+  PLAY_ALL_ONCE: 2 // Parcourt la liste une fois et s'arrête
 };
 
 export const PlayerContext = createContext();
@@ -131,12 +131,12 @@ export const PlayerProvider = ({ children }) => {
   const [radioSource, setRadioSource]         = useState(null);
 
   // Modes de lecture (exposés à l'UI)
-  const [isShuffle, setIsShuffle]   = useState(false);
-  const [repeatMode, setRepeatMode] = useState(REPEAT_MODE.ALL);
+  const [isShuffle, setIsShuffle]   = useState(true);
+  const [repeatMode, setRepeatMode] = useState(REPEAT_MODE.LOOP_ALL);
 
   // Refs pour les callbacks headless / event listeners (évite les stale closures)
-  const shuffleRef    = useRef(false);
-  const repeatRef     = useRef(REPEAT_MODE.ALL);
+  const shuffleRef    = useRef(true);
+  const repeatRef     = useRef(REPEAT_MODE.LOOP_ALL);
   const queueRef      = useRef([]);
   const queueIdxRef   = useRef(0);
   const currentTrackRef = useRef(null);
@@ -217,41 +217,46 @@ export const PlayerProvider = ({ children }) => {
 
       if (!playFn) return;
 
-      // Fin naturelle du morceau
+      // Fin naturelle du morceau (Transition automatique)
       if ((event.type === Event.PlaybackTrackChanged && event.nextTrack == null) || event.type === Event.PlaybackQueueEnded) {
-        if (repeat === REPEAT_MODE.ONE) {
-          await TrackPlayer.seekTo(0);
-          await TrackPlayer.play();
-          return;
-        }
-        
-        const isLast = !shuffle && idx >= queue.length - 1;
-        // Si c'est le dernier et qu'on est pas en repeat ONE, on fetch la suite
-        if (isLast) {
-          const lastTrack = queue[idx];
-          if (lastTrack) fetchRecommendations(lastTrack, true);
+        // Mode 0: Désactivation -> S'arrête juste après l'élément en cours
+        if (repeat === REPEAT_MODE.STOP_CURRENT) {
+          await TrackPlayer.pause();
           return;
         }
 
+        const isLast = !shuffle && idx >= queue.length - 1;
+
+        if (isLast) {
+          if (repeat === REPEAT_MODE.LOOP_ALL) {
+            // Mode 1: Boucle -> Reprend au début
+            playFn(queue[0], queue, 0);
+          } else if (repeat === REPEAT_MODE.PLAY_ALL_ONCE) {
+            // Mode 2: Tout lire une fois -> S'arrête à la fin de la liste
+            await TrackPlayer.pause();
+          }
+          return;
+        }
+
+        // Cas normal ou Aléatoire
         const nextIdx = getNextIndex(queue, idx, shuffle);
         playFn(queue[nextIdx], queue, nextIdx);
         return;
       }
 
-      // Bouton Suivant
+      // Bouton Suivant (Skip manuel)
       if (event.type === Event.RemoteNext) {
-        if (repeat === REPEAT_MODE.ONE) {
-          await TrackPlayer.seekTo(0);
-          await TrackPlayer.play();
-          return;
-        }
-        const nextIdx = getNextIndex(queue, idx, shuffle);
         const isLast = !shuffle && idx >= queue.length - 1;
         
         if (isLast) {
-          const lastTrack = queue[idx];
-          if (lastTrack) fetchRecommendations(lastTrack, true);
+          if (repeat === REPEAT_MODE.LOOP_ALL) {
+            playFn(queue[0], queue, 0);
+          } else {
+            // On s'arrête si on est au dernier et pas en boucle
+            await TrackPlayer.pause();
+          }
         } else {
+          const nextIdx = getNextIndex(queue, idx, shuffle);
           playFn(queue[nextIdx], queue, nextIdx);
         }
         return;
@@ -315,17 +320,37 @@ export const PlayerProvider = ({ children }) => {
       triggerHaptic('impactMedium');
 
       // ── Optimistic update immédiat ──────────────────────────────────────────
-      // Pochette + titre changent tout de suite. Le spinner n'apparaît que
-      // sur le bouton play, pas sur toute l'UI.
       setCurrentTrack(track);
       currentTrackRef.current = track;
       setLoadingTrackId(track.id);
 
-      // Queue + index aussi immédiatement (next/prev correct dès le clic)
-      const newQueue = (queue && queue.length > 0) ? queue : [track];
-      const newIdx   = forceIndex !== null
+      // Détermination de la queue "Milieu"
+      let newQueue = (queue && queue.length > 0) ? queue : [track];
+      
+      // Si la queue est vide ou ne contient que le titre (contexte Isolé)
+      // On fetch immédiatement des suggestions pour créer un milieu
+      if (!queue || queue.length <= 1) {
+        try {
+          const res = await axios.get(`${BASE_URL}/chosic/recommend`, { 
+            params: { 
+              artist: track.artist?.name || track.artist,
+              track: track.title,
+              limit: 15 
+            } 
+          });
+          if (res.data && res.data.track) {
+            const suggs = res.data.track.slice(0, 15).map(t => ({ ...t, isSuggestion: true }));
+            newQueue = [track, ...suggs];
+          }
+        } catch (e) {
+          console.warn('[Queue] Failed to auto-fill milieu (Chosic):', e.message);
+        }
+      }
+
+      const newIdx = forceIndex !== null
         ? forceIndex
         : Math.max(0, newQueue.findIndex(t => t.id === track.id));
+
       setCurrentQueue(newQueue);
       queueRef.current    = newQueue;
       setCurrentQueueIndex(newIdx);
@@ -334,9 +359,8 @@ export const PlayerProvider = ({ children }) => {
       // On définit toujours la source de la radio
       setRadioSource(track);
       
-      // On fetch les recommandations dans tous les cas pour mettre à jour l'état 'suggestions'
-      // Si une queue est fournie, on lui dit de juste "préparer" les suggestions sans écraser la queue
-      fetchRecommendations(track, false, !!(queue && queue.length > 0));
+      // On met à jour l'état suggestions global pour l'UI
+      setSuggestions(newQueue.filter(t => t.isSuggestion));
 
       // ─── Mise à jour de la ref pour les events headless ───────────────────
       handlePlayTrackRef.current = handlePlayTrack;
@@ -389,33 +413,36 @@ export const PlayerProvider = ({ children }) => {
         }
       }
 
-      // On vérifie d'abord le cache du prefetch
+      // ─── Cache & Local ─────────────────────────────────────────────────────
+      // 1. Vérification du cache de prefetch
       const cached = prefetchCache.current[track.id];
       if (cached && cached.expires > Date.now()) {
         finalLink = cached.link;
         console.log(`[Cache] Hit for: ${track.title}`);
       }
 
-      // Priorité absolue au fichier local si téléchargé (physiquement présent)
+      // 2. Priorité absolue au fichier local si téléchargé (physiquement présent)
       const physicallyExists = await isTrackDownloaded(track);
       if (physicallyExists) {
-        const albumFolder = track.album?.title ? `${track.album.title.replace(/[#%&{}\\<>*?/$!'":@+`|=]/g, '_')}/` : '';
-        const DOWNLOAD_DIR = `file://${FileSystem.documentDirectory}downloads/${albumFolder}`;
-        finalLink = `${DOWNLOAD_DIR}${track.id}.mp3`;
+        finalLink = getTrackPath(track);
         console.log(`[Local] Playing from physical storage: ${track.title}`);
         
-        // On cherche aussi l'artwork local s'il existe
-        const localTrack = downloads.find(d => String(d.id) === String(track.id));
+        const updatedDownloads = await getDownloadMetadata();
+        const localTrack = updatedDownloads.find(d => String(d.id) === String(track.id));
+        
         if (localTrack) {
           finalTrack = { ...localTrack, localUri: finalLink };
+          if (downloads.find(d => String(d.id) === String(track.id))?.localUri !== localTrack.localUri) {
+            setDownloads(updatedDownloads);
+          }
         } else {
           finalTrack = { ...track, localUri: finalLink };
         }
       } else if (isDownloaded) {
-        // Si les métadonnées disent "téléchargé" mais que le fichier a disparu
         console.warn(`[Local] Metadata found but file missing for: ${track.title}`);
       }
 
+      // 3. Résolution réseau si nécessaire
       if (!finalLink && (String(track.id).startsWith('lfm-') || String(track.id).startsWith('cho-'))) {
         const q = `${track.title} ${track.artist?.name || track.artist}`;
         const res = await axios.get(`${BASE_URL}/search/play`, { params: { q } });
@@ -478,12 +505,19 @@ export const PlayerProvider = ({ children }) => {
     if (!queue.length) return;
     triggerHaptic('selection');
 
-    if (repeat === REPEAT_MODE.ONE) {
-      TrackPlayer.seekTo(0).then(() => TrackPlayer.play());
-      return;
+    const isLast = !shuffle && idx >= queue.length - 1;
+
+    if (isLast) {
+      if (repeat === REPEAT_MODE.LOOP_ALL) {
+        handlePlayTrack(queue[0], queue, 0);
+      } else {
+        // Stop ou ne rien faire si on est au dernier et pas en boucle
+        TrackPlayer.pause();
+      }
+    } else {
+      const nextIdx = getNextIndex(queue, idx, shuffle);
+      handlePlayTrack(queue[nextIdx], queue, nextIdx);
     }
-    const nextIdx = getNextIndex(queue, idx, shuffle);
-    playTrackAtIndex(queue, nextIdx);
   }, []);
 
   const handlePrevious = useCallback(() => {
@@ -606,6 +640,88 @@ export const PlayerProvider = ({ children }) => {
     }
   };
 
+  // ─── ActionSheet Global State ──────────────────────────────────────────────
+  const [actionSheet, setActionSheet] = useState({
+    visible: false,
+    data: null,
+    type: 'track', // 'track', 'album', 'artist', 'playlist'
+    context: null  // { playlistId: '...' }
+  });
+
+  const openActionSheet = useCallback((data, type = 'track', context = null) => {
+    triggerHaptic('impactLight');
+    setActionSheet({ visible: true, data, type, context });
+  }, []);
+
+  const closeActionSheet = useCallback(() => {
+    setActionSheet(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  const onRemoveFromPlaylist = useCallback(async (trackId, playlistId) => {
+    try {
+      await removeTrackFromPlaylist(playlistId, trackId);
+      await loadPlaylists(); // Recharger les playlists
+      triggerHaptic('notificationSuccess');
+    } catch (e) {
+      console.error('[Playlist] removal error:', e);
+    }
+  }, []);
+
+  // ─── Gestion avancée de la File d'attente ──────────────────────────────────
+  const playNext = useCallback(async (track) => {
+    try {
+      const newQueue = [...currentQueue];
+      // On insère juste après l'index actuel
+      const insertIdx = currentQueueIndex + 1;
+      newQueue.splice(insertIdx, 0, track);
+      
+      setCurrentQueue(newQueue);
+      queueRef.current = newQueue;
+      
+      // On ajoute aussi au TrackPlayer physique
+      await TrackPlayer.add(track, insertIdx);
+      triggerHaptic('notificationSuccess');
+      closeActionSheet();
+    } catch (e) {
+      console.error('[Queue] playNext error:', e);
+    }
+  }, [currentQueue, currentQueueIndex]);
+
+  const addToQueue = useCallback(async (track) => {
+    try {
+      const newQueue = [...currentQueue, track];
+      setCurrentQueue(newQueue);
+      queueRef.current = newQueue;
+      
+      // On ajoute à la fin du TrackPlayer physique
+      await TrackPlayer.add(track);
+      triggerHaptic('notificationSuccess');
+      closeActionSheet();
+    } catch (e) {
+      console.error('[Queue] addToQueue error:', e);
+    }
+  }, [currentQueue]);
+
+  const removeFromQueue = useCallback(async (index) => {
+    try {
+      if (index === currentQueueIndex) {
+        triggerHaptic('notificationError');
+        return;
+      }
+
+      const newQueue = [...currentQueue];
+      newQueue.splice(index, 1);
+
+      setCurrentQueue(newQueue);
+      queueRef.current = newQueue;
+
+      await TrackPlayer.remove(index);
+      triggerHaptic('impactLight');
+    } catch (e) {
+      console.error('[Queue] removeFromQueue error:', e);
+    }
+  }, [currentQueue, currentQueueIndex]);
+
   // ─── Loaders ───────────────────────────────────────────────────────────────
   const loadFavorites = async () => { setFavorites((await getFavorites()) || []); };
   const loadPlaylists = async () => { setPlaylists((await getPlaylists()) || []); };
@@ -723,15 +839,31 @@ export const PlayerProvider = ({ children }) => {
       onDownloadBatch: async (tracks) => {
         if (!tracks || tracks.length === 0) return;
         triggerHaptic('notificationSuccess');
-        for (const track of tracks) {
-          try {
-            // On appelle directement la logique de download du contexte
-            if (activeDownloads[track.id] !== undefined) continue;
-            const exists = await isTrackDownloaded(track);
-            if (exists) continue;
 
-            setActiveDownloads(prev => ({ ...prev, [track.id]: 0 }));
-            setDownloadingItems(prev => ({ ...prev, [track.id]: track }));
+        // Filtrer les morceaux déjà téléchargés ou en cours
+        const toDownload = [];
+        for (const track of tracks) {
+          if (activeDownloads[track.id] !== undefined) continue;
+          const exists = await isTrackDownloaded(track);
+          if (!exists) toDownload.push(track);
+        }
+
+        if (toDownload.length === 0) return;
+
+        // ✅ Pré-inscrire TOUS les morceaux dans le flux AVANT de commencer
+        // → L'UI voit tout d'un coup
+        const initialItems = {};
+        const initialProgress = {};
+        toDownload.forEach(track => {
+          initialItems[track.id] = track;
+          initialProgress[track.id] = 0;
+        });
+        setDownloadingItems(prev => ({ ...prev, ...initialItems }));
+        setActiveDownloads(prev => ({ ...prev, ...initialProgress }));
+
+        // Téléchargement séquentiel
+        for (const track of toDownload) {
+          try {
             const dl = await getTrackDownload(track.id);
             const link = dl?.target?.link || dl?.link;
             if (link) {
@@ -742,6 +874,7 @@ export const PlayerProvider = ({ children }) => {
           } catch (e) {
             console.error('Batch item failed', e);
           } finally {
+            // Retirer uniquement ce morceau une fois terminé
             setActiveDownloads(prev => { const n = { ...prev }; delete n[track.id]; return n; });
             setDownloadingItems(prev => { const n = { ...prev }; delete n[track.id]; return n; });
             loadDownloads();
@@ -750,6 +883,15 @@ export const PlayerProvider = ({ children }) => {
       },
       // Couleurs statiques (image-colors désactivé)
       currentColors: { primary: '#1DB954', secondary: '#111', background: '#000' },
+
+      // ActionSheet & Queue management
+      actionSheet,
+      openActionSheet,
+      closeActionSheet,
+      playNext,
+      addToQueue,
+      removeFromQueue,
+      onRemoveFromPlaylist
     }}>
       {children}
     </PlayerContext.Provider>

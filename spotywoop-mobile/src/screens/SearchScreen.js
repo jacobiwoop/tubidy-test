@@ -20,7 +20,6 @@ import { theme } from '../utils/theme';
 import { searchMusic, getSearchSuggestions } from '../services/api';
 import { usePlayer } from '../context/PlayerContext';
 import TrackSkeleton from '../components/TrackSkeleton';
-import { MenuView } from '@react-native-menu/menu';
 import { triggerHaptic } from '../utils/haptics';
 import { getArtistNames } from '../utils/formatters';
 
@@ -52,7 +51,8 @@ export default function SearchScreen({ navigation }) {
     currentTrack, 
     downloads,
     enrichTracks,
-    enrichedMetadata
+    enrichedMetadata,
+    openActionSheet
   } = usePlayer();
 
   const [query, setQuery]       = useState('');
@@ -177,25 +177,14 @@ export default function SearchScreen({ navigation }) {
 
     return (
       <Animated.View style={{ opacity: fadeAnim }}>
-        <MenuView
-          onPressAction={({ nativeEvent }) => {
-            if (nativeEvent.event === 'play') onPlayTrack(item, results);
-            if (nativeEvent.event === 'favorite') onToggleFavorite(item);
-            if (nativeEvent.event === 'artist') navigation.navigate('ArtistDetail', { artistId: item.artist?.id });
-          }}
-          actions={[
-            { id: 'play', title: 'Lire maintenant', image: 'play' },
-            { id: 'favorite', title: isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris', image: 'heart' },
-            { id: 'artist', title: 'Voir l\'artiste', image: 'person' },
-          ]}
-          shouldOpenOnLongPress={true}
-        >
           <TouchableOpacity 
             style={[styles.trackCard, isPlaying && styles.playingCard]}
             onPress={() => {
               triggerHaptic("impactLight");
               onPlayTrack(item);
             }}
+            onLongPress={() => openActionSheet(item, 'track')}
+            delayLongPress={300}
           >
             <TouchableOpacity 
               style={styles.coverContainer}
@@ -235,12 +224,14 @@ export default function SearchScreen({ navigation }) {
                   fill={isFavorite ? theme.colors.accent : 'transparent'} 
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn}>
+              <TouchableOpacity 
+                style={styles.actionBtn}
+                onPress={() => openActionSheet(item, 'track')}
+              >
                 <MoreHorizontal size={20} color="rgba(255,255,255,0.4)" />
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
-        </MenuView>
       </Animated.View>
     );
   };
@@ -260,8 +251,16 @@ export default function SearchScreen({ navigation }) {
             style={styles.input}
             placeholder="Artistes, titres, albums..."
             placeholderTextColor="rgba(255,255,255,0.3)"
-            value={query}
-            onChangeText={setQuery}
+            onChangeText={(text) => {
+              setQuery(text);
+              if (text.trim().length > 0) {
+                setIsTyping(true);
+                setResults([]); // On vide les résultats pour laisser place aux suggestions
+              } else {
+                setIsTyping(false);
+                setSuggestions([]);
+              }
+            }}
             onSubmitEditing={() => handleSearch()}
             returnKeyType="search"
           />
@@ -273,6 +272,7 @@ export default function SearchScreen({ navigation }) {
                 setQuery('');
                 setResults([]);
                 setSuggestions([]);
+                setIsTyping(false);
               }}
             >
               <X size={20} color="white" />
@@ -280,9 +280,9 @@ export default function SearchScreen({ navigation }) {
           )}
         </View>
       </View>
-
+ 
       {/* Suggestions View */}
-      {suggestions.length > 0 && results.length === 0 && !loading && (
+      {isTyping && suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
           {suggestions.map((s, i) => (
             <TouchableOpacity 

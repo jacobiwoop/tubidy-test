@@ -7,9 +7,9 @@ import {
   LayoutAnimation, 
   Platform, 
   UIManager,
-  FlatList
+  Animated
 } from 'react-native';
-import { ChevronDown, ChevronUp, Download, Loader2 } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Loader2, Music, Disc } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { theme } from '../utils/theme';
 import { getArtistNames } from '../utils/formatters';
@@ -26,18 +26,16 @@ const ProgressRing = ({ progress, size = 40, strokeWidth = 3, children }) => {
   return (
     <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
       <Svg width={size} height={size} style={styles.svg}>
-        {/* Background Circle */}
         <Circle
-          stroke="rgba(255,255,255,0.1)"
+          stroke="rgba(255,255,255,0.05)"
           fill="transparent"
           cx={size / 2}
           cy={size / 2}
           r={radius}
           strokeWidth={strokeWidth}
         />
-        {/* Progress Circle */}
         <Circle
-          stroke="white"
+          stroke={theme.colors.accent}
           fill="transparent"
           cx={size / 2}
           cy={size / 2}
@@ -67,96 +65,162 @@ export default function DownloadQueue({ downloadingItems, activeDownloads }) {
       const track = downloadingItems[id];
       const progress = activeDownloads[id] || 0;
       
-      if (track.album?.title) {
-        if (!albumGroups[track.album.title]) {
-          albumGroups[track.album.title] = {
-            title: track.album.title,
+      if (track.album?.id) {
+        const albumId = String(track.album.id);
+        if (!albumGroups[albumId]) {
+          albumGroups[albumId] = {
+            id: albumId,
+            title: track.album.title || 'Album inconnu',
             artist: getArtistNames(track),
             tracks: [],
-            totalProgress: 0,
+            currentTrackTitle: ''
           };
         }
-        albumGroups[track.album.title].tracks.push({ ...track, progress });
+        albumGroups[albumId].tracks.push({ ...track, progress });
+        // Identifier le morceau en cours de traitement pour cet album
+        if (progress > 0 && progress < 100) {
+          albumGroups[albumId].currentTrackTitle = track.title;
+        }
       } else {
         individualTracks.push({ ...track, progress });
       }
     });
 
-    // Calculer la moyenne par album
+    // Calculer la moyenne et trier
     Object.values(albumGroups).forEach(group => {
       const sum = group.tracks.reduce((acc, t) => acc + t.progress, 0);
       group.avgProgress = sum / group.tracks.length;
+      
+      // Si aucun morceau n'est spécifiquement "en cours" (ex: tous à 0% ou tous finis), 
+      // on prend le premier qui n'est pas à 100%
+      if (!group.currentTrackTitle) {
+        const next = group.tracks.find(t => t.progress < 100);
+        if (next) group.currentTrackTitle = next.title;
+      }
+      
+      group.tracks.sort((a, b) => (a.title > b.title ? 1 : -1));
     });
 
-    return { albums: Object.values(albumGroups), singles: individualTracks };
+    return { 
+      albums: Object.values(albumGroups), 
+      singles: individualTracks 
+    };
   }, [downloadingItems, activeDownloads]);
+
+  // Auto-expand logic
+  React.useEffect(() => {
+    if (groups.albums.length > 0) {
+      setExpandedAlbums(prev => {
+        const next = { ...prev };
+        let changed = false;
+        groups.albums.forEach(album => {
+          if (next[album.id] === undefined) {
+            next[album.id] = true; // Auto-expand par défaut
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }
+  }, [groups.albums.length]);
 
   if (groups.albums.length === 0 && groups.singles.length === 0) return null;
 
-  const toggleAlbum = (title) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpandedAlbums(prev => ({ ...prev, [title]: !prev[title] }));
+  const toggleAlbum = (albumId) => {
+    if (Platform.OS === 'ios' || (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental)) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
+    setExpandedAlbums(prev => ({ ...prev, [albumId]: !prev[albumId] }));
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.mainHeader}>
         <Loader2 size={16} color={theme.colors.accent} style={styles.spinningIcon} />
-        <Text style={styles.headerTitle}>File d'attente</Text>
+        <Text style={styles.mainHeaderTitle}>Flux de téléchargement</Text>
       </View>
 
-      {/* Albums Groupés */}
-      {groups.albums.map(group => (
-        <View key={group.title} style={styles.albumGroup}>
-          <TouchableOpacity 
-            style={styles.albumHeader} 
-            onPress={() => toggleAlbum(group.title)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.albumInfo}>
-              <Text style={styles.albumName} numberOfLines={1}>{group.title}</Text>
-              <Text style={styles.albumArtist}>{group.artist}</Text>
-            </View>
-            
-            <View style={styles.rightSide}>
-              <ProgressRing progress={group.avgProgress} size={36}>
-                <Text style={styles.counterText}>{group.tracks.length}</Text>
-              </ProgressRing>
-              {expandedAlbums[group.title] ? <ChevronUp size={20} color="rgba(255,255,255,0.4)" /> : <ChevronDown size={20} color="rgba(255,255,255,0.4)" />}
-            </View>
-          </TouchableOpacity>
-
-          {expandedAlbums[group.title] && (
-            <View style={styles.trackList}>
-              {group.tracks.map(track => (
-                <View key={track.id} style={styles.trackRow}>
-                  <Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
-                  <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${track.progress}%` }]} />
+      {/* SECTION : ALBUMS */}
+      {groups.albums.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Disc size={14} color={theme.colors.accent} />
+            <Text style={styles.sectionLabel}>ALBUMS EN COURS</Text>
+          </View>
+          
+          {groups.albums.map(group => {
+            const isExpanded = expandedAlbums[group.id];
+            return (
+              <View key={group.id} style={styles.albumCard}>
+                <TouchableOpacity 
+                  style={styles.albumHeader} 
+                  onPress={() => toggleAlbum(group.id)}
+                  activeOpacity={0.8}
+                >
+                  <ProgressRing progress={group.avgProgress} size={42} strokeWidth={3}>
+                    <Text style={styles.counterText}>{group.tracks.length}</Text>
+                  </ProgressRing>
+                  
+                  <View style={styles.albumInfo}>
+                    <Text style={styles.albumName} numberOfLines={1}>{group.title}</Text>
+                    <Text style={styles.albumArtist} numberOfLines={1}>
+                      {!isExpanded && group.currentTrackTitle ? `En cours : ${group.currentTrackTitle}` : group.artist}
+                    </Text>
+                    <View style={styles.globalProgressBg}>
+                        <View style={[styles.globalProgressFill, { width: `${Math.max(2, group.avgProgress)}%` }]} />
+                    </View>
                   </View>
-                  <Text style={styles.percentText}>{Math.round(track.progress)}%</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      ))}
+                  
+                  <View style={styles.expandIcon}>
+                    {isExpanded ? <ChevronUp size={20} color={theme.colors.accent} /> : <ChevronDown size={20} color="rgba(255,255,255,0.2)" />}
+                  </View>
+                </TouchableOpacity>
 
-      {/* Titres Individuels */}
-      {groups.singles.map(track => (
-        <View key={track.id} style={styles.singleTrack}>
-          <View style={styles.singleInfo}>
-            <Text style={styles.singleTitle} numberOfLines={1}>{track.title}</Text>
-            <Text style={styles.singleArtist}>{getArtistNames(track)}</Text>
-          </View>
-          <View style={styles.singleProgress}>
-             <Text style={styles.percentTextSmall}>{Math.round(track.progress)}%</Text>
-             <View style={styles.progressBarBgSmall}>
-                <View style={[styles.progressBarFill, { width: `${track.progress}%` }]} />
-             </View>
-          </View>
+                {isExpanded && (
+                  <View style={styles.expandedContent}>
+                    {group.tracks.map(track => (
+                      <View key={track.id} style={styles.subTrackRow}>
+                        <View style={styles.subTrackHeader}>
+                            <Text style={styles.subTrackTitle} numberOfLines={1}>{track.title}</Text>
+                            <Text style={styles.subTrackPercent}>{Math.round(track.progress)}%</Text>
+                        </View>
+                        <View style={styles.subProgressBg}>
+                          <View style={[styles.subProgressFill, { width: `${track.progress}%` }]} />
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })}
         </View>
-      ))}
+      )}
+
+      {/* SECTION : TITRES INDIVIDUELS */}
+      {groups.singles.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Music size={14} color={theme.colors.accent} />
+            <Text style={styles.sectionLabel}>TITRES INDIVIDUELS</Text>
+          </View>
+          
+          {groups.singles.map(track => (
+            <View key={track.id} style={styles.singleTrackCard}>
+              <View style={styles.singleInfo}>
+                <Text style={styles.singleTitle} numberOfLines={1}>{track.title}</Text>
+                <Text style={styles.singleArtist} numberOfLines={1}>{getArtistNames(track)}</Text>
+              </View>
+              <View style={styles.singleRight}>
+                <Text style={styles.singlePercent}>{Math.round(track.progress)}%</Text>
+                <View style={styles.singleProgressBg}>
+                  <View style={[styles.singleProgressFill, { width: `${track.progress}%` }]} />
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -164,108 +228,140 @@ export default function DownloadQueue({ downloadingItems, activeDownloads }) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 15,
     marginVertical: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
-  header: {
+  mainHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 25,
     paddingLeft: 5,
   },
-  headerTitle: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
+  mainHeaderTitle: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
+    letterSpacing: 2,
     marginLeft: 10,
+    opacity: 0.9,
   },
   spinningIcon: {
-    // On pourrait ajouter une animation de rotation réelle ici
+    opacity: 0.8,
   },
-  albumGroup: {
+  section: {
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    marginLeft: 5,
+  },
+  sectionLabel: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginLeft: 8,
+  },
+  albumCard: {
     backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 16,
+    borderRadius: 18,
     marginBottom: 10,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.04)',
   },
   albumHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 15,
+    padding: 12,
   },
   albumInfo: {
     flex: 1,
-    marginRight: 10,
+    marginHorizontal: 15,
   },
   albumName: {
     color: '#fff',
     fontSize: 15,
     fontWeight: 'bold',
+    marginBottom: 2,
   },
   albumArtist: {
     color: 'rgba(255,255,255,0.4)',
     fontSize: 12,
-    marginTop: 2,
+    marginBottom: 8,
   },
-  rightSide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
+  globalProgressBg: {
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 2,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  globalProgressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.accent,
+  },
+  expandIcon: {
+    padding: 5,
   },
   counterText: {
     color: '#fff',
     fontSize: 11,
     fontWeight: 'bold',
   },
-  trackList: {
+  expandedContent: {
+    backgroundColor: 'rgba(0,0,0,0.15)',
     paddingHorizontal: 15,
-    paddingBottom: 15,
+    paddingBottom: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.03)',
   },
-  trackRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
+  subTrackRow: {
+    paddingVertical: 12,
   },
-  trackTitle: {
-    color: 'rgba(255,255,255,0.7)',
+  subTrackHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  subTrackTitle: {
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
     flex: 1,
-    marginRight: 15,
-  },
-  progressBarBg: {
-    width: 60,
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 2,
     marginRight: 10,
   },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: 'white',
-    borderRadius: 2,
-  },
-  percentText: {
-    color: 'rgba(255,255,255,0.4)',
+  subTrackPercent: {
+    color: 'rgba(255,255,255,0.3)',
     fontSize: 11,
-    width: 30,
-    textAlign: 'right',
+    fontWeight: '600',
   },
-  singleTrack: {
+  subProgressBg: {
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 1,
+    width: '100%',
+  },
+  subProgressFill: {
+    height: '100%',
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    borderRadius: 1,
+  },
+  singleTrackCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 15,
     backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.03)',
   },
   singleInfo: {
     flex: 1,
@@ -273,25 +369,33 @@ const styles = StyleSheet.create({
   singleTitle: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
+    marginBottom: 2,
   },
   singleArtist: {
     color: 'rgba(255,255,255,0.4)',
     fontSize: 11,
   },
-  singleProgress: {
+  singleRight: {
     alignItems: 'flex-end',
+    width: 60,
   },
-  percentTextSmall: {
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 10,
+  singlePercent: {
+    color: theme.colors.accent,
+    fontSize: 11,
+    fontWeight: 'bold',
     marginBottom: 4,
   },
-  progressBarBgSmall: {
-    width: 50,
-    height: 2,
+  singleProgressBg: {
+    width: '100%',
+    height: 3,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 1,
+    borderRadius: 1.5,
+  },
+  singleProgressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.accent,
+    borderRadius: 1.5,
   },
   svg: {
     position: 'absolute',

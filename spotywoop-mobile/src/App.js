@@ -15,12 +15,14 @@ import SearchScreen  from './screens/SearchScreen';
 import PlayerScreen  from './screens/PlayerScreen';
 import ArtistScreen  from './screens/ArtistScreen';
 import ArtistReleasesScreen from './screens/ArtistReleasesScreen';
+import DownloadedAlbumsScreen from './screens/DownloadedAlbumsScreen';
 import AlbumScreen from './screens/AlbumScreen';
 import PlaylistDetailScreen from './screens/PlaylistDetailScreen';
 import LibraryScreen from './screens/LibraryScreen';
 import MiniPlayer    from './components/MiniPlayer';
 import QueueModal    from './components/QueueModal';
 import PlaylistModal from './components/PlaylistModal';
+import ActionSheet from './components/ActionSheet';
 
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { theme } from './utils/theme';
@@ -72,7 +74,8 @@ const MainApp = () => {
     currentQueueIndex,
     radioSource,
     suggestions,
-    onPlayTrack
+    onPlayTrack,
+    removeFromQueue
   } = usePlayer();
 
   const onViewArtist = (artistId) => {
@@ -203,7 +206,7 @@ const MainApp = () => {
             const success = await onPlayTrack(currentQueue[index], currentQueue, index);
             if (success) setIsQueueVisible(false);
           }}
-          onRemoveTrackAt={() => {}}
+          onRemoveTrackAt={removeFromQueue}
           onClearQueue={() => {}}
         />
 
@@ -215,6 +218,8 @@ const MainApp = () => {
           onAddToPlaylist={handleAddToPlaylist}
           onCreatePlaylist={handleCreatePlaylist}
         />
+
+        <ActionSheet />
       </NavigationContainer>
     </View>
   );
@@ -229,6 +234,7 @@ function HomeStack() {
       <Stack.Screen name="ArtistReleases" component={ArtistReleasesScreen} />
       <Stack.Screen name="AlbumDetail" component={AlbumScreen} />
       <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
+      <Stack.Screen name="DownloadedAlbums" component={DownloadedAlbumsScreen} />
     </Stack.Navigator>
   );
 }
@@ -240,6 +246,7 @@ function SearchStack() {
       <Stack.Screen name="ArtistReleases" component={ArtistReleasesScreen} />
       <Stack.Screen name="AlbumDetail" component={AlbumScreen} />
       <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
+      <Stack.Screen name="DownloadedAlbums" component={DownloadedAlbumsScreen} />
     </Stack.Navigator>
   );
 }
@@ -251,17 +258,22 @@ function LibraryStack() {
       <Stack.Screen name="ArtistReleases" component={ArtistReleasesScreen} />
       <Stack.Screen name="AlbumDetail" component={AlbumScreen} />
       <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
+      <Stack.Screen name="DownloadedAlbums" component={DownloadedAlbumsScreen} />
     </Stack.Navigator>
   );
 }
 
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <PlayerProvider>
-        <MainApp />
-      </PlayerProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <PlayerProvider>
+          <MainApp />
+        </PlayerProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

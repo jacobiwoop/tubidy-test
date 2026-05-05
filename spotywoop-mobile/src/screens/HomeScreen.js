@@ -15,7 +15,7 @@ export default function HomeScreen({ navigation }) {
   const { 
     favorites, playlists, onPlayTrack, onViewArtist, 
     currentTrack, loadingTrackId, musicDNA, recentlyPlayed, downloads,
-    enrichTracks, enrichedMetadata
+    enrichTracks, enrichedMetadata, openActionSheet
   } = usePlayer();
   const [serverStatus, setServerStatus] = useState('checking');
   const [debugLogs, setDebugLogs] = useState([]);
@@ -238,7 +238,13 @@ export default function HomeScreen({ navigation }) {
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
               {recentlyPlayed.slice(0, 8).map((track, i) => (
-                <TouchableOpacity key={`${track.id}-${i}`} style={styles.recentItem} onPress={() => onPlayTrack(track)}>
+                <TouchableOpacity 
+                  key={`${track.id}-${i}`} 
+                  style={styles.recentItem} 
+                  onPress={() => onPlayTrack(track)}
+                  onLongPress={() => openActionSheet(track, 'track')}
+                  delayLongPress={300}
+                >
                    <Image 
                      source={{ uri: track.album?.cover_medium || track.artwork || 'https://via.placeholder.com/300' }} 
                      style={styles.recentThumb} 
@@ -282,6 +288,8 @@ export default function HomeScreen({ navigation }) {
                     key={track.id} 
                     style={styles.trackCard}
                     onPress={() => onPlayTrack(track, recommendations)}
+                    onLongPress={() => openActionSheet(track, 'track')}
+                    delayLongPress={300}
                   >
                     <View style={styles.cardImageContainer}>
                       <Image 
@@ -335,6 +343,8 @@ export default function HomeScreen({ navigation }) {
                   key={track.id} 
                   style={styles.genreMixCard}
                   onPress={() => onPlayTrack(track, genreMix)}
+                  onLongPress={() => openActionSheet(track, 'track')}
+                  delayLongPress={300}
                 >
                   <Image 
                     source={{ uri: (track.album?.cover_big || track.album?.cover_medium) || 'https://via.placeholder.com/300' }} 
