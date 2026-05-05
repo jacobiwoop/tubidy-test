@@ -4,7 +4,7 @@ import {
   Modal, TextInput, ScrollView, Dimensions, Platform
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Home, Search, Library, Plus, ListMusic } from 'lucide-react-native';
@@ -14,6 +14,9 @@ import HomeScreen    from './screens/HomeScreen';
 import SearchScreen  from './screens/SearchScreen';
 import PlayerScreen  from './screens/PlayerScreen';
 import ArtistScreen  from './screens/ArtistScreen';
+import ArtistReleasesScreen from './screens/ArtistReleasesScreen';
+import AlbumScreen from './screens/AlbumScreen';
+import PlaylistDetailScreen from './screens/PlaylistDetailScreen';
 import LibraryScreen from './screens/LibraryScreen';
 import MiniPlayer    from './components/MiniPlayer';
 import QueueModal    from './components/QueueModal';
@@ -22,12 +25,14 @@ import PlaylistModal from './components/PlaylistModal';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { theme } from './utils/theme';
 import { addTrackToPlaylist, createPlaylist } from './utils/playlists';
-import { startDownload } from './utils/downloader';
+import { startDownload, isTrackDownloaded } from './utils/downloader';
 import { getTrackDownload } from './services/api';
 
 const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const navigationRef = createNavigationContainerRef();
 
 const navTheme = {
   ...DefaultTheme,
@@ -42,34 +47,40 @@ const navTheme = {
 };
 
 const MainApp = () => {
-  const {
-    currentTrack,
-    playerStatus,
-    onTogglePlay,
+  const { 
+    currentTrack, 
+    playerStatus, 
+    onTogglePlay, 
+    onStop, 
+    loadingTrackId, 
+    currentColors, 
+    onToggleFavorite, 
     favorites,
-    onToggleFavorite,
     playlists,
     loadPlaylists,
+    downloads,
+    onRemoveDownload,
+    onDownload,
+    activeDownloads,
     onNext,
     onPrevious,
-    downloads,
-    activeDownloads,
-    setActiveDownloads,
-    loadingTrackId,
-    currentColors,
-    suggestions,
-    onPlayTrack,
-    currentQueue,
-    currentQueueIndex,
-    radioSource,
-    // Modes de lecture
     isShuffle,
     repeatMode,
     toggleShuffle,
     cycleRepeatMode,
-    onRemoveDownload,
-    loadDownloads,
+    currentQueue,
+    currentQueueIndex,
+    radioSource,
+    suggestions,
+    onPlayTrack
   } = usePlayer();
+
+  const onViewArtist = (artistId) => {
+    if (navigationRef.isReady()) {
+      navigationRef.navigate('ArtistDetail', { artistId });
+      closeFullPlayer();
+    }
+  };
 
   // ─── États locaux (pas dans le Context → pas de re-render global) ──────────
   const [showFullPlayer,   setShowFullPlayer]   = useState(false);
@@ -93,23 +104,7 @@ const MainApp = () => {
     transform: [{ translateY: translateY.value }],
   }));
 
-  // ─── Téléchargement ────────────────────────────────────────────────────────
-  const handleDownload = async (track) => {
-    try {
-      setActiveDownloads(prev => ({ ...prev, [track.id]: 0 }));
-      const dl   = await getTrackDownload(track.id);
-      const link = dl?.target?.link || dl?.link;
-      if (!link) { alert('Lien non disponible'); return; }
-      await startDownload(track, link, (progress) => {
-        setActiveDownloads(prev => ({ ...prev, [track.id]: progress }));
-      });
-      loadDownloads(); // Rafraîchir l'UI pour montrer l'icône "téléchargé"
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setActiveDownloads(prev => { const n = { ...prev }; delete n[track.id]; return n; });
-    }
-  };
+
 
   // ─── Playlists ─────────────────────────────────────────────────────────────
   const handleCreatePlaylist = async (title) => { await createPlaylist(title); await loadPlaylists(); };
@@ -123,7 +118,7 @@ const MainApp = () => {
 
   return (
     <View style={styles.container}>
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer theme={navTheme} ref={navigationRef}>
         <Tab.Navigator
           screenOptions={({ route }) => ({
             tabBarIcon: ({ color, size }) => {
@@ -152,6 +147,7 @@ const MainApp = () => {
             loadingTrackId={loadingTrackId}
             colors={currentColors}
             onOpenQueue={() => setIsQueueVisible(true)}
+            onStop={onStop}
           />
         )}
 
@@ -171,10 +167,11 @@ const MainApp = () => {
               isFavorite={favorites.some(f => f.id === currentTrack?.id)}
               onToggleFavorite={() => onToggleFavorite(currentTrack)}
               onAddToPlaylist={() => setShowPlaylistModal(true)}
-              onDownload={() => handleDownload(currentTrack)}
+              onDownload={() => onDownload(currentTrack)}
               onRemoveDownload={onRemoveDownload}
               downloads={downloads}
               activeDownloads={activeDownloads}
+              onViewArtist={onViewArtist}
               colors={currentColors}
               onOpenQueue={() => setIsQueueVisible(true)}
               // Modes de lecture
@@ -197,7 +194,12 @@ const MainApp = () => {
           suggestions={suggestions}
           favorites={favorites}
           onToggleFavorite={onToggleFavorite}
-          onPlayTrackAt={async (index) => {
+          onPlayTrackAt={async (index, item) => {
+            if (index === -1 && item) {
+              const success = await onPlayTrack(item);
+              if (success) setIsQueueVisible(false);
+              return;
+            }
             const success = await onPlayTrack(currentQueue[index], currentQueue, index);
             if (success) setIsQueueVisible(false);
           }}
@@ -224,6 +226,9 @@ function HomeStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeMain"    component={HomeScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistScreen} />
+      <Stack.Screen name="ArtistReleases" component={ArtistReleasesScreen} />
+      <Stack.Screen name="AlbumDetail" component={AlbumScreen} />
+      <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
     </Stack.Navigator>
   );
 }
@@ -232,6 +237,9 @@ function SearchStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="SearchMain"   component={SearchScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistScreen} />
+      <Stack.Screen name="ArtistReleases" component={ArtistReleasesScreen} />
+      <Stack.Screen name="AlbumDetail" component={AlbumScreen} />
+      <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
     </Stack.Navigator>
   );
 }
@@ -240,6 +248,9 @@ function LibraryStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="LibraryMain"  component={LibraryScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistScreen} />
+      <Stack.Screen name="ArtistReleases" component={ArtistReleasesScreen} />
+      <Stack.Screen name="AlbumDetail" component={AlbumScreen} />
+      <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
     </Stack.Navigator>
   );
 }

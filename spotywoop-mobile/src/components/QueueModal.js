@@ -1,3 +1,4 @@
+import React from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -57,7 +58,12 @@ const QueueModal = ({
           style={[styles.trackItem, isPlaying && styles.playingItem]}
           onPress={() => {
             triggerHaptic("impactLight");
-            onPlayTrackAt(index);
+            if (isSuggestion) {
+              // Si c'est une suggestion, on lance une nouvelle radio
+              onPlayTrackAt(-1, item); 
+            } else {
+              onPlayTrackAt(index);
+            }
           }}
         >
           {!isSuggestion && <GripVertical size={20} color={theme.colors.secondary} style={{ marginRight: 8, opacity: 0.3 }} />}
@@ -105,12 +111,16 @@ const QueueModal = ({
       isVisible={isVisible}
       onBackdropPress={onClose}
       onBackButtonPress={onClose}
+      onSwipeComplete={onClose}
+      swipeDirection="down"
+      swipeThreshold={80}
       style={styles.modal}
       backdropOpacity={0.7}
       animationIn="slideInUp"
       animationOut="slideOutDown"
       useNativeDriver
       hideModalContentWhileAnimating
+      propagateSwipe
     >
       <View style={styles.container}>
         <View style={styles.header}>

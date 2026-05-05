@@ -10,10 +10,12 @@ import {
   Dimensions,
   Pressable,
   KeyboardAvoidingView,
+  Animated,
   Platform
 } from 'react-native';
 import { Plus, ListMusic, X, FolderPlus } from 'lucide-react-native';
 import { theme } from '../utils/theme';
+import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -25,6 +27,7 @@ const PlaylistModal = ({
   onCreatePlaylist 
 }) => {
   const [newTitle, setNewTitle] = useState('');
+  const { panHandlers, animatedStyle } = useSwipeToDismiss({ onDismiss: onClose });
 
   const handleCreate = () => {
     if (newTitle.trim()) {
@@ -45,7 +48,7 @@ const PlaylistModal = ({
         style={styles.overlay}
       >
         <Pressable style={styles.dismissArea} onPress={onClose} />
-        <View style={styles.content}>
+        <Animated.View style={[styles.content, animatedStyle]} {...panHandlers}>
           {/* Handle pour le style Bottom Sheet */}
           <View style={styles.handle} />
           
@@ -109,7 +112,7 @@ const PlaylistModal = ({
               ))
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

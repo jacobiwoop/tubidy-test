@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { Play, Heart, Disc, Music, Volume2 } from 'lucide-react-native';
+import { Play, Heart, Disc, Music, Volume2, Download } from 'lucide-react-native';
 import { theme } from '../utils/theme';
 import { checkHealth, BASE_URL, getChosicRecommendations } from '../services/api';
 import { usePlayer } from '../context/PlayerContext';
 import StatsService from '../services/StatsService';
+import { getArtistNames } from '../utils/formatters';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
   const { 
     favorites, playlists, onPlayTrack, onViewArtist, 
-    currentTrack, loadingTrackId, musicDNA 
+    currentTrack, loadingTrackId, musicDNA, recentlyPlayed, downloads,
+    enrichTracks, enrichedMetadata
   } = usePlayer();
   const [serverStatus, setServerStatus] = useState('checking');
   const [debugLogs, setDebugLogs] = useState([]);
@@ -98,18 +100,27 @@ export default function HomeScreen({ navigation }) {
         }
 
         const mainData = await getChosicRecommendations(seedParams);
-        if (mainData && mainData.track) setRecommendations(mainData.track);
+        if (mainData && mainData.track) {
+          setRecommendations(mainData.track);
+          enrichTracks(mainData.track);
+        }
 
         // 3. Créer un Mix Genre secondaire
         if (smartSeeds.topGenres.length > 1 && !selectedGenre) {
           const secondGenre = smartSeeds.topGenres[1];
           setGenreMixTitle(`Mix ${secondGenre}`);
           const mixData = await getChosicRecommendations({ genre: secondGenre, limit: 10 });
-          if (mixData && mixData.track) setGenreMix(mixData.track);
+          if (mixData && mixData.track) {
+            setGenreMix(mixData.track);
+            enrichTracks(mixData.track);
+          }
         } else {
           setGenreMixTitle("Vibe Afrobeat");
           const mixData = await getChosicRecommendations({ genre: 'afrobeat', limit: 10 });
-          if (mixData && mixData.track) setGenreMix(mixData.track);
+          if (mixData && mixData.track) {
+            setGenreMix(mixData.track);
+            enrichTracks(mixData.track);
+          }
         }
 
       } catch (err) {
@@ -217,17 +228,28 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* Section: Récemment écoutés */}
-        {musicDNA?.history?.length > 0 && (
+        {recentlyPlayed?.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Récemment écoutés</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Récemment écoutés</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('PlaylistDetail', { playlistId: 'recently', title: 'Écoutés récemment' })}>
+                <Text style={styles.seeAll}>Tout afficher</Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {musicDNA.history.slice(0, 8).map((track, i) => (
+              {recentlyPlayed.slice(0, 8).map((track, i) => (
                 <TouchableOpacity key={`${track.id}-${i}`} style={styles.recentItem} onPress={() => onPlayTrack(track)}>
                    <Image 
-                     source={{ uri: track.artwork && track.artwork !== "" ? track.artwork : 'https://via.placeholder.com/300' }} 
+                     source={{ uri: track.album?.cover_medium || track.artwork || 'https://via.placeholder.com/300' }} 
                      style={styles.recentThumb} 
                    />
-                   <Text style={styles.recentTitle} numberOfLines={1}>{track.title}</Text>
+                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                     <Text style={styles.recentTitle} numberOfLines={1}>{track.title}</Text>
+                     {downloads.some(d => String(d.id) === String(track.id)) && (
+                       <Download size={10} color={theme.colors.accent} style={{ marginLeft: 4 }} />
+                     )}
+                   </View>
+                   <Text style={styles.recentArtist} numberOfLines={1}>{getArtistNames(track, enrichedMetadata)}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -272,8 +294,13 @@ export default function HomeScreen({ navigation }) {
                         </View>
                       )}
                     </View>
-                    <Text style={[styles.cardTitle, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>{track.title}</Text>
-                    <Text style={styles.cardArtist} numberOfLines={1}>{track.artist?.name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={[styles.cardTitle, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>{track.title}</Text>
+                      {downloads.some(d => String(d.id) === String(track.id)) && (
+                        <Download size={10} color={theme.colors.accent} style={{ marginLeft: 4 }} />
+                      )}
+                    </View>
+                    <Text style={styles.cardArtist} numberOfLines={1}>{getArtistNames(track, enrichedMetadata)}</Text>
                   </TouchableOpacity>
                 );
               })

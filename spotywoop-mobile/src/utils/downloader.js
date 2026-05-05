@@ -21,11 +21,22 @@ export const saveDownloadMetadata = async (metadata) => {
   await AsyncStorage.setItem(DOWNLOADS_KEY, JSON.stringify(metadata));
 };
 
+const sanitize = (name) => name ? name.replace(/[#%&{}\\<>*?/$!'":@+`|=]/g, '_') : 'Unknown_Album';
+
 export const startDownload = async (track, downloadUrl, onProgress) => {
   await ensureDir();
   
+  const albumFolder = track.album?.title ? `${sanitize(track.album.title)}/` : '';
+  const finalDir = `${DOWNLOAD_DIR}${albumFolder}`;
+  
+  // S'assurer que le sous-dossier existe
+  const dirInfo = await FileSystem.getInfoAsync(finalDir);
+  if (!dirInfo.exists) {
+    await FileSystem.makeDirectoryAsync(finalDir, { intermediates: true });
+  }
+
   const fileName = `${track.id}.mp3`;
-  const fileUri = `${DOWNLOAD_DIR}${fileName}`;
+  const fileUri = `${finalDir}${fileName}`;
   
   const downloadResumable = FileSystem.createDownloadResumable(
     downloadUrl,
@@ -72,14 +83,36 @@ export const startDownload = async (track, downloadUrl, onProgress) => {
   }
 };
 
-export const deleteDownload = async (trackId) => {
-  const fileUri = `${DOWNLOAD_DIR}${trackId}.mp3`;
-  const artworkUri = `${DOWNLOAD_DIR}thumb_${trackId}.jpg`;
+const getTrackPath = (track) => {
+  const albumFolder = track.album?.title ? `${sanitize(track.album.title)}/` : '';
+  return `${DOWNLOAD_DIR}${albumFolder}${track.id}.mp3`;
+};
+
+export const isTrackDownloaded = async (track) => {
+  if (!track) return false;
+  const fileUri = getTrackPath(track);
+  try {
+    const info = await FileSystem.getInfoAsync(fileUri);
+    return info.exists;
+  } catch (e) {
+    return false;
+  }
+};
+
+export const deleteDownload = async (track) => {
+  if (!track) return;
+  const trackId = track.id || track;
+  const fileUri = getTrackPath(track);
+  const albumFolder = track.album?.title ? `${sanitize(track.album.title)}/` : '';
+  const artworkUri = `${DOWNLOAD_DIR}${albumFolder}thumb_${trackId}.jpg`;
+  
   try {
     await FileSystem.deleteAsync(fileUri, { idempotent: true });
-    await FileSystem.deleteAsync(artworkUri, { idempotent: true });
+    // Note: on ne supprime l'artwork que si c'est le dernier morceau de l'album ? 
+    // Pour l'instant on reste simple.
+    
     const downloads = await getDownloadMetadata();
-    const filtered = downloads.filter(d => d.id !== trackId);
+    const filtered = downloads.filter(d => String(d.id) !== String(trackId));
     await saveDownloadMetadata(filtered);
   } catch (e) {
     console.error('Delete error:', e);

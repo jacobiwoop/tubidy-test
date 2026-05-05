@@ -6,13 +6,16 @@ import TrackPlayer, {
   Event,
   useTrackPlayerEvents,
 } from 'react-native-track-player';
+import { getArtistNames } from '../utils/formatters';
 import { getFavorites, saveFavorite } from '../utils/favorites';
 import { getPlaylists } from '../utils/playlists';
-import { getDownloadMetadata, deleteDownload } from '../utils/downloader';
-import { getTrackDownload, getTrackRadio, BASE_URL } from '../services/api';
+import { getDownloadMetadata, deleteDownload, isTrackDownloaded, startDownload } from '../utils/downloader';
+import { getTrackDownload, getTrackRadio, getTrack, BASE_URL } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
 import StatsService from '../services/StatsService';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 
 // ─── Modes de lecture ────────────────────────────────────────────────────────
 export const REPEAT_MODE = {
@@ -35,12 +38,93 @@ export const PlayerProvider = ({ children }) => {
   const [favorites, setFavorites]             = useState([]);
   const [playlists, setPlaylists]             = useState([]);
   const [downloads, setDownloads]             = useState([]);
+  const [recentlyPlayed, setRecentlyPlayed]   = useState([]);
   const [activeDownloads, setActiveDownloads] = useState({});
   const [loadingTrackId, setLoadingTrackId]   = useState(null);
   const [currentQueue, setCurrentQueue]       = useState([]);
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
   const [suggestions, setSuggestions]         = useState([]);
   const [musicDNA, setMusicDNA]               = useState(null);
+  const [followedAlbums, setFollowedAlbums]   = useState([]);
+  const [followedArtists, setFollowedArtists] = useState([]);
+  const [downloadingItems, setDownloadingItems] = useState({}); // { trackId: trackObj }
+  const [enrichedMetadata, setEnrichedMetadata] = useState({}); // { trackId: fullTrackData }
+
+  // ─── Chargement initial & Persistance ──────────────────────────────────────
+  useEffect(() => {
+    const initHistory = async () => {
+      try {
+        const history = await AsyncStorage.getItem('@spotiwoop_history');
+        if (history) setRecentlyPlayed(JSON.parse(history));
+      } catch (e) {
+        console.error('Failed to load history', e);
+      }
+    };
+    initHistory();
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem('@spotiwoop_history', JSON.stringify(recentlyPlayed));
+  }, [recentlyPlayed]);
+
+  useEffect(() => {
+    const initAlbums = async () => {
+      const saved = await AsyncStorage.getItem('@spotiwoop_followed_albums');
+      if (saved) setFollowedAlbums(JSON.parse(saved));
+    };
+    initAlbums();
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem('@spotiwoop_followed_albums', JSON.stringify(followedAlbums));
+  }, [followedAlbums]);
+
+  const toggleFollowAlbum = (album) => {
+    if (!album) return;
+    triggerHaptic('impactLight');
+    setFollowedAlbums(prev => {
+      const isFollowed = prev.some(a => String(a.id) === String(album.id));
+      if (isFollowed) {
+        return prev.filter(a => String(a.id) !== String(album.id));
+      } else {
+        return [album, ...prev];
+      }
+    });
+  };
+
+  useEffect(() => {
+    const initArtists = async () => {
+      const saved = await AsyncStorage.getItem('@spotiwoop_followed_artists');
+      if (saved) setFollowedArtists(JSON.parse(saved));
+    };
+    initArtists();
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem('@spotiwoop_followed_artists', JSON.stringify(followedArtists));
+  }, [followedArtists]);
+
+  const toggleFollowArtist = (artist) => {
+    if (!artist) return;
+    triggerHaptic('impactLight');
+    setFollowedArtists(prev => {
+      const isFollowed = prev.some(a => String(a.id) === String(artist.id));
+      if (isFollowed) {
+        return prev.filter(a => String(a.id) !== String(artist.id));
+      } else {
+        return [{ id: artist.id, name: artist.name, picture_medium: artist.picture_medium }, ...prev];
+      }
+    });
+  };
+
+  const addToHistory = useCallback((track) => {
+    if (!track) return;
+    setRecentlyPlayed(prev => {
+      const filtered = prev.filter(t => t.id !== track.id);
+      const updated = [track, ...filtered];
+      return updated.slice(0, 50);
+    });
+  }, []);
 
   // Musique source de la radio (celle choisie par l'user depuis la recherche)
   // Affichée en haut du QueueModal, réinitialisée à chaque choix manuel
@@ -223,8 +307,11 @@ export const PlayerProvider = ({ children }) => {
 
   // ─── Lecture principale ────────────────────────────────────────────────────
   const handlePlayTrack = async (track, queue = [], forceIndex = null) => {
+    if (!track) return false;
+    
+    addToHistory(track);
+
     try {
-      if (!track) return false;
       triggerHaptic('impactMedium');
 
       // ── Optimistic update immédiat ──────────────────────────────────────────
@@ -244,11 +331,12 @@ export const PlayerProvider = ({ children }) => {
       setCurrentQueueIndex(newIdx);
       queueIdxRef.current = newIdx;
 
-      // Choix manuel depuis la recherche (queue vide) → nouveau point de départ radio
-      if (!queue || queue.length === 0) {
-        setRadioSource(track);
-        fetchRecommendations(track); // charge la liste une seule fois
-      }
+      // On définit toujours la source de la radio
+      setRadioSource(track);
+      
+      // On fetch les recommandations dans tous les cas pour mettre à jour l'état 'suggestions'
+      // Si une queue est fournie, on lui dit de juste "préparer" les suggestions sans écraser la queue
+      fetchRecommendations(track, false, !!(queue && queue.length > 0));
 
       // ─── Mise à jour de la ref pour les events headless ───────────────────
       handlePlayTrackRef.current = handlePlayTrack;
@@ -287,6 +375,20 @@ export const PlayerProvider = ({ children }) => {
       let finalTrack = track;
       let finalLink  = null;
 
+      // Enrichissement des métadonnées (Récupération des contributeurs complets)
+      if (!isOffline && (!track.contributors || track.contributors.length === 0)) {
+        try {
+          const fullData = await getTrack(track.id);
+          if (fullData && fullData.contributors) {
+            finalTrack = { ...track, ...fullData };
+            setCurrentTrack(finalTrack);
+            currentTrackRef.current = finalTrack;
+          }
+        } catch (e) {
+          console.warn(`[Metadata] Failed to enrich ${track.title}:`, e.message);
+        }
+      }
+
       // On vérifie d'abord le cache du prefetch
       const cached = prefetchCache.current[track.id];
       if (cached && cached.expires > Date.now()) {
@@ -294,14 +396,24 @@ export const PlayerProvider = ({ children }) => {
         console.log(`[Cache] Hit for: ${track.title}`);
       }
 
-      // Priorité au fichier local si téléchargé
-      if (isDownloaded) {
+      // Priorité absolue au fichier local si téléchargé (physiquement présent)
+      const physicallyExists = await isTrackDownloaded(track);
+      if (physicallyExists) {
+        const albumFolder = track.album?.title ? `${track.album.title.replace(/[#%&{}\\<>*?/$!'":@+`|=]/g, '_')}/` : '';
+        const DOWNLOAD_DIR = `file://${FileSystem.documentDirectory}downloads/${albumFolder}`;
+        finalLink = `${DOWNLOAD_DIR}${track.id}.mp3`;
+        console.log(`[Local] Playing from physical storage: ${track.title}`);
+        
+        // On cherche aussi l'artwork local s'il existe
         const localTrack = downloads.find(d => String(d.id) === String(track.id));
         if (localTrack) {
-          finalTrack = { ...localTrack }; // Contient le localUri et l'artwork local
-          finalLink = localTrack.localUri;
-          console.log(`[Local] Playing from storage: ${track.title}`);
+          finalTrack = { ...localTrack, localUri: finalLink };
+        } else {
+          finalTrack = { ...track, localUri: finalLink };
         }
+      } else if (isDownloaded) {
+        // Si les métadonnées disent "téléchargé" mais que le fichier a disparu
+        console.warn(`[Local] Metadata found but file missing for: ${track.title}`);
       }
 
       if (!finalLink && (String(track.id).startsWith('lfm-') || String(track.id).startsWith('cho-'))) {
@@ -332,7 +444,7 @@ export const PlayerProvider = ({ children }) => {
         id:       String(finalTrack.id),
         url:      finalLink,
         title:    finalTrack.title,
-        artist:   finalTrack.artist?.name || finalTrack.artist,
+        artist:   getArtistNames(finalTrack),
         artwork:  finalTrack.artwork || finalTrack.album?.cover_big || finalTrack.album?.cover_medium || finalTrack.thumbnail,
         duration: finalTrack.duration,
       });
@@ -396,7 +508,7 @@ export const PlayerProvider = ({ children }) => {
     setRepeatMode(prev => (prev + 1) % 3);
   }, []);
 
-  // ─── Play/Pause ────────────────────────────────────────────────────────────
+  // ─── Play/Pause & Stop ───────────────────────────────────────────────────
   const togglePlay = async () => {
     if (playbackState.state === State.Playing) {
       await TrackPlayer.pause();
@@ -404,6 +516,19 @@ export const PlayerProvider = ({ children }) => {
       await TrackPlayer.play();
     }
     triggerHaptic('impactLight');
+  };
+
+  const stopPlayer = async () => {
+    try {
+      await TrackPlayer.reset();
+      setCurrentTrack(null);
+      setCurrentQueue([]);
+      setRadioSource(null);
+      setLoadingTrackId(null);
+      triggerHaptic('notificationSuccess');
+    } catch (e) {
+      console.error('stopPlayer error:', e);
+    }
   };
 
   // ─── Favoris (optimistic update) ──────────────────────────────────────────
@@ -431,7 +556,7 @@ export const PlayerProvider = ({ children }) => {
   //   DNA → sugg1 → sugg2 → ... → sugg10 (fin)
   //   → fetchRecommendations(sugg10, true) → [sugg10, nouvelles_sugg...]
   //   → joue nouvelles_sugg[0] automatiquement → continue
-  const fetchRecommendations = async (track, autoPlay = false) => {
+  const fetchRecommendations = async (track, autoPlay = false, skipQueueUpdate = false) => {
     try {
       console.log(`[Radio] Fetching suggestions for: ${track.title}`);
       let tracks = [];
@@ -442,17 +567,26 @@ export const PlayerProvider = ({ children }) => {
           params: { artist: track.artist?.name || track.artist, track: track.title },
           timeout: 8000
         });
-        tracks = res.data?.track || [];
+        tracks = (res.data?.track || []).map(t => ({ ...t, isSuggestion: true }));
       } catch (e) {
         console.warn('[Radio] Chosic failed, trying Deezer fallback...');
-        // Fallback sur Deezer Radio native
-        const res = await getTrackRadio(track.id);
-        tracks = res || [];
+        try {
+          const res = await getTrackRadio(track.id);
+          // Deezer renvoie souvent { data: [...] }
+          const rawTracks = Array.isArray(res) ? res : (res?.data || []);
+          tracks = rawTracks.map(t => ({ ...t, isSuggestion: true }));
+        } catch (err) {
+          console.error('[Radio] Deezer fallback also failed:', err);
+          tracks = [];
+        }
       }
 
       if (!tracks || tracks.length === 0) return;
 
       setSuggestions(tracks);
+
+      // Si on ne veut pas écraser la queue (ex: clic depuis recherche), on s'arrête là
+      if (skipQueueUpdate) return;
 
       const newQueue = [track, ...tracks];
       setCurrentQueue(newQueue);
@@ -482,6 +616,43 @@ export const PlayerProvider = ({ children }) => {
     loading: playbackState.state === State.Buffering || playbackState.state === State.Loading,
   }), [playbackState.state]);
 
+  // ─── Enrichissement des Métadonnées ─────────────────────────────────────────
+  const enrichTracks = useCallback(async (tracks) => {
+    if (!tracks || !Array.isArray(tracks)) return;
+    
+    // On traite tous les morceaux qui ne sont pas encore en cache HD
+    const tracksToProcess = tracks.filter(t => 
+      t && t.id && !enrichedMetadata[String(t.id)]
+    );
+
+    if (tracksToProcess.length === 0) return;
+
+    // --- Vague 1 : Les 3 premiers en simultané (Ultra-rapide pour le haut de liste) ---
+    const firstWave = tracksToProcess.slice(0, 3);
+    const remaining = tracksToProcess.slice(3);
+
+    const enrichTrackInternal = async (track) => {
+      try {
+        const fullData = await getTrack(track.id);
+        if (fullData && fullData.contributors) {
+          const trackIdStr = String(track.id);
+          setEnrichedMetadata(prev => ({ ...prev, [trackIdStr]: fullData }));
+        }
+      } catch (e) {}
+    };
+
+    // On lance la première vague immédiatement
+    Promise.all(firstWave.map(t => enrichTrackInternal(t)));
+
+    // --- Vague 2 : Le reste en séquence pour ne pas saturer ---
+    for (let i = 0; i < remaining.length; i++) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        await enrichTrackInternal(remaining[i]);
+      } catch (e) {}
+    }
+  }, [enrichedMetadata]);
+
   return (
     <PlayerContext.Provider value={{
       currentTrack,
@@ -489,10 +660,12 @@ export const PlayerProvider = ({ children }) => {
       favorites,
       playlists,
       downloads,
+      recentlyPlayed,
       activeDownloads,
       loadingTrackId,
       onPlayTrack:      handlePlayTrack,
       onTogglePlay:     togglePlay,
+      onStop:           stopPlayer,
       onToggleFavorite: toggleFavorite,
       onNext:           handleNext,
       onPrevious:       handlePrevious,
@@ -511,10 +684,69 @@ export const PlayerProvider = ({ children }) => {
       repeatMode,
       toggleShuffle,
       cycleRepeatMode,
-      onRemoveDownload: async (id) => {
-        await deleteDownload(id);
+      followedAlbums,
+      onToggleFollowAlbum: toggleFollowAlbum,
+      followedArtists,
+      onToggleFollowArtist: toggleFollowArtist,
+      downloadingItems,
+      enrichedMetadata,
+      enrichTracks,
+      onRemoveDownload: async (track) => {
+        await deleteDownload(track);
         loadDownloads();
         triggerHaptic('notificationSuccess');
+      },
+      onDownload: async (track) => {
+        if (activeDownloads[track.id] !== undefined) return;
+        const exists = await isTrackDownloaded(track);
+        if (exists) {
+          loadDownloads();
+          return;
+        }
+        try {
+          setActiveDownloads(prev => ({ ...prev, [track.id]: 0 }));
+          setDownloadingItems(prev => ({ ...prev, [track.id]: track }));
+          const dl = await getTrackDownload(track.id);
+          const link = dl?.target?.link || dl?.link;
+          if (!link) return;
+          await startDownload(track, link, (progress) => {
+            setActiveDownloads(prev => ({ ...prev, [track.id]: progress }));
+          });
+          loadDownloads();
+        } catch (e) {
+          console.error('Download failed', e);
+        } finally {
+          setActiveDownloads(prev => { const n = { ...prev }; delete n[track.id]; return n; });
+          setDownloadingItems(prev => { const n = { ...prev }; delete n[track.id]; return n; });
+        }
+      },
+      onDownloadBatch: async (tracks) => {
+        if (!tracks || tracks.length === 0) return;
+        triggerHaptic('notificationSuccess');
+        for (const track of tracks) {
+          try {
+            // On appelle directement la logique de download du contexte
+            if (activeDownloads[track.id] !== undefined) continue;
+            const exists = await isTrackDownloaded(track);
+            if (exists) continue;
+
+            setActiveDownloads(prev => ({ ...prev, [track.id]: 0 }));
+            setDownloadingItems(prev => ({ ...prev, [track.id]: track }));
+            const dl = await getTrackDownload(track.id);
+            const link = dl?.target?.link || dl?.link;
+            if (link) {
+              await startDownload(track, link, (progress) => {
+                setActiveDownloads(prev => ({ ...prev, [track.id]: progress }));
+              });
+            }
+          } catch (e) {
+            console.error('Batch item failed', e);
+          } finally {
+            setActiveDownloads(prev => { const n = { ...prev }; delete n[track.id]; return n; });
+            setDownloadingItems(prev => { const n = { ...prev }; delete n[track.id]; return n; });
+            loadDownloads();
+          }
+        }
       },
       // Couleurs statiques (image-colors désactivé)
       currentColors: { primary: '#1DB954', secondary: '#111', background: '#000' },

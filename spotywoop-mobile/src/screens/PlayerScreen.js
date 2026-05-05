@@ -130,7 +130,8 @@ const PlayerScreen = ({
   }, [progress.position, lyrics]);
 
   const albumScale = useRef(new Animated.Value(isPlaying ? 1 : 0.85)).current;
-  const pan        = useRef(new Animated.Value(0)).current;
+  const pan     = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
 
   // ─── Animation album art (play/pause) ──────────────────────────────────────
   useEffect(() => {
@@ -144,15 +145,46 @@ const PlayerScreen = ({
   // ─── Drag to close ─────────────────────────────────────────────────────────
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 10,
-      onPanResponderMove: (_, g) => { if (g.dy > 0) pan.setValue(g.dy); },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 150 || g.vy > 0.5) {
-          onClose();
-          setTimeout(() => pan.setValue(0), 300);
-        } else {
-          Animated.spring(pan, { toValue: 0, useNativeDriver: true, tension: 40, friction: 8 }).start();
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 8 && Math.abs(g.dx) < Math.abs(g.dy),
+      onPanResponderGrant: () => {
+        pan.setOffset(pan._value);
+        pan.setValue(0);
+      },
+      onPanResponderMove: (_, g) => {
+        if (g.dy > 0) {
+          pan.setValue(g.dy);
+          // Fade progressif à partir de 80px de glissement
+          const newOpacity = 1 - Math.max(0, Math.min(0.7, (g.dy - 80) / 280));
+          opacity.setValue(newOpacity);
         }
+      },
+      onPanResponderRelease: (_, g) => {
+        pan.flattenOffset();
+        if (g.dy > 120 || g.vy > 0.8) {
+          // Fermeture fluide
+          Animated.parallel([
+            Animated.timing(pan,     { toValue: 800, duration: 250, useNativeDriver: true }),
+            Animated.timing(opacity, { toValue: 0,   duration: 200, useNativeDriver: true }),
+          ]).start(() => {
+            onClose();
+            pan.setValue(0);
+            opacity.setValue(1);
+          });
+        } else {
+          // Snap back
+          Animated.parallel([
+            Animated.spring(pan,     { toValue: 0, useNativeDriver: true, tension: 60, friction: 12 }),
+            Animated.spring(opacity, { toValue: 1, useNativeDriver: true, tension: 60, friction: 12 }),
+          ]).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        pan.flattenOffset();
+        Animated.parallel([
+          Animated.spring(pan,     { toValue: 0, useNativeDriver: true }),
+          Animated.spring(opacity, { toValue: 1, useNativeDriver: true }),
+        ]).start();
       },
     })
   ).current;
@@ -179,7 +211,7 @@ const PlayerScreen = ({
 
   return (
     <Animated.View
-      style={[styles.container, { transform: [{ translateY: pan }] }]}
+      style={[styles.container, { transform: [{ translateY: pan }], opacity }]}
       {...panResponder.panHandlers}
     >
       {/* Background immersif */}
@@ -209,7 +241,7 @@ const PlayerScreen = ({
         {/* Pochette ou Paroles */}
         <View style={[styles.artContainer, showLyrics && { flex: 1, paddingHorizontal: 0 }]}>
           {showLyrics ? (
-            <LyricsView track={track} currentTime={progress.position} lyricsData={lyrics} />
+            <LyricsView track={track} currentTime={progress.position} />
           ) : (
             <Animated.Image
               source={{ uri: track?.artwork || track?.album?.cover_big || track?.album?.cover_medium || '' }}
@@ -234,8 +266,9 @@ const PlayerScreen = ({
               {/* Téléchargement / Suppression */}
               <TouchableOpacity 
                 onPress={isDownloaded ? () => onRemoveDownload(track.id) : onDownload} 
-                style={styles.actionCircle} 
+                style={[styles.actionCircle, activeDownloads[track?.id] !== undefined && { opacity: 0.5 }]} 
                 activeOpacity={0.6}
+                disabled={activeDownloads[track?.id] !== undefined}
               >
                 {activeDownloads[track?.id] !== undefined ? (
                   <Text style={styles.progressText}>{Math.round(activeDownloads[track.id] * 100)}%</Text>
@@ -395,8 +428,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    overflow: 'hidden', // FIX : empêche le contenu de déborder pendant le swipe
+    borderTopLeftRadius: 16,  // FIX : coins arrondis en haut pour l'effet sheet
+    borderTopRightRadius: 16,
   },
-  background: { ...StyleSheet.absoluteFillObject, zIndex: -1 },
+  background: { ...StyleSheet.absoluteFillObject, zIndex: -1, overflow: 'hidden' },
   backgroundImage: { width: '100%', height: '100%', opacity: 0.65, transform: [{ scale: 1.4 }] },
   overlay: { ...StyleSheet.absoluteFillObject },
   header: {

@@ -5,14 +5,50 @@ import {
   View,
   FlatList,
   Dimensions,
-  ActivityIndicator,
-  Platform
+  Platform,
+  Animated
 } from 'react-native';
 import axios from 'axios';
 import { theme } from '../utils/theme';
 import { BASE_URL } from '../services/api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Petit composant interne pour les pointillés animés
+const LyricsSkeleton = () => {
+  const opacity = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.7,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const SkeletonLine = ({ width }) => (
+    <Animated.View style={[styles.skeletonLine, { width, opacity }]} />
+  );
+
+  return (
+    <View style={styles.skeletonContainer}>
+      <SkeletonLine width="80%" />
+      <SkeletonLine width="60%" />
+      <SkeletonLine width="90%" />
+      <SkeletonLine width="70%" />
+      <SkeletonLine width="50%" />
+    </View>
+  );
+};
 
 const LyricsView = ({ track, currentTime, lyricsData }) => {
   const [lyrics, setLyrics] = useState(lyricsData || []);
@@ -21,7 +57,6 @@ const LyricsView = ({ track, currentTime, lyricsData }) => {
   const listRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(-1);
 
-  // 1. Récupération des paroles (uniquement si non fournies)
   useEffect(() => {
     if (lyricsData && lyricsData.length > 0) {
       setLyrics(lyricsData);
@@ -47,14 +82,17 @@ const LyricsView = ({ track, currentTime, lyricsData }) => {
           const parsed = parseLRC(res.data.synced);
           setLyrics(parsed);
         } else if (res.data && res.data.plain) {
-          // Si pas de synchro, on affiche juste le texte
           setLyrics([{ time: 0, text: res.data.plain }]);
         } else {
-          setError('Pas de paroles trouvées');
+          setError('Lyrics non trouvés');
         }
       } catch (err) {
         console.error('[LyricsView] Error fetching lyrics:', err.message);
-        setError('Impossible de charger les paroles');
+        if (err.response && err.response.status === 404) {
+          setError('Lyrics non trouvés');
+        } else {
+          setError('Impossible de charger les paroles');
+        }
       } finally {
         setLoading(false);
       }
@@ -63,24 +101,20 @@ const LyricsView = ({ track, currentTime, lyricsData }) => {
     fetchLyrics();
   }, [track.id, lyricsData]);
 
-  // 2. Synchronisation avec la musique
   useEffect(() => {
     if (lyrics.length > 0) {
-      // On cherche la ligne qui correspond au temps actuel
       const index = lyrics.findLastIndex(l => l.time <= currentTime);
       if (index !== -1 && index !== currentIndex) {
         setCurrentIndex(index);
-        // Défilement auto
         listRef.current?.scrollToIndex({
           index,
           animated: true,
-          viewPosition: 0.3 // Garde la ligne active au premier tiers de l'écran
+          viewPosition: 0.3
         });
       }
     }
   }, [currentTime, lyrics]);
 
-  // Parser simple pour le format LRC
   const parseLRC = (lrc) => {
     const lines = lrc.split('\n');
     const result = [];
@@ -115,11 +149,7 @@ const LyricsView = ({ track, currentTime, lyricsData }) => {
     );
   };
 
-  if (loading) return (
-    <View style={styles.center}>
-      <ActivityIndicator size="large" color={theme.colors.accent} />
-    </View>
-  );
+  if (loading) return <LyricsSkeleton />;
 
   if (error) return (
     <View style={styles.center}>
@@ -137,7 +167,7 @@ const LyricsView = ({ track, currentTime, lyricsData }) => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         initialNumToRender={20}
-        onScrollToIndexFailed={() => {}} // Évite les crashs si l'index n'est pas encore rendu
+        onScrollToIndexFailed={() => {}}
       />
     </View>
   );
@@ -153,6 +183,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
+  },
+  skeletonContainer: {
+    flex: 1,
+    paddingHorizontal: 30,
+    paddingTop: 60,
+  },
+  skeletonLine: {
+    height: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 6,
+    marginVertical: 12,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   listContent: {
     paddingTop: 50,
