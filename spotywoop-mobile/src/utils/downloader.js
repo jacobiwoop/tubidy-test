@@ -147,16 +147,25 @@ export const startDownload = async (track, downloadUrl, onProgress) => {
 
 export const deleteDownload = async (track) => {
   if (!track) return;
-  const trackId = track.id || track;
-  const fileUri = getTrackPath(track);
-  
-  // Chemin de l'artwork (stocké à la racine dans startDownload)
+
+  // Supporte le cas où on passe uniquement un ID (string ou number)
+  let trackObj = track;
+  const trackId = typeof track === 'object' ? track.id : track;
+
+  if (typeof track !== 'object' || !track.album) {
+    // On récupère les métadonnées complètes depuis AsyncStorage pour avoir l'album.id
+    const downloads = await getDownloadMetadata();
+    const found = downloads.find(d => String(d.id) === String(trackId));
+    if (found) trackObj = found;
+  }
+
+  const fileUri = getTrackPath(trackObj);
   const artworkUri = `${DOWNLOAD_DIR}thumb_${trackId}.jpg`;
-  
+
   try {
     await FileSystem.deleteAsync(fileUri, { idempotent: true });
     await FileSystem.deleteAsync(artworkUri, { idempotent: true });
-    
+
     const downloads = await getDownloadMetadata();
     const filtered = downloads.filter(d => String(d.id) !== String(trackId));
     await saveDownloadMetadata(filtered);
