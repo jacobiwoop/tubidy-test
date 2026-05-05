@@ -289,6 +289,12 @@ export default function PlaylistDetailScreen({ navigation, route }) {
           <View style={styles.albumsSectionHeader}>
             <Disc size={14} color={theme.colors.accent} />
             <Text style={styles.albumsSectionTitle}>ALBUMS</Text>
+            <TouchableOpacity
+              style={styles.seeAllBtn}
+              onPress={() => navigation.navigate('DownloadedAlbums')}
+            >
+              <Text style={styles.seeAllText}>Tout voir</Text>
+            </TouchableOpacity>
           </View>
           {downloadedAlbums.map(album => (
             <TouchableOpacity

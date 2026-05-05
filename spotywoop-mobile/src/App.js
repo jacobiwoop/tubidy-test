@@ -15,6 +15,7 @@ import SearchScreen  from './screens/SearchScreen';
 import PlayerScreen  from './screens/PlayerScreen';
 import ArtistScreen  from './screens/ArtistScreen';
 import ArtistReleasesScreen from './screens/ArtistReleasesScreen';
+import DownloadedAlbumsScreen from './screens/DownloadedAlbumsScreen';
 import AlbumScreen from './screens/AlbumScreen';
 import PlaylistDetailScreen from './screens/PlaylistDetailScreen';
 import LibraryScreen from './screens/LibraryScreen';
@@ -233,6 +234,7 @@ function HomeStack() {
       <Stack.Screen name="ArtistReleases" component={ArtistReleasesScreen} />
       <Stack.Screen name="AlbumDetail" component={AlbumScreen} />
       <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
+      <Stack.Screen name="DownloadedAlbums" component={DownloadedAlbumsScreen} />
     </Stack.Navigator>
   );
 }
@@ -244,6 +246,7 @@ function SearchStack() {
       <Stack.Screen name="ArtistReleases" component={ArtistReleasesScreen} />
       <Stack.Screen name="AlbumDetail" component={AlbumScreen} />
       <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
+      <Stack.Screen name="DownloadedAlbums" component={DownloadedAlbumsScreen} />
     </Stack.Navigator>
   );
 }
@@ -255,6 +258,7 @@ function LibraryStack() {
       <Stack.Screen name="ArtistReleases" component={ArtistReleasesScreen} />
       <Stack.Screen name="AlbumDetail" component={AlbumScreen} />
       <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
+      <Stack.Screen name="DownloadedAlbums" component={DownloadedAlbumsScreen} />
     </Stack.Navigator>
   );
 }
