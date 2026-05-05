@@ -144,7 +144,7 @@ export default function LibraryScreen({ navigation }) {
                 style={styles.playlistCard} 
                 onPress={() => {
                   triggerHaptic("impactLight");
-                  navigation.navigate('Album', { albumId: album.id, albumTitle: album.title });
+                  navigation.navigate('AlbumDetail', { albumId: album.id, albumTitle: album.title });
                 }}
                 onLongPress={() => openActionSheet(album, 'album')}
                 delayLongPress={300}
@@ -166,7 +166,7 @@ export default function LibraryScreen({ navigation }) {
                 style={styles.playlistCard} 
                 onPress={() => {
                   triggerHaptic("impactLight");
-                  navigation.navigate('Artist', { artistId: artist.id });
+                  navigation.navigate('ArtistDetail', { artistId: artist.id });
                 }}
                 onLongPress={() => openActionSheet(artist, 'artist')}
                 delayLongPress={300}

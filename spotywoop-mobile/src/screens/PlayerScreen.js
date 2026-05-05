@@ -441,7 +441,11 @@ const PlayerScreen = ({
             <ListMusic size={24} color={theme.colors.secondary} />
           </TouchableOpacity>
           <Text style={styles.footerText}>
-            {isShuffle ? '🔀 Aléatoire' : repeatMode === REPEAT_MODE.LOOP_ALL ? '🔁 Tout en boucle' : repeatMode === REPEAT_MODE.PLAY_ALL_ONCE ? '➡️ Tout une fois' : '⏹️ Arrêt après titre'}
+            {`${isShuffle ? 'Aléatoire' : ''}${isShuffle ? ' • ' : ''}${
+              repeatMode === REPEAT_MODE.LOOP_ALL ? 'Tout en boucle' : 
+              repeatMode === REPEAT_MODE.PLAY_ALL_ONCE ? 'Tout une fois' : 
+              'Arrêt après titre'
+            }`}
           </Text>
           <TouchableOpacity onPress={() => setShowLyrics(!showLyrics)}>
             <Mic2 size={24} color={showLyrics ? theme.colors.accent : theme.colors.secondary} />
