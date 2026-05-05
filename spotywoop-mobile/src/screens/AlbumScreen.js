@@ -26,7 +26,7 @@ import { getArtistNames } from '../utils/formatters';
 const { width } = Dimensions.get('window');
 
 export default function AlbumScreen({ navigation, route }) {
-  const { albumId, albumTitle } = route.params;
+  const { albumId, albumTitle, localTracks } = route.params;
   const { 
     onPlayTrack, 
     currentTrack, 
@@ -53,6 +53,26 @@ export default function AlbumScreen({ navigation, route }) {
   }, [albumId]);
 
   const loadAlbumData = async () => {
+    // ── Mode hors-ligne : on a des morceaux locaux, pas besoin du réseau ──
+    if (localTracks && localTracks.length > 0) {
+      const firstTrack = localTracks[0];
+      const syntheticAlbum = {
+        id: albumId,
+        title: albumTitle || firstTrack.album?.title || 'Album',
+        cover_medium: firstTrack.album?.cover_medium || firstTrack.artwork,
+        cover_xl:     firstTrack.album?.cover_xl     || firstTrack.album?.cover_medium || firstTrack.artwork,
+        cover_small:  firstTrack.album?.cover_small  || firstTrack.artwork,
+        artist:       firstTrack.artist,
+        nb_tracks:    localTracks.length,
+        release_date: firstTrack.album?.release_date,
+        isLocalOnly: true,
+      };
+      setAlbum(syntheticAlbum);
+      setTracks(localTracks);
+      setLoading(false);
+      return; // ← On s'arrête là, pas de réseau
+    }
+
     const cacheKey = `album_${albumId}`;
     
     // 1. Cache
@@ -63,11 +83,10 @@ export default function AlbumScreen({ navigation, route }) {
       setLoading(false);
     }
 
-    // 2. Network
+    // 2. Network (seulement si pas de localTracks)
     try {
       const albumData = await api.getAlbum(albumId);
       
-      // On enrichit chaque piste avec les infos de l'album pour le lecteur
       const enrichedTracks = (albumData.tracks?.data || []).map(t => ({
         ...t,
         album: {
@@ -86,7 +105,7 @@ export default function AlbumScreen({ navigation, route }) {
       
       setAlbum(freshData.album);
       setTracks(freshData.tracks);
-      enrichTracks(freshData.tracks); // Enrichissement en arrière-plan
+      enrichTracks(freshData.tracks);
       saveCache(cacheKey, freshData);
     } catch (error) {
       console.error('Failed to load album data:', error);
