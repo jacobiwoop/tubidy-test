@@ -9,7 +9,6 @@ import TrackPlayer, {
 import { getArtistNames } from '../utils/formatters';
 import { getFavorites, saveFavorite } from '../utils/favorites';
 import { getPlaylists, removeTrackFromPlaylist } from '../utils/playlists';
-import { getDownloadMetadata, deleteDownload, isTrackDownloaded, startDownload } from '../utils/downloader';
 import { getTrackDownload, getTrackRadio, getTrack, BASE_URL } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
 import StatsService from '../services/StatsService';
@@ -420,22 +419,6 @@ export const PlayerProvider = ({ children }) => {
         console.log(`[Cache] Hit for: ${track.title}`);
       }
 
-      // Priorité absolue au fichier local si téléchargé (physiquement présent)
-      const physicallyExists = await isTrackDownloaded(track);
-      if (physicallyExists) {
-        const albumFolder = track.album?.title ? `${track.album.title.replace(/[#%&{}\\<>*?/$!'":@+`|=]/g, '_')}/` : '';
-        const DOWNLOAD_DIR = `file://${FileSystem.documentDirectory}downloads/${albumFolder}`;
-        finalLink = `${DOWNLOAD_DIR}${track.id}.mp3`;
-        console.log(`[Local] Playing from physical storage: ${track.title}`);
-        
-        // On cherche aussi l'artwork local s'il existe
-        const localTrack = downloads.find(d => String(d.id) === String(track.id));
-        if (localTrack) {
-          finalTrack = { ...localTrack, localUri: finalLink };
-        } else {
-          finalTrack = { ...track, localUri: finalLink };
-        }
-      } else if (isDownloaded) {
         // Si les métadonnées disent "téléchargé" mais que le fichier a disparu
         console.warn(`[Local] Metadata found but file missing for: ${track.title}`);
       }

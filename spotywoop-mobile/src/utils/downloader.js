@@ -4,11 +4,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const DOWNLOADS_KEY = '@spotywoop_downloads_metadata';
 const DOWNLOAD_DIR = `${FileSystem.documentDirectory}downloads/`;
 
-// S'assurer que le dossier existe
-const ensureDir = async () => {
-  const dirInfo = await FileSystem.getInfoAsync(DOWNLOAD_DIR);
+/**
+ * Nettoie les noms de fichiers et dossiers pour éviter les erreurs FS
+ */
+const sanitize = (name) => {
+  if (name === undefined || name === null) return 'Unknown';
+  // Conversion en string + retrait des caractères spéciaux interdits sur mobile FS
+  return String(name).replace(/[#%&{}\\<>*?/$!'":@+`|=]/g, '_').trim() || 'Unknown';
+};
+
+/**
+ * S'assurer que le dossier racine existe
+ */
+const ensureDir = async (path = DOWNLOAD_DIR) => {
+  const dirInfo = await FileSystem.getInfoAsync(path);
   if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(DOWNLOAD_DIR, { intermediates: true });
+    await FileSystem.makeDirectoryAsync(path, { intermediates: true });
   }
 };
 
@@ -21,26 +32,79 @@ export const saveDownloadMetadata = async (metadata) => {
   await AsyncStorage.setItem(DOWNLOADS_KEY, JSON.stringify(metadata));
 };
 
-const sanitize = (name) => name ? name.replace(/[#%&{}\\<>*?/$!'":@+`|=]/g, '_') : 'Unknown_Album';
+/**
+ * Calcule le chemin "Cible" (Nouvelle structure par ID d'album)
+ */
+  const albumId = track.album?.id || track.albumId;
+  const albumFolder = albumId ? `${sanitize(albumId)}/` : '';
+  return `${DOWNLOAD_DIR}${albumFolder}${track.id}.mp3`;
+};
+
+/**
+ * Vérifie si un morceau est téléchargé ET migre physiquement le fichier
+ * si celui-ci est trouvé dans une ancienne structure (Téléportation).
+ */
+export const isTrackDownloaded = async (track) => {
+  if (!track || !track.id) return false;
+  
+  const targetPath = getTrackPath(track);
+  
+  try {
+    // 1. Vérification au chemin cible (Nouveau système : ID Album)
+    const targetInfo = await FileSystem.getInfoAsync(targetPath);
+    if (targetInfo.exists) return true;
+
+    // 2. Moteur de Téléportation : Recherche dans les anciennes structures
+    const oldPaths = [
+      `${DOWNLOAD_DIR}${track.id}.mp3`, // Ancienne structure : Racine
+      track.album?.title ? `${DOWNLOAD_DIR}${sanitize(track.album.title)}/${track.id}.mp3` : null // Ancienne structure : Titre Album
+    ].filter(Boolean);
+
+    for (const oldPath of oldPaths) {
+      const oldInfo = await FileSystem.getInfoAsync(oldPath);
+      if (oldInfo.exists) {
+        console.log(`[Downloader] Téléportation détectée : ${track.id} (${oldPath} -> ${targetPath})`);
+        
+        // Créer le dossier parent si nécessaire
+        const parentDir = targetPath.substring(0, targetPath.lastIndexOf('/') + 1);
+        await ensureDir(parentDir);
+
+        // Déplacement physique du fichier
+        await FileSystem.moveAsync({
+          from: oldPath,
+          to: targetPath
+        });
+
+        // Mise à jour des métadonnées dans AsyncStorage
+        const downloads = await getDownloadMetadata();
+        const index = downloads.findIndex(d => String(d.id) === String(track.id));
+        
+        if (index !== -1) {
+          downloads[index].localUri = targetPath;
+          // Si on a un artwork, on pourrait aussi le migrer ici si besoin
+          await saveDownloadMetadata(downloads);
+        }
+
+        return true;
+      }
+    }
+  } catch (e) {
+    console.error('[Downloader] Erreur lors de la vérification/migration :', e);
+  }
+  
+  return false;
+};
 
 export const startDownload = async (track, downloadUrl, onProgress) => {
   await ensureDir();
   
-  const albumFolder = track.album?.title ? `${sanitize(track.album.title)}/` : '';
-  const finalDir = `${DOWNLOAD_DIR}${albumFolder}`;
-  
-  // S'assurer que le sous-dossier existe
-  const dirInfo = await FileSystem.getInfoAsync(finalDir);
-  if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(finalDir, { intermediates: true });
-  }
+  const targetPath = getTrackPath(track);
+  const targetDir = targetPath.substring(0, targetPath.lastIndexOf('/') + 1);
+  await ensureDir(targetDir);
 
-  const fileName = `${track.id}.mp3`;
-  const fileUri = `${finalDir}${fileName}`;
-  
   const downloadResumable = FileSystem.createDownloadResumable(
     downloadUrl,
-    fileUri,
+    targetPath,
     {},
     (downloadProgress) => {
       const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
@@ -51,7 +115,7 @@ export const startDownload = async (track, downloadUrl, onProgress) => {
   try {
     const { uri } = await downloadResumable.downloadAsync();
     
-    // Télécharger aussi l'artwork pour le mode hors-ligne
+    // Télécharger aussi l'artwork pour le mode hors-ligne (stocké à la racine pour l'instant)
     let localArtwork = null;
     const artworkUrl = track.album?.cover_big || track.album?.cover_medium || track.thumbnail || track.artwork;
     if (artworkUrl && artworkUrl.startsWith('http')) {
@@ -71,7 +135,7 @@ export const startDownload = async (track, downloadUrl, onProgress) => {
     const newDownload = {
       ...track,
       localUri: uri,
-      artwork: localArtwork || artworkUrl, // On remplace par le lien local si dispo
+      artwork: localArtwork || artworkUrl,
       downloadedAt: new Date().toISOString()
     };
     
@@ -83,33 +147,17 @@ export const startDownload = async (track, downloadUrl, onProgress) => {
   }
 };
 
-const getTrackPath = (track) => {
-  const albumFolder = track.album?.title ? `${sanitize(track.album.title)}/` : '';
-  return `${DOWNLOAD_DIR}${albumFolder}${track.id}.mp3`;
-};
-
-export const isTrackDownloaded = async (track) => {
-  if (!track) return false;
-  const fileUri = getTrackPath(track);
-  try {
-    const info = await FileSystem.getInfoAsync(fileUri);
-    return info.exists;
-  } catch (e) {
-    return false;
-  }
-};
-
 export const deleteDownload = async (track) => {
   if (!track) return;
   const trackId = track.id || track;
   const fileUri = getTrackPath(track);
-  const albumFolder = track.album?.title ? `${sanitize(track.album.title)}/` : '';
-  const artworkUri = `${DOWNLOAD_DIR}${albumFolder}thumb_${trackId}.jpg`;
+  
+  // Chemin de l'artwork (stocké à la racine dans startDownload)
+  const artworkUri = `${DOWNLOAD_DIR}thumb_${trackId}.jpg`;
   
   try {
     await FileSystem.deleteAsync(fileUri, { idempotent: true });
-    // Note: on ne supprime l'artwork que si c'est le dernier morceau de l'album ? 
-    // Pour l'instant on reste simple.
+    await FileSystem.deleteAsync(artworkUri, { idempotent: true });
     
     const downloads = await getDownloadMetadata();
     const filtered = downloads.filter(d => String(d.id) !== String(trackId));

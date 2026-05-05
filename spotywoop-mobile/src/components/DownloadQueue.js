@@ -65,7 +65,6 @@ export default function DownloadQueue({ downloadingItems, activeDownloads }) {
       const track = downloadingItems[id];
       const progress = activeDownloads[id] || 0;
       
-      // On groupe par album.id (plus fiable que le titre)
       if (track.album?.id) {
         const albumId = String(track.album.id);
         if (!albumGroups[albumId]) {
@@ -74,9 +73,14 @@ export default function DownloadQueue({ downloadingItems, activeDownloads }) {
             title: track.album.title || 'Album inconnu',
             artist: getArtistNames(track),
             tracks: [],
+            currentTrackTitle: ''
           };
         }
         albumGroups[albumId].tracks.push({ ...track, progress });
+        // Identifier le morceau en cours de traitement pour cet album
+        if (progress > 0 && progress < 100) {
+          albumGroups[albumId].currentTrackTitle = track.title;
+        }
       } else {
         individualTracks.push({ ...track, progress });
       }
@@ -86,6 +90,14 @@ export default function DownloadQueue({ downloadingItems, activeDownloads }) {
     Object.values(albumGroups).forEach(group => {
       const sum = group.tracks.reduce((acc, t) => acc + t.progress, 0);
       group.avgProgress = sum / group.tracks.length;
+      
+      // Si aucun morceau n'est spécifiquement "en cours" (ex: tous à 0% ou tous finis), 
+      // on prend le premier qui n'est pas à 100%
+      if (!group.currentTrackTitle) {
+        const next = group.tracks.find(t => t.progress < 100);
+        if (next) group.currentTrackTitle = next.title;
+      }
+      
       group.tracks.sort((a, b) => (a.title > b.title ? 1 : -1));
     });
 
@@ -94,6 +106,23 @@ export default function DownloadQueue({ downloadingItems, activeDownloads }) {
       singles: individualTracks 
     };
   }, [downloadingItems, activeDownloads]);
+
+  // Auto-expand logic
+  React.useEffect(() => {
+    if (groups.albums.length > 0) {
+      setExpandedAlbums(prev => {
+        const next = { ...prev };
+        let changed = false;
+        groups.albums.forEach(album => {
+          if (next[album.id] === undefined) {
+            next[album.id] = true; // Auto-expand par défaut
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }
+  }, [groups.albums.length]);
 
   if (groups.albums.length === 0 && groups.singles.length === 0) return null;
 
@@ -134,9 +163,11 @@ export default function DownloadQueue({ downloadingItems, activeDownloads }) {
                   
                   <View style={styles.albumInfo}>
                     <Text style={styles.albumName} numberOfLines={1}>{group.title}</Text>
-                    <Text style={styles.albumArtist} numberOfLines={1}>{group.artist}</Text>
+                    <Text style={styles.albumArtist} numberOfLines={1}>
+                      {!isExpanded && group.currentTrackTitle ? `En cours : ${group.currentTrackTitle}` : group.artist}
+                    </Text>
                     <View style={styles.globalProgressBg}>
-                        <View style={[styles.globalProgressFill, { width: `${group.avgProgress}%` }]} />
+                        <View style={[styles.globalProgressFill, { width: `${Math.max(2, group.avgProgress)}%` }]} />
                     </View>
                   </View>
                   
