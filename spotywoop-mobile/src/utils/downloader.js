@@ -32,9 +32,7 @@ export const saveDownloadMetadata = async (metadata) => {
   await AsyncStorage.setItem(DOWNLOADS_KEY, JSON.stringify(metadata));
 };
 
-/**
- * Calcule le chemin "Cible" (Nouvelle structure par ID d'album)
- */
+export const getTrackPath = (track) => {
   const albumId = track.album?.id || track.albumId;
   const albumFolder = albumId ? `${sanitize(albumId)}/` : '';
   return `${DOWNLOAD_DIR}${albumFolder}${track.id}.mp3`;

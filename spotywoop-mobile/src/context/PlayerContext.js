@@ -9,6 +9,7 @@ import TrackPlayer, {
 import { getArtistNames } from '../utils/formatters';
 import { getFavorites, saveFavorite } from '../utils/favorites';
 import { getPlaylists, removeTrackFromPlaylist } from '../utils/playlists';
+import { getDownloadMetadata, deleteDownload, isTrackDownloaded, startDownload, getTrackPath } from '../utils/downloader';
 import { getTrackDownload, getTrackRadio, getTrack, BASE_URL } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
 import StatsService from '../services/StatsService';
@@ -412,17 +413,36 @@ export const PlayerProvider = ({ children }) => {
         }
       }
 
-      // On vérifie d'abord le cache du prefetch
+      // ─── Cache & Local ─────────────────────────────────────────────────────
+      // 1. Vérification du cache de prefetch
       const cached = prefetchCache.current[track.id];
       if (cached && cached.expires > Date.now()) {
         finalLink = cached.link;
         console.log(`[Cache] Hit for: ${track.title}`);
       }
 
-        // Si les métadonnées disent "téléchargé" mais que le fichier a disparu
+      // 2. Priorité absolue au fichier local si téléchargé (physiquement présent)
+      const physicallyExists = await isTrackDownloaded(track);
+      if (physicallyExists) {
+        finalLink = getTrackPath(track);
+        console.log(`[Local] Playing from physical storage: ${track.title}`);
+        
+        const updatedDownloads = await getDownloadMetadata();
+        const localTrack = updatedDownloads.find(d => String(d.id) === String(track.id));
+        
+        if (localTrack) {
+          finalTrack = { ...localTrack, localUri: finalLink };
+          if (downloads.find(d => String(d.id) === String(track.id))?.localUri !== localTrack.localUri) {
+            setDownloads(updatedDownloads);
+          }
+        } else {
+          finalTrack = { ...track, localUri: finalLink };
+        }
+      } else if (isDownloaded) {
         console.warn(`[Local] Metadata found but file missing for: ${track.title}`);
       }
 
+      // 3. Résolution réseau si nécessaire
       if (!finalLink && (String(track.id).startsWith('lfm-') || String(track.id).startsWith('cho-'))) {
         const q = `${track.title} ${track.artist?.name || track.artist}`;
         const res = await axios.get(`${BASE_URL}/search/play`, { params: { q } });
