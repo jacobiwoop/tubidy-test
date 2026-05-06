@@ -96,3 +96,13 @@ jobs:
           name: spotywoop-production-release
           path: spotywoop-mobile/android/app/build/outputs/apk/release/spotywoop-release-signed.apk
           retention-days: 30
+
+      - name: 🚀 Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Spotiwoop Release v1.0.${{ github.run_number }}
+          files: spotywoop-mobile/android/app/build/outputs/apk/release/spotywoop-release-signed.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
