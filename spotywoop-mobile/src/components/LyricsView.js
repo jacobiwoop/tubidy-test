@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,9 +6,12 @@ import {
   FlatList,
   Dimensions,
   Platform,
-  Animated
+  Animated,
+  TouchableOpacity,
+  AppState
 } from 'react-native';
 import axios from 'axios';
+import TrackPlayer from 'react-native-track-player';
 import { theme } from '../utils/theme';
 import { BASE_URL } from '../services/api';
 
@@ -50,13 +53,18 @@ const LyricsSkeleton = () => {
   );
 };
 
-const LyricsView = ({ track, currentTime, lyricsData }) => {
+const LyricsView = ({ track, currentTime, lyricsData, onSeek }) => {
   const [lyrics, setLyrics] = useState(lyricsData || []);
   const [loading, setLoading] = useState(!lyricsData);
   const [error, setError] = useState(null);
   const listRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(-1);
+  const lyricsRef = useRef(lyrics);
 
+  // Garder lyricsRef à jour pour les callbacks sans re-render
+  useEffect(() => {
+    lyricsRef.current = lyrics;
+  }, [lyrics]);
 
   useEffect(() => {
     if (lyricsData && lyricsData.length > 0) {
@@ -65,31 +73,83 @@ const LyricsView = ({ track, currentTime, lyricsData }) => {
     }
   }, [lyricsData]);
 
-  useEffect(() => {
-    if (lyrics.length > 0) {
-      const index = lyrics.findLastIndex(l => l.time <= currentTime);
-      if (index !== -1 && index !== currentIndex) {
-        setCurrentIndex(index);
+  // ─── Fonction centrale de synchro ─────────────────────────────────────────
+  // Calcule et applique le bon index selon une position donnée (en secondes)
+  const syncToPosition = useCallback((position) => {
+    const currentLyrics = lyricsRef.current;
+    if (!currentLyrics || currentLyrics.length === 0) return;
+
+    const index = currentLyrics.findLastIndex(l => l.time <= position);
+    if (index !== -1) {
+      setCurrentIndex(index);
+      // Petit délai pour laisser le temps au FlatList d'être prêt
+      setTimeout(() => {
         listRef.current?.scrollToIndex({
           index,
           animated: true,
           viewPosition: 0.3
         });
-      }
+      }, 100);
     }
+  }, []);
+
+  // ─── Synchro continue via prop currentTime (useProgress du player) ────────
+  useEffect(() => {
+    syncToPosition(currentTime);
   }, [currentTime, lyrics]);
+
+  // ─── Synchro au mount et au retour dans l'app (AppState) ─────────────────
+  // Interroge TrackPlayer.getProgress() directement pour avoir la vraie position
+  const resyncNow = useCallback(async () => {
+    try {
+      const { position } = await TrackPlayer.getProgress();
+      syncToPosition(position);
+    } catch (e) {
+      // Player pas encore prêt, on ignore
+    }
+  }, [syncToPosition]);
+
+  // Au mount du composant (ouverture du player)
+  useEffect(() => {
+    resyncNow();
+  }, [lyrics]); // Re-sync aussi quand les lyrics chargent
+
+  // Au retour dans l'app depuis l'arrière-plan
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        resyncNow();
+      }
+    });
+    return () => subscription.remove();
+  }, [resyncNow]);
+
+  // ─── Seek au clic sur une ligne ───────────────────────────────────────────
+  const handleLineTap = useCallback(async (item, index) => {
+    try {
+      await TrackPlayer.seekTo(item.time);
+      setCurrentIndex(index);
+      if (onSeek) onSeek(item.time);
+    } catch (e) {
+      console.warn('[LyricsView] Seek failed:', e.message);
+    }
+  }, [onSeek]);
 
   const renderItem = ({ item, index }) => {
     const isActive = index === currentIndex;
     return (
-      <View style={[styles.lineWrapper, isActive && styles.activeLineWrapper]}>
+      <TouchableOpacity
+        style={[styles.lineWrapper, isActive && styles.activeLineWrapper]}
+        onPress={() => handleLineTap(item, index)}
+        activeOpacity={0.7}
+      >
         <Text style={[
-          styles.lineText, 
+          styles.lineText,
           isActive ? styles.activeLineText : styles.inactiveLineText
         ]}>
           {item.text}
         </Text>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -111,7 +171,16 @@ const LyricsView = ({ track, currentTime, lyricsData }) => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         initialNumToRender={20}
-        onScrollToIndexFailed={() => {}}
+        onScrollToIndexFailed={(info) => {
+          // Retry après que le layout soit prêt
+          setTimeout(() => {
+            listRef.current?.scrollToIndex({
+              index: info.index,
+              animated: true,
+              viewPosition: 0.3
+            });
+          }, 300);
+        }}
       />
     </View>
   );
@@ -148,6 +217,12 @@ const styles = StyleSheet.create({
   },
   lineWrapper: {
     marginVertical: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  activeLineWrapper: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   lineText: {
     fontSize: 24,
