@@ -8,7 +8,8 @@ import {
   TouchableOpacity, 
   ActivityIndicator, 
   StatusBar,
-  Dimensions
+  Dimensions,
+  InteractionManager
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, X } from 'lucide-react-native';
@@ -33,7 +34,10 @@ export default function ArtistReleasesScreen({ navigation, route }) {
   const [activeFilter, setActiveFilter] = useState(initialFilter || 'Albums');
 
   useEffect(() => {
-    loadAllReleases();
+    const task = InteractionManager.runAfterInteractions(() => {
+      loadAllReleases();
+    });
+    return () => task.cancel();
   }, []);
 
   const loadAllReleases = async () => {

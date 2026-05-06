@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, memo } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -35,6 +35,86 @@ import { triggerHaptic } from '../utils/haptics';
 import { getArtistNames } from '../utils/formatters';
 
 const { width } = Dimensions.get('window');
+
+const TrackItem = memo(({ 
+  item, index, isPlaying, isFavorite, isDownloaded, isSelected, isSelecting, 
+  activeProgress, onPlay, onToggleFavorite, onNavigateArtist, onLongPress, onSelect, onAction,
+  enrichedMetadata, finalTracks
+}) => (
+  <TouchableOpacity 
+    style={[styles.trackItem, isPlaying && styles.playingTrack, isSelected && styles.selectedTrack]}
+    onPress={() => {
+      if (isSelecting) {
+        onSelect(String(item.id));
+      } else {
+        triggerHaptic("impactLight");
+        onPlay(item, finalTracks);
+      }
+    }}
+    onLongPress={onLongPress}
+    delayLongPress={300}
+  >
+    {isSelecting ? (
+      <View style={styles.checkbox}>
+        {isSelected 
+          ? <CheckCircle2 size={22} color={theme.colors.accent} fill={theme.colors.accent} />
+          : <Circle size={22} color="rgba(255,255,255,0.3)" />
+        }
+      </View>
+    ) : (
+      <Text style={styles.trackNumber}>{index + 1}</Text>
+    )}
+
+    <TouchableOpacity 
+      onPress={(e) => {
+        e.stopPropagation();
+        if (isSelecting) return;
+        triggerHaptic("impactLight");
+        onNavigateArtist(item.artist?.id || item.artist_id);
+      }}
+    >
+      <Image 
+        source={{ uri: item.album?.cover_medium || item.artwork }} 
+        style={styles.trackThumb} 
+      />
+    </TouchableOpacity>
+
+    <View style={styles.trackInfo}>
+      <Text style={[styles.trackTitle, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>
+        {item.title}
+      </Text>
+      <Text style={styles.trackArtist}>{getArtistNames(item, enrichedMetadata)}</Text>
+    </View>
+
+    <View style={styles.trackAction}>
+      {!isSelecting && (
+        activeProgress !== undefined ? (
+          <Text style={styles.progressTextSmall}>{Math.round(activeProgress * 100)}%</Text>
+        ) : isDownloaded ? (
+          <Download size={16} color={theme.colors.accent} />
+        ) : (
+          <TouchableOpacity onPress={() => onToggleFavorite(item)}>
+            <Heart 
+              size={18} 
+              color={isFavorite ? theme.colors.accent : 'rgba(255,255,255,0.2)'} 
+              fill={isFavorite ? theme.colors.accent : 'transparent'} 
+            />
+          </TouchableOpacity>
+        )
+      )}
+    </View>
+  </TouchableOpacity>
+), (prev, next) => {
+  return (
+    prev.isPlaying === next.isPlaying &&
+    prev.isFavorite === next.isFavorite &&
+    prev.isDownloaded === next.isDownloaded &&
+    prev.isSelected === next.isSelected &&
+    prev.isSelecting === next.isSelecting &&
+    prev.activeProgress === next.activeProgress &&
+    prev.item.id === next.item.id
+  );
+});
 
 export default function PlaylistDetailScreen({ navigation, route }) {
   const { playlistId, title, tracks: initialTracks } = route.params;
@@ -181,83 +261,37 @@ export default function PlaylistDetailScreen({ navigation, route }) {
     inputRange: [150, 200], outputRange: [0, 1], extrapolate: 'clamp',
   });
 
-  // ── Rendu d'un morceau ───────────────────────────────────────────────────
-  const renderTrackItem = ({ item, index }) => {
-    const isPlaying = currentTrack?.id === item.id;
-    const isFavorite = favorites.some(f => f.id === item.id);
-    const isDownloaded = downloads.some(d => String(d.id) === String(item.id));
-    const isSelected = selectedIds.has(String(item.id));
+  // OPTIMISATION : Indexation rapide pour les listes géantes
+  const favoriteIds = useMemo(() => new Set(favorites.map(f => String(f.id))), [favorites]);
+  const downloadIds = useMemo(() => new Set(downloads.map(d => String(d.id))), [downloads]);
 
-    return (
-      <TouchableOpacity 
-        style={[styles.trackRow, isPlaying && styles.playingRow, isSelected && styles.selectedRow]}
-        onPress={() => {
-          if (isSelecting) { toggleSelect(String(item.id)); return; }
-          onPlayTrack(item, finalTracks);
-        }}
-        onLongPress={() => {
-          if (isSelecting) return;
-          if (playlistId === 'downloads') {
-            enterSelectMode(String(item.id));
-          } else {
-            openActionSheet(item, 'track', { playlistId });
-          }
-        }}
-        delayLongPress={300}
-      >
-        {/* Checkbox en mode sélection */}
-        {isSelecting ? (
-          <View style={styles.checkbox}>
-            {isSelected 
-              ? <CheckCircle2 size={22} color={theme.colors.accent} fill={theme.colors.accent} />
-              : <Circle size={22} color="rgba(255,255,255,0.3)" />
-            }
-          </View>
-        ) : (
-          <Text style={styles.trackNumber}>{index + 1}</Text>
-        )}
-
-        <TouchableOpacity 
-          onPress={(e) => {
-            e.stopPropagation();
-            if (isSelecting) return;
-            triggerHaptic("impactLight");
-            navigation.navigate('ArtistDetail', { artistId: item.artist?.id || item.artist_id });
-          }}
-        >
-          <Image 
-            source={{ uri: item.album?.cover_medium || item.artwork }} 
-            style={styles.trackThumb} 
-          />
-        </TouchableOpacity>
-
-        <View style={styles.trackInfo}>
-          <Text style={[styles.trackTitle, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.trackArtist}>{getArtistNames(item, enrichedMetadata)}</Text>
-        </View>
-
-        <View style={styles.trackAction}>
-          {!isSelecting && (
-            activeDownloads[item.id] !== undefined ? (
-              <Text style={styles.progressTextSmall}>{Math.round(activeDownloads[item.id] * 100)}%</Text>
-            ) : isDownloaded ? (
-              <Download size={16} color={theme.colors.accent} />
-            ) : (
-              <TouchableOpacity onPress={() => onToggleFavorite(item)}>
-                <Heart 
-                  size={18} 
-                  color={isFavorite ? theme.colors.accent : 'rgba(255,255,255,0.2)'} 
-                  fill={isFavorite ? theme.colors.accent : 'transparent'} 
-                />
-              </TouchableOpacity>
-            )
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderTrackItem = ({ item, index }) => (
+    <TrackItem 
+      item={item}
+      index={index}
+      isPlaying={currentTrack?.id === item.id}
+      isFavorite={favoriteIds.has(String(item.id))}
+      isDownloaded={downloadIds.has(String(item.id))}
+      isSelected={selectedIds.has(String(item.id))}
+      isSelecting={isSelecting}
+      activeProgress={activeDownloads[item.id]}
+      onPlay={(track, list) => onPlayTrack(track, list)}
+      onToggleFavorite={onToggleFavorite}
+      onNavigateArtist={(artistId) => navigation.navigate('ArtistDetail', { artistId })}
+      onLongPress={() => {
+        if (isSelecting) return;
+        if (playlistId === 'downloads') {
+          enterSelectMode(String(item.id));
+        } else {
+          openActionSheet(item, 'track', { playlistId });
+        }
+      }}
+      onSelect={(id) => isSelecting ? toggleSelect(id) : null}
+      onAction={() => openActionSheet(item, 'track', { playlistId })}
+      enrichedMetadata={enrichedMetadata}
+      finalTracks={finalTracks}
+    />
+  );
 
   // ── Header de liste (Albums + Actions) ───────────────────────────────────
   const ListHeader = () => (

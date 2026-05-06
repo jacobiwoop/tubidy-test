@@ -9,7 +9,8 @@ import {
   ActivityIndicator, 
   StatusBar,
   Dimensions,
-  Platform
+  Platform,
+  InteractionManager
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -49,7 +50,10 @@ export default function AlbumScreen({ navigation, route }) {
   const [tracks, setTracks] = useState([]);
 
   useEffect(() => {
-    loadAlbumData();
+    const task = InteractionManager.runAfterInteractions(() => {
+      loadAlbumData();
+    });
+    return () => task.cancel();
   }, [albumId]);
 
   const loadAlbumData = async () => {

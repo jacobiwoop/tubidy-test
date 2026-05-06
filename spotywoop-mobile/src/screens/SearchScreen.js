@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -41,6 +41,91 @@ const GENRES = [
 
 const searchCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000;
+
+// COMPOSANT MÉMOÏSÉ POUR LES PERFORMANCES
+const TrackItem = memo(({ 
+  item, 
+  isPlaying, 
+  isLoading, 
+  isFavorite, 
+  isDownloaded, 
+  onPlay, 
+  onToggleFavorite, 
+  onNavigateArtist, 
+  onOpenActionSheet,
+  enrichedMetadata 
+}) => {
+  return (
+    <TouchableOpacity 
+      style={[styles.trackCard, isPlaying && styles.playingCard]}
+      onPress={() => {
+        triggerHaptic("impactLight");
+        onPlay(item);
+      }}
+      onLongPress={() => onOpenActionSheet(item, 'track')}
+      delayLongPress={300}
+    >
+      <TouchableOpacity 
+        style={styles.coverContainer}
+        onPress={(e) => {
+          e.stopPropagation();
+          triggerHaptic("impactLight");
+          onNavigateArtist(item.artist?.id || item.artist_id);
+        }}
+      >
+        <Image source={{ uri: item?.album?.cover_medium }} style={styles.cover} />
+        {isPlaying && (
+          <View style={styles.playingOverlay}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={theme.colors.accent} />
+            ) : (
+              <Volume2 size={20} color={theme.colors.accent} />
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
+
+      <View style={styles.trackInfo}>
+        <View style={styles.titleRow}>
+          <Text style={[styles.trackTitle, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>
+            {item.title}
+          </Text>
+          {isDownloaded && (
+            <Download size={12} color={theme.colors.accent} style={{ marginLeft: 6 }} />
+          )}
+        </View>
+        <Text style={styles.trackArtist} numberOfLines={1}>
+          {getArtistNames(item, enrichedMetadata)}
+        </Text>
+      </View>
+
+      <View style={styles.trackActions}>
+        <TouchableOpacity onPress={() => onToggleFavorite(item)} style={styles.actionBtn}>
+          <Heart 
+            size={20} 
+            color={isFavorite ? theme.colors.accent : 'rgba(255,255,255,0.2)'} 
+            fill={isFavorite ? theme.colors.accent : 'transparent'} 
+          />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.actionBtn}
+          onPress={() => onOpenActionSheet(item, 'track')}
+        >
+          <MoreHorizontal size={20} color="rgba(255,255,255,0.4)" />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}, (prev, next) => {
+  // On ne redessine que si l'état crucial a changé
+  return (
+    prev.isPlaying === next.isPlaying &&
+    prev.isLoading === next.isLoading &&
+    prev.isFavorite === next.isFavorite &&
+    prev.isDownloaded === next.isDownloaded &&
+    prev.item.id === next.item.id
+  );
+});
 
 export default function SearchScreen({ navigation }) {
   const { 
@@ -170,71 +255,24 @@ export default function SearchScreen({ navigation }) {
     </TouchableOpacity>
   );
 
-  const renderTrack = ({ item, index }) => {
-    const isLoading = loadingTrackId === item.id;
-    const isPlaying = currentTrack?.id === item.id;
-    const isFavorite = favorites.some(f => f.id === item.id);
+  // OPTIMISATION : On transforme les listes en Sets pour des recherches O(1) ultra-rapides
+  const favoriteIds = useMemo(() => new Set(favorites.map(f => String(f.id))), [favorites]);
+  const downloadIds = useMemo(() => new Set(downloads.map(d => String(d.id))), [downloads]);
 
-    return (
-      <Animated.View style={{ opacity: fadeAnim }}>
-          <TouchableOpacity 
-            style={[styles.trackCard, isPlaying && styles.playingCard]}
-            onPress={() => {
-              triggerHaptic("impactLight");
-              onPlayTrack(item);
-            }}
-            onLongPress={() => openActionSheet(item, 'track')}
-            delayLongPress={300}
-          >
-            <TouchableOpacity 
-              style={styles.coverContainer}
-              onPress={(e) => {
-                e.stopPropagation();
-                triggerHaptic("impactLight");
-                navigation.navigate('ArtistDetail', { artistId: item.artist?.id || item.artist_id });
-              }}
-            >
-              <Image source={{ uri: item?.album?.cover_medium }} style={styles.cover} />
-              {isPlaying && (
-                <View style={styles.playingOverlay}>
-                  <Volume2 size={20} color={theme.colors.accent} />
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.trackInfo}>
-              <View style={styles.titleRow}>
-                <Text style={[styles.trackTitle, isPlaying && { color: theme.colors.accent }]} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                {downloads.some(d => String(d.id) === String(item.id)) && (
-                  <Download size={12} color={theme.colors.accent} style={{ marginLeft: 6 }} />
-                )}
-              </View>
-              <Text style={styles.trackArtist} numberOfLines={1}>
-                {getArtistNames(item, enrichedMetadata)}
-              </Text>
-            </View>
-
-            <View style={styles.trackActions}>
-              <TouchableOpacity onPress={() => onToggleFavorite(item)} style={styles.actionBtn}>
-                <Heart 
-                  size={20} 
-                  color={isFavorite ? theme.colors.accent : 'rgba(255,255,255,0.2)'} 
-                  fill={isFavorite ? theme.colors.accent : 'transparent'} 
-                />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.actionBtn}
-                onPress={() => openActionSheet(item, 'track')}
-              >
-                <MoreHorizontal size={20} color="rgba(255,255,255,0.4)" />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-      </Animated.View>
-    );
-  };
+  const renderTrack = ({ item }) => (
+    <TrackItem 
+      item={item}
+      isPlaying={currentTrack?.id === item.id}
+      isLoading={loadingTrackId === item.id}
+      isFavorite={favoriteIds.has(String(item.id))}
+      isDownloaded={downloadIds.has(String(item.id))}
+      onPlay={onPlayTrack}
+      onToggleFavorite={onToggleFavorite}
+      onNavigateArtist={(artistId) => navigation.navigate('ArtistDetail', { artistId })}
+      onOpenActionSheet={openActionSheet}
+      enrichedMetadata={enrichedMetadata}
+    />
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -354,8 +392,14 @@ export default function SearchScreen({ navigation }) {
             <FlatList
               data={results}
               renderItem={renderTrack}
-              keyExtractor={(item) => item.id.toString()}
-              extraData={enrichedMetadata} // Force le re-rendu quand le cache change
+              keyExtractor={(item) => String(item.id)}
+              getItemLayout={(data, index) => (
+                { length: 72, offset: 72 * index, index }
+              )}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={Platform.OS === 'android'}
               contentContainerStyle={styles.resultsList}
               ListEmptyComponent={
                 query ? <Text style={styles.emptyText}>Aucun résultat pour "{query}"</Text> : null

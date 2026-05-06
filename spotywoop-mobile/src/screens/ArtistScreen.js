@@ -10,7 +10,8 @@ import {
   Dimensions, 
   Animated,
   Platform,
-  StatusBar
+  StatusBar,
+  InteractionManager
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -58,7 +59,10 @@ export default function ArtistScreen({ navigation, route }) {
   const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    loadArtistData();
+    const task = InteractionManager.runAfterInteractions(() => {
+      loadArtistData();
+    });
+    return () => task.cancel();
   }, [artistId]);
 
   const loadArtistData = async () => {

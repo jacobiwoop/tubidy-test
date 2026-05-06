@@ -365,14 +365,16 @@ export const PlayerProvider = ({ children }) => {
       // ─── Mise à jour de la ref pour les events headless ───────────────────
       handlePlayTrackRef.current = handlePlayTrack;
 
+      // ─── Mise à jour immédiate de l'UI ────────────────────────────────────
+      setCurrentTrack(track);
+      currentTrackRef.current = track;
+      setLoadingTrackId(track.id);
+
       // ─── Vérification Connectivité & Local ─────────────────────────────────
       const isDownloaded = downloads.some(d => String(d.id) === String(track.id));
-      let isOffline = false;
-      try {
-        await axios.get(`${BASE_URL}/health`, { timeout: 1500 });
-      } catch (e) {
-        isOffline = true;
-      }
+      let isOffline = false; 
+      // On retire le check santé bloquant (trop lent). 
+      // On se basera sur l'échec des requêtes suivantes pour le mode hors-ligne.
 
       // Si Hors-ligne et non téléchargé -> on cherche le prochain téléchargé
       if (isOffline && !isDownloaded) {
