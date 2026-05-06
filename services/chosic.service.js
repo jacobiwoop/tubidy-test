@@ -82,9 +82,9 @@ async function getRecommendations({ seedTracks = [], seedGenres = [], limit = 20
 async function getGenreRecommendations(genre, limit = 50) {
     try {
         console.log(`[Chosic] Découvertes pour le genre : ${genre}`);
+        const response = await axios.get('https://www.chosic.com/api/tools/recommendations', {
             params: { 
-                based_on: 'genre',
-                genre: genre,
+                seed_genres: genre,
                 limit 
             },
             headers: {
