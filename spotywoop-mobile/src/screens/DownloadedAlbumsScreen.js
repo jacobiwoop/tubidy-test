@@ -16,6 +16,7 @@ import { theme } from '../utils/theme';
 import { usePlayer } from '../context/PlayerContext';
 import { getArtistNames } from '../utils/formatters';
 import { triggerHaptic } from '../utils/haptics';
+import DownloadQueue from '../components/DownloadQueue';
 
 const { width } = Dimensions.get('window');
 const CARD_SIZE = (width - 50) / 2;
@@ -27,7 +28,7 @@ const TABS = [
 ];
 
 export default function DownloadedAlbumsScreen({ navigation }) {
-  const { downloads, onPlayTrack, currentTrack, openActionSheet } = usePlayer();
+  const { downloads, onPlayTrack, currentTrack, openActionSheet, downloadingItems, activeDownloads } = usePlayer();
   const [activeTab, setActiveTab] = useState('all');
 
   // ── Onglet "Tout" ────────────────────────────────────────────────────────
@@ -190,6 +191,16 @@ export default function DownloadedAlbumsScreen({ navigation }) {
           })}
         </View>
       </SafeAreaView>
+
+      {/* File de téléchargement en cours */}
+      {Object.keys(downloadingItems || {}).length > 0 && (
+        <View style={{ paddingHorizontal: 15 }}>
+          <DownloadQueue
+            downloadingItems={downloadingItems}
+            activeDownloads={activeDownloads}
+          />
+        </View>
+      )}
 
       {/* Contenu selon l'onglet actif */}
       {activeTab === 'all' && (

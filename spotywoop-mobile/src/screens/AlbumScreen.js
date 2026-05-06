@@ -162,7 +162,16 @@ export default function AlbumScreen({ navigation, route }) {
                   fill={isFollowed ? theme.colors.accent : "transparent"} 
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.iconBtn} onPress={() => setShowDownloadModal(true)}>
+              <TouchableOpacity style={styles.iconBtn} onPress={() => {
+                  const albumTracksInDl = tracks.filter(t => activeDownloads[t.id] !== undefined);
+                  const isDownloading = albumTracksInDl.length > 0;
+                  if (isDownloading) {
+                    // Naviguer vers la page de téléchargements si DL en cours
+                    navigation.navigate('DownloadedAlbums');
+                  } else {
+                    setShowDownloadModal(true);
+                  }
+                }}>
                 {(() => {
                   const albumTracksInDl = tracks.filter(t => activeDownloads[t.id] !== undefined);
                   const isDownloading = albumTracksInDl.length > 0;

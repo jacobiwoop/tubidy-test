@@ -63,7 +63,8 @@ export default function DownloadQueue({ downloadingItems, activeDownloads }) {
 
     Object.keys(downloadingItems).forEach(id => {
       const track = downloadingItems[id];
-      const progress = activeDownloads[id] || 0;
+      // activeDownloads stores fractions (0-1), convert to percentage (0-100)
+      const progress = (activeDownloads[id] || 0) * 100;
       
       if (track.album?.id) {
         const albumId = String(track.album.id);

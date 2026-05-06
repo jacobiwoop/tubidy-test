@@ -7,10 +7,10 @@ const axios = require('axios');
 
 // NOTE: Le cookie de session est nécessaire pour les recommandations.
 // Il peut expirer. Idéalement, il devrait être dans ton fichier .env
-const CHOSIC_COOKIE = process.env.CHOSIC_COOKIE || "pll_language=en; r_34874064=1777902685%7C4e2bfcf40f4bef5f%7Ce8254c82a5bc41c9b68926907b183abe92ea0912ed7b419b5c92c95a94744a7a";
+const CHOSIC_COOKIE = process.env.CHOSIC_COOKIE || "pll_language=en; r_34874064=1778095732%7C85033bbc5b3d58c4%7C74c1fc442748392b381f3414e9ff5f8bd547a5ed1f10efa63515bfae7e3a6611";
 
 const COMMON_HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
     'X-Requested-With': 'XMLHttpRequest',
     'Referer': 'https://www.chosic.com/playlist-generator/',
     'Accept': 'application/json, text/javascript, */*; q=0.01',
@@ -82,9 +82,9 @@ async function getRecommendations({ seedTracks = [], seedGenres = [], limit = 20
 async function getGenreRecommendations(genre, limit = 50) {
     try {
         console.log(`[Chosic] Découvertes pour le genre : ${genre}`);
-        const response = await axios.get('https://www.chosic.com/api/tools/recommendations', {
             params: { 
-                seed_genres: genre,
+                based_on: 'genre',
+                genre: genre,
                 limit 
             },
             headers: {
