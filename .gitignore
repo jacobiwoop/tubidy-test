@@ -7,3 +7,5 @@ cookies.txt
 dist/
 client/dist/
 *.log
+spotiwoop-web/
+tasks/spotywoop-apk/

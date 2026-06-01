@@ -6,8 +6,10 @@ const axios = require('axios');
  */
 
 // NOTE: Le cookie de session est nécessaire pour les recommandations.
-// Il peut expirer. Idéalement, il devrait être dans ton fichier .env
-const CHOSIC_COOKIE = "pll_language=en; r_34874064=1778095732%7C85033bbc5b3d58c4%7C74c1fc442748392b381f3414e9ff5f8bd547a5ed1f10efa63515bfae7e3a6611";
+// Il peut expirer. Preferer CHOSIC_COOKIE dans .env pour eviter de repatcher le code.
+const CHOSIC_COOKIE =
+    process.env.CHOSIC_COOKIE ||
+    "pll_language=en; r_34874064=1780348856%7C5afe2943a0b56d94%7Ce09188070a6ba8ed952b221bb837981c47308bb9963294b720730271b9387c65";
 
 const COMMON_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
