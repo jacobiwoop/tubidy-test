@@ -5,22 +5,26 @@ const https = require("https");
 const http = require("http");
 const { port } = require("./config/apis.config");
 
-const searchRoute = require("./routes/search");
-const streamRoute = require("./routes/stream");
-const downloadRoute = require("./routes/download");
-const lyricsRoute = require("./routes/lyrics");
-const recommendRoute = require("./routes/recommend");
-const chosicRoute = require("./routes/chosic");
-const cloakRoute = require("./routes/cloak");
-const deezerRoute = require("./routes/deezer");
-const libraryRoute = require("./routes/library");
-const playlistRoute = require("./routes/playlists");
-const ytmusicRoute = require("./routes/ytmusic");
-
 const path = require("path");
 
 const app = express(); const cors = require("cors"); app.use(cors());
 app.use(express.json());
+
+function lazyRoute(modulePath) {
+  let route;
+  return (req, res, next) => {
+    try {
+      if (!route) {
+        console.log(`[boot] Loading route ${modulePath}`);
+        route = require(modulePath);
+        console.log(`[boot] Loaded route ${modulePath}`);
+      }
+      return route(req, res, next);
+    } catch (err) {
+      return next(err);
+    }
+  };
+}
 
 // Logger simple
 app.use((req, res, next) => {
@@ -157,17 +161,17 @@ app.get("/api/proxy-audio", (req, res) => {
   proxyAudio(targetUrl, res, req);
 });
 
-app.use("/api/search", searchRoute);
-app.use("/api/stream", streamRoute);
-app.use("/api/download", downloadRoute);
-app.use("/api/lyrics", lyricsRoute);
-app.use("/api/recommend", recommendRoute);
-app.use("/api/chosic", chosicRoute);
-app.use("/api/cloak", cloakRoute);
-app.use("/api/deezer", deezerRoute);
-app.use("/api/me/library", libraryRoute);
-app.use("/api/playlists", playlistRoute);
-app.use("/api/ytmusic", ytmusicRoute);
+app.use("/api/search", lazyRoute("./routes/search"));
+app.use("/api/stream", lazyRoute("./routes/stream"));
+app.use("/api/download", lazyRoute("./routes/download"));
+app.use("/api/lyrics", lazyRoute("./routes/lyrics"));
+app.use("/api/recommend", lazyRoute("./routes/recommend"));
+app.use("/api/chosic", lazyRoute("./routes/chosic"));
+app.use("/api/cloak", lazyRoute("./routes/cloak"));
+app.use("/api/deezer", lazyRoute("./routes/deezer"));
+app.use("/api/me/library", lazyRoute("./routes/library"));
+app.use("/api/playlists", lazyRoute("./routes/playlists"));
+app.use("/api/ytmusic", lazyRoute("./routes/ytmusic"));
 
 // Health check
 app.get("/health", (req, res) => res.json({ status: "ok" }));
