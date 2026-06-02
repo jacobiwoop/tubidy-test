@@ -562,6 +562,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  recentArtist: {
+    color: theme.colors.secondary,
+    fontSize: 11,
+  },
   artistCircleItem: {
     alignItems: 'center',
     marginRight: 20,
