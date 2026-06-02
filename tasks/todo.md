@@ -82,3 +82,21 @@
 - Domaine public configure via Nginx existant, pas via un conteneur Traefik: `http://cloak.204.236.198.29.traefik.me`.
 - `GET http://cloak.204.236.198.29.traefik.me/health` retourne `{"ok": true, "service": "cloak-runner"}`.
 - Test public du job Chosic valide: job `8dd5f56a14cf4fa2a603d226f9163d31`, `exit_code=0`, duree `39639ms`, `33` cookies, `cookie_header_length=1762`.
+
+---
+
+# Render API + CloakRunner externe
+
+## Plan
+
+- [x] Retirer CloakRunner de l'image Docker Render.
+- [x] Revenir a une image Node legere pour le backend.
+- [x] Garder les routes `/api/cloak/*` comme pont vers un runner externe.
+- [x] Faire echouer clairement `/api/cloak/*` si `CLOAK_RUNNER_URL` n'est pas configure.
+
+## Review
+
+- Le Dockerfile Render ne lance plus Xvfb, Python runner, ni Chromium.
+- `routes/cloak.js` utilise maintenant uniquement `CLOAK_RUNNER_URL`.
+- Si `CLOAK_RUNNER_URL` est absent, les routes Cloak renvoient une erreur 503 via le handler Express.
+- Le runner distant AWS reste la cible prevue pour la suite.

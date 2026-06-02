@@ -1,8 +1,9 @@
-# Image one-shot pour Render: API Node + CloakBrowser runner local.
-FROM cloakhq/cloakbrowser:latest
+# Utilise une image Node.js stable et légère pour Render.
+FROM node:20-slim
 
 # Outils de compilation nécessaires pour better-sqlite3 si le prebuild n'est pas disponible.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
     make \
     g++ \
     ca-certificates \
@@ -27,16 +28,8 @@ RUN npm ci --omit=dev
 # Copie du reste du code source
 COPY . .
 
-RUN chmod +x /app/docker/render-entrypoint.sh
-
 # Port utilisé par ton app.js (3000 par défaut)
 EXPOSE 3000
 
-# Render expose le port de l'API Node. Le runner reste local dans le conteneur.
-ENV CLOAK_RUNNER_URL=http://127.0.0.1:8765 \
-    RUNNER_HOST=127.0.0.1 \
-    RUNNER_PORT=8765 \
-    RUNNER_MAX_TIMEOUT_SECONDS=300 \
-    ENABLE_DEBUG_RUN=0
-
-ENTRYPOINT ["/app/docker/render-entrypoint.sh"]
+# Commande de lancement directe (plus robuste que npm start)
+CMD ["node", "app.js"]

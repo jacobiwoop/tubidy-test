@@ -3,12 +3,21 @@ const axios = require("axios");
 
 const router = express.Router();
 
-const CLOAK_RUNNER_URL =
-  process.env.CLOAK_RUNNER_URL || "http://127.0.0.1:8765";
+const CLOAK_RUNNER_URL = process.env.CLOAK_RUNNER_URL || "";
+
+function getRunnerUrl() {
+  if (!CLOAK_RUNNER_URL) {
+    const err = new Error("CLOAK_RUNNER_URL is not configured");
+    err.status = 503;
+    throw err;
+  }
+  return CLOAK_RUNNER_URL.replace(/\/+$/, "");
+}
 
 router.get("/health", async (req, res, next) => {
   try {
-    const response = await axios.get(`${CLOAK_RUNNER_URL}/health`, {
+    const runnerUrl = getRunnerUrl();
+    const response = await axios.get(`${runnerUrl}/health`, {
       timeout: 5000,
     });
     res.json(response.data);
@@ -19,9 +28,10 @@ router.get("/health", async (req, res, next) => {
 
 router.post("/chosic-focus-cookie", async (req, res, next) => {
   try {
+    const runnerUrl = getRunnerUrl();
     const timeout = Number(req.body?.timeout || 180);
     const response = await axios.post(
-      `${CLOAK_RUNNER_URL}/chosic/focus-cookie`,
+      `${runnerUrl}/chosic/focus-cookie`,
       { timeout },
       { timeout: Math.max(timeout + 30, 60) * 1000 },
     );
