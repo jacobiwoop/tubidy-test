@@ -328,6 +328,8 @@ export const PlayerProvider = ({ children }) => {
 
       // Détermination de la queue "Milieu"
       let newQueue = (queue && queue.length > 0) ? queue : [track];
+      const hasProvidedQueue = Array.isArray(queue) && queue.length > 1;
+      let generatedRadioQueue = false;
       
       // Si la queue est vide ou ne contient que le titre (contexte Isolé)
       // On fetch immédiatement des suggestions pour créer un milieu
@@ -343,11 +345,15 @@ export const PlayerProvider = ({ children }) => {
           if (res.data && res.data.track) {
             const suggs = res.data.track.slice(0, 15).map(t => ({ ...t, isSuggestion: true }));
             newQueue = [track, ...suggs];
+            generatedRadioQueue = suggs.length > 0;
           }
         } catch (e) {
           console.warn('[Queue] Failed to auto-fill milieu (Chosic):', e.message);
         }
       }
+      const hasRadioSuggestions = newQueue.some(t => t.isSuggestion);
+      const isRadioSeedPlayback = !preserveRadioSource && !hasProvidedQueue && generatedRadioQueue;
+      const isListPlayback = !preserveRadioSource && hasProvidedQueue && !hasRadioSuggestions;
 
       const newIdx = forceIndex !== null
         ? forceIndex
@@ -358,15 +364,17 @@ export const PlayerProvider = ({ children }) => {
       setCurrentQueueIndex(newIdx);
       queueIdxRef.current = newIdx;
 
-      // La base radio change uniquement quand l'utilisateur choisit un morceau
-      // individuel. Les suggestions et les navigations dans la queue gardent la
-      // base initiale.
-      if (!preserveRadioSource) {
+      // La base radio change uniquement quand un morceau individuel genere une
+      // radio. Les vraies listes (album, playlist, liked, downloads) ne doivent
+      // pas afficher de base radio.
+      if (isRadioSeedPlayback) {
         setRadioSource(track);
+      } else if (isListPlayback) {
+        setRadioSource(null);
       }
       
       // On met à jour l'état suggestions global pour l'UI
-      setSuggestions(newQueue.filter(t => t.isSuggestion));
+      setSuggestions(hasRadioSuggestions ? newQueue.filter(t => t.isSuggestion) : []);
 
       // ─── Mise à jour de la ref pour les events headless ───────────────────
       handlePlayTrackRef.current = handlePlayTrack;

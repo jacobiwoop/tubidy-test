@@ -140,3 +140,4 @@
 - Les transitions internes de queue, next/previous, remote next/previous, boucle et skip offline gardent la base radio.
 - Le clic manuel sur une suggestion dans `QueueModal` joue l'item dans la queue existante et garde la base radio.
 - Un choix individuel sans option continue de redefinir la base radio et de generer son milieu.
+- Ajustement final: une vraie liste fournie (album, playlist, liked, downloads) vide `radioSource` et `suggestions` au lieu d'afficher une base radio.
