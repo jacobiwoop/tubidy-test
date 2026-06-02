@@ -42,7 +42,7 @@ const TrackItem = memo(({
   enrichedMetadata, finalTracks
 }) => (
   <TouchableOpacity 
-    style={[styles.trackItem, isPlaying && styles.playingTrack, isSelected && styles.selectedTrack]}
+    style={[styles.trackRow, isPlaying && styles.playingRow, isSelected && styles.selectedRow]}
     onPress={() => {
       if (isSelecting) {
         onSelect(String(item.id));

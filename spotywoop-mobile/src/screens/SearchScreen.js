@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
   Dimensions,
   ScrollView,
-  Animated
+  Animated,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Heart, Volume2, Clock, X, Play, MoreHorizontal, Download } from 'lucide-react-native';
