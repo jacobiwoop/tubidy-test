@@ -231,7 +231,7 @@ export const PlayerProvider = ({ children }) => {
         if (isLast) {
           if (repeat === REPEAT_MODE.LOOP_ALL) {
             // Mode 1: Boucle -> Reprend au début
-            playFn(queue[0], queue, 0);
+            playFn(queue[0], queue, 0, { preserveRadioSource: true });
           } else if (repeat === REPEAT_MODE.PLAY_ALL_ONCE) {
             // Mode 2: Tout lire une fois -> S'arrête à la fin de la liste
             await TrackPlayer.pause();
@@ -241,7 +241,7 @@ export const PlayerProvider = ({ children }) => {
 
         // Cas normal ou Aléatoire
         const nextIdx = getNextIndex(queue, idx, shuffle);
-        playFn(queue[nextIdx], queue, nextIdx);
+        playFn(queue[nextIdx], queue, nextIdx, { preserveRadioSource: true });
         return;
       }
 
@@ -251,14 +251,14 @@ export const PlayerProvider = ({ children }) => {
         
         if (isLast) {
           if (repeat === REPEAT_MODE.LOOP_ALL) {
-            playFn(queue[0], queue, 0);
+            playFn(queue[0], queue, 0, { preserveRadioSource: true });
           } else {
             // On s'arrête si on est au dernier et pas en boucle
             await TrackPlayer.pause();
           }
         } else {
           const nextIdx = getNextIndex(queue, idx, shuffle);
-          playFn(queue[nextIdx], queue, nextIdx);
+          playFn(queue[nextIdx], queue, nextIdx, { preserveRadioSource: true });
         }
         return;
       }
@@ -266,7 +266,7 @@ export const PlayerProvider = ({ children }) => {
       // Bouton Précédent
       if (event.type === Event.RemotePrevious) {
         const prevIdx = getPrevIndex(queue, idx, shuffle);
-        playTrackAtIndex(queue, prevIdx);
+        playTrackAtIndex(queue, prevIdx, { preserveRadioSource: true });
         return;
       }
     }
@@ -306,14 +306,15 @@ export const PlayerProvider = ({ children }) => {
     }
   }, [downloads]);
 
-  const playTrackAtIndex = useCallback((queue, index) => {
+  const playTrackAtIndex = useCallback((queue, index, options = {}) => {
     if (!queue || !queue[index]) return;
-    handlePlayTrack(queue[index], queue, index);
+    handlePlayTrack(queue[index], queue, index, options);
   }, []);
 
   // ─── Lecture principale ────────────────────────────────────────────────────
-  const handlePlayTrack = async (track, queue = [], forceIndex = null) => {
+  const handlePlayTrack = async (track, queue = [], forceIndex = null, options = {}) => {
     if (!track) return false;
+    const preserveRadioSource = Boolean(options.preserveRadioSource);
     
     addToHistory(track);
 
@@ -357,8 +358,12 @@ export const PlayerProvider = ({ children }) => {
       setCurrentQueueIndex(newIdx);
       queueIdxRef.current = newIdx;
 
-      // On définit toujours la source de la radio
-      setRadioSource(track);
+      // La base radio change uniquement quand l'utilisateur choisit un morceau
+      // individuel. Les suggestions et les navigations dans la queue gardent la
+      // base initiale.
+      if (!preserveRadioSource) {
+        setRadioSource(track);
+      }
       
       // On met à jour l'état suggestions global pour l'UI
       setSuggestions(newQueue.filter(t => t.isSuggestion));
@@ -387,7 +392,7 @@ export const PlayerProvider = ({ children }) => {
             const nextIdx = (currentIndex + i) % q.length;
             const nextTrack = q[nextIdx];
             if (downloads.some(d => String(d.id) === String(nextTrack.id))) {
-              return handlePlayTrack(nextTrack, q, nextIdx);
+              return handlePlayTrack(nextTrack, q, nextIdx, { preserveRadioSource: true });
             }
           }
         }
@@ -515,14 +520,14 @@ export const PlayerProvider = ({ children }) => {
 
     if (isLast) {
       if (repeat === REPEAT_MODE.LOOP_ALL) {
-        handlePlayTrack(queue[0], queue, 0);
+        handlePlayTrack(queue[0], queue, 0, { preserveRadioSource: true });
       } else {
         // Stop ou ne rien faire si on est au dernier et pas en boucle
         TrackPlayer.pause();
       }
     } else {
       const nextIdx = getNextIndex(queue, idx, shuffle);
-      handlePlayTrack(queue[nextIdx], queue, nextIdx);
+      handlePlayTrack(queue[nextIdx], queue, nextIdx, { preserveRadioSource: true });
     }
   }, []);
 
@@ -534,7 +539,7 @@ export const PlayerProvider = ({ children }) => {
     if (!queue.length) return;
     triggerHaptic('selection');
     const prevIdx = getPrevIndex(queue, idx, shuffle);
-    playTrackAtIndex(queue, prevIdx);
+    playTrackAtIndex(queue, prevIdx, { preserveRadioSource: true });
   }, []);
 
   // ─── Shuffle / Repeat toggles ──────────────────────────────────────────────
@@ -648,7 +653,7 @@ export const PlayerProvider = ({ children }) => {
 
       // Si appelé en fin de queue → lancer automatiquement la 1ère suggestion
       if (autoPlay && newQueue[1]) {
-        handlePlayTrack(newQueue[1], newQueue, 1);
+        handlePlayTrack(newQueue[1], newQueue, 1, { preserveRadioSource: true });
       }
     } catch (err) {
       console.error('[Radio] Recommendation error:', err.message);

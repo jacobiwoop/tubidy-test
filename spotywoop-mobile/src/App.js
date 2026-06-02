@@ -201,11 +201,14 @@ const MainApp = () => {
           onToggleFavorite={onToggleFavorite}
           onPlayTrackAt={async (index, item) => {
             if (index === -1 && item) {
-              const success = await onPlayTrack(item);
+              const suggestionIndex = currentQueue.findIndex(t => String(t.id) === String(item.id));
+              const success = suggestionIndex >= 0
+                ? await onPlayTrack(item, currentQueue, suggestionIndex, { preserveRadioSource: true })
+                : await onPlayTrack(item);
               if (success) setIsQueueVisible(false);
               return;
             }
-            const success = await onPlayTrack(currentQueue[index], currentQueue, index);
+            const success = await onPlayTrack(currentQueue[index], currentQueue, index, { preserveRadioSource: true });
             if (success) setIsQueueVisible(false);
           }}
           onRemoveTrackAt={removeFromQueue}

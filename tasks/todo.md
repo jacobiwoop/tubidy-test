@@ -121,3 +121,22 @@
 - `GET /api/chosic/status` expose `refreshingCookie` pour l'app.
 - HomeScreen et QueueModal affichent une indication pendant la mise a jour du moteur de recommandations.
 - Verification: `node -c` OK sur les fichiers backend modifies. ESLint mobile n'a pas rendu la main et a ete arrete; pas de script lint/test mobile configure.
+
+---
+
+# Base radio de la queue
+
+## Plan
+
+- [x] Lire la logique actuelle `radioSource`, `currentQueue` et suggestions.
+- [x] Garder la base radio sur le morceau individuel initial.
+- [x] Ne pas changer la base quand une suggestion radio est jouee automatiquement.
+- [x] Ne pas changer la base quand une suggestion radio est choisie manuellement dans la queue.
+- [x] Changer la base seulement lorsqu'un morceau individuel hors radio/liste est choisi.
+
+## Review
+
+- `handlePlayTrack` accepte maintenant `preserveRadioSource`.
+- Les transitions internes de queue, next/previous, remote next/previous, boucle et skip offline gardent la base radio.
+- Le clic manuel sur une suggestion dans `QueueModal` joue l'item dans la queue existante et garde la base radio.
+- Un choix individuel sans option continue de redefinir la base radio et de generer son milieu.
