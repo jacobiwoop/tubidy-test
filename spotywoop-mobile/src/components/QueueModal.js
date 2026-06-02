@@ -29,6 +29,7 @@ const QueueModal = ({
   onClearQueue,
   currentQueueIndex,
   suggestions = [],
+  refreshingChosicCookie = false,
   favorites = [],
   onToggleFavorite
 }) => {
@@ -160,6 +161,14 @@ const QueueModal = ({
                       </Text>
                     </View>
                   </View>
+                </View>
+              )}
+              {refreshingChosicCookie && (
+                <View style={styles.cookieRefreshContainer}>
+                  <ActivityIndicator size="small" color={theme.colors.accent} />
+                  <Text style={styles.cookieRefreshText}>
+                    Mise à jour du moteur de recommandations...
+                  </Text>
                 </View>
               )}
               <Text style={styles.sectionTitle}>À suivre</Text>
@@ -312,6 +321,22 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary,
     fontSize: 12,
     marginTop: 2,
+  },
+  cookieRefreshContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 10,
+    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    gap: 10,
+  },
+  cookieRefreshText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
   suggestionBadge: {
     backgroundColor: 'rgba(29,185,84,0.15)',

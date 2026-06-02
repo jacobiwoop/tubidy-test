@@ -100,3 +100,24 @@
 - `routes/cloak.js` utilise maintenant uniquement `CLOAK_RUNNER_URL`.
 - Si `CLOAK_RUNNER_URL` est absent, les routes Cloak renvoient une erreur 503 via le handler Express.
 - Le runner distant AWS reste la cible prevue pour la suite.
+
+---
+
+# Auto-refresh cookie Chosic via CloakRunner
+
+## Plan
+
+- [x] Rafraichir le cookie Chosic uniquement apres echec.
+- [x] Utiliser le runner actuel `http://cloak.204.236.198.29.traefik.me`.
+- [x] Ajouter un verrou pour eviter plusieurs refresh Chromium simultanes.
+- [x] Retenter la requete Chosic une seule fois apres refresh.
+- [x] Informer l'app mobile quand un refresh cookie est en cours.
+
+## Review
+
+- `services/chosic.service.js` garde maintenant le cookie courant en memoire et refresh via CloakRunner seulement si Chosic renvoie une erreur de cookie/token.
+- Un verrou `refreshPromise` evite plusieurs refresh Chromium simultanes; les autres requetes attendent le meme refresh.
+- Apres refresh, la requete Chosic est retentee une fois avec le nouveau `cookie_header`.
+- `GET /api/chosic/status` expose `refreshingCookie` pour l'app.
+- HomeScreen et QueueModal affichent une indication pendant la mise a jour du moteur de recommandations.
+- Verification: `node -c` OK sur les fichiers backend modifies. ESLint mobile n'a pas rendu la main et a ete arrete; pas de script lint/test mobile configure.

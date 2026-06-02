@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const chosicService = require('../services/chosic.service');
 
+router.get('/status', (req, res) => {
+    res.json(chosicService.getStatus());
+});
+
 /**
  * Route pour obtenir des recommandations via Chosic
  * GET /api/chosic/recommend?artist=...&track=...

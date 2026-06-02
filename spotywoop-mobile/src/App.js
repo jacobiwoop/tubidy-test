@@ -74,6 +74,7 @@ const MainApp = () => {
     currentQueueIndex,
     radioSource,
     suggestions,
+    refreshingChosicCookie,
     onPlayTrack,
     removeFromQueue
   } = usePlayer();
@@ -195,6 +196,7 @@ const MainApp = () => {
           currentTrack={currentTrack}
           radioSource={radioSource}
           suggestions={suggestions}
+          refreshingChosicCookie={refreshingChosicCookie}
           favorites={favorites}
           onToggleFavorite={onToggleFavorite}
           onPlayTrackAt={async (index, item) => {

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { Play, Heart, Disc, Music, Volume2, Download } from 'lucide-react-native';
 import { theme } from '../utils/theme';
-import { checkHealth, BASE_URL, getChosicRecommendations } from '../services/api';
+import { checkHealth, BASE_URL, getChosicRecommendations, getChosicStatus } from '../services/api';
 import { usePlayer } from '../context/PlayerContext';
 import StatsService from '../services/StatsService';
 import { getArtistNames } from '../utils/formatters';
@@ -22,6 +22,7 @@ export default function HomeScreen({ navigation }) {
   const [recommendations, setRecommendations] = useState([]);
   const [recSource, setRecSource] = useState(null);
   const [loadingRecs, setLoadingRecs] = useState(false);
+  const [refreshingChosicCookie, setRefreshingChosicCookie] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState(null);
   const [topArtists, setTopArtists] = useState([]);
   const [genreMix, setGenreMix] = useState([]);
@@ -71,8 +72,15 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     const fetchRecs = async () => {
       if (serverStatus !== 'online') return;
+      let statusPoll = null;
       setLoadingRecs(true);
+      setRefreshingChosicCookie(false);
       try {
+        statusPoll = setInterval(async () => {
+          const status = await getChosicStatus();
+          setRefreshingChosicCookie(Boolean(status.refreshingCookie));
+        }, 1500);
+
         const smartSeeds = await StatsService.getSmartSeeds();
         
         // 1. Calculer les artistes du moment
@@ -126,6 +134,8 @@ export default function HomeScreen({ navigation }) {
       } catch (err) {
         console.error('Failed to fetch recommendations:', err);
       } finally {
+        if (statusPoll) clearInterval(statusPoll);
+        setRefreshingChosicCookie(false);
         setLoadingRecs(false);
       }
     };
@@ -270,7 +280,11 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.seeAll}>Voir tout</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.recSource}>{recSource ? `Inspiré par ${recSource}` : 'Tes découvertes'}</Text>
+          <Text style={styles.recSource}>
+            {refreshingChosicCookie
+              ? 'Mise à jour du moteur de recommandations...'
+              : recSource ? `Inspiré par ${recSource}` : 'Tes découvertes'}
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
             {loadingRecs && recommendations.length === 0 ? (
               [1, 2, 3].map(i => (

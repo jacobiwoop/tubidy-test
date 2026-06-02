@@ -132,11 +132,22 @@ export const getChosicRecommendations = async (params = {}) => {
         genre: params.genre,
         limit: params.limit || 15,
       },
+      timeout: 240000,
     });
     return response.data;
   } catch (error) {
     console.error("Get Chosic Recommendations error:", error);
     return { track: [] };
+  }
+};
+
+export const getChosicStatus = async () => {
+  try {
+    const response = await api.get("/chosic/status", { timeout: 3000 });
+    return response.data;
+  } catch (error) {
+    console.error("Get Chosic Status error:", error);
+    return { refreshingCookie: false };
   }
 };
 

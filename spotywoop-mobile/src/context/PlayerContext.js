@@ -49,6 +49,7 @@ export const PlayerProvider = ({ children }) => {
   const [followedArtists, setFollowedArtists] = useState([]);
   const [downloadingItems, setDownloadingItems] = useState({}); // { trackId: trackObj }
   const [enrichedMetadata, setEnrichedMetadata] = useState({}); // { trackId: fullTrackData }
+  const [refreshingChosicCookie, setRefreshingChosicCookie] = useState(false);
 
   // ─── Chargement initial & Persistance ──────────────────────────────────────
   useEffect(() => {
@@ -596,15 +597,24 @@ export const PlayerProvider = ({ children }) => {
   //   → fetchRecommendations(sugg10, true) → [sugg10, nouvelles_sugg...]
   //   → joue nouvelles_sugg[0] automatiquement → continue
   const fetchRecommendations = async (track, autoPlay = false, skipQueueUpdate = false) => {
+    let statusPoll = null;
     try {
       console.log(`[Radio] Fetching suggestions for: ${track.title}`);
       let tracks = [];
+      setRefreshingChosicCookie(false);
       
       // Essai Chosic avec timeout 8s
       try {
+        statusPoll = setInterval(async () => {
+          try {
+            const status = await axios.get(`${BASE_URL}/chosic/status`, { timeout: 3000 });
+            setRefreshingChosicCookie(Boolean(status.data?.refreshingCookie));
+          } catch (_) {}
+        }, 1500);
+
         const res = await axios.get(`${BASE_URL}/chosic/recommend`, {
           params: { artist: track.artist?.name || track.artist, track: track.title },
-          timeout: 8000
+          timeout: 240000
         });
         tracks = (res.data?.track || []).map(t => ({ ...t, isSuggestion: true }));
       } catch (e) {
@@ -642,6 +652,9 @@ export const PlayerProvider = ({ children }) => {
       }
     } catch (err) {
       console.error('[Radio] Recommendation error:', err.message);
+    } finally {
+      if (statusPoll) clearInterval(statusPoll);
+      setRefreshingChosicCookie(false);
     }
   };
 
@@ -796,6 +809,7 @@ export const PlayerProvider = ({ children }) => {
       currentQueue,
       currentQueueIndex,
       suggestions,
+      refreshingChosicCookie,
       radioSource,
       musicDNA,
       setActiveDownloads,
