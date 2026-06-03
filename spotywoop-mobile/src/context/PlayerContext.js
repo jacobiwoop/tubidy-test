@@ -144,6 +144,8 @@ export const PlayerProvider = ({ children }) => {
   const nativeQueueRefreshIdRef = useRef(0);
   const resolvedTrackByLogicalIndexRef = useRef({});
   const lastRecordedPlaybackRef = useRef(null);
+  const remoteFallbackQueueRef = useRef([]);
+  const remoteFallbackProcessingRef = useRef(false);
 
   useEffect(() => { shuffleRef.current  = isShuffle;   }, [isShuffle]);
   useEffect(() => { repeatRef.current   = repeatMode;  }, [repeatMode]);
@@ -422,9 +424,82 @@ export const PlayerProvider = ({ children }) => {
     }
   }, [loadNativeQueueFrom]);
 
+  const playNextLogicalFallback = useCallback(async () => {
+    const queue = queueRef.current;
+    const idx = queueIdxRef.current;
+    if (!queue.length) return;
+
+    const isLast = !shuffleRef.current && idx >= queue.length - 1;
+    if (isLast && repeatRef.current !== REPEAT_MODE.LOOP_ALL) {
+      await TrackPlayer.pause();
+      return;
+    }
+
+    const nextIdx = isLast ? 0 : getNextIndex(queue, idx, shuffleRef.current);
+    await playLogicalIndex(nextIdx, { preserveRadioSource: true });
+  }, [getNextIndex, playLogicalIndex]);
+
+  const playPreviousLogicalFallback = useCallback(async () => {
+    const queue = queueRef.current;
+    const idx = queueIdxRef.current;
+    if (!queue.length) return;
+
+    const prevIdx = getPrevIndex(queue, idx, shuffleRef.current);
+    await playLogicalIndex(prevIdx, { preserveRadioSource: true });
+  }, [getPrevIndex, playLogicalIndex]);
+
+  const processRemoteFallbackQueue = useCallback(async () => {
+    if (remoteFallbackProcessingRef.current) return;
+    remoteFallbackProcessingRef.current = true;
+
+    try {
+      while (remoteFallbackQueueRef.current.length > 0) {
+        const direction = remoteFallbackQueueRef.current.shift();
+        if (direction === 'next') {
+          await playNextLogicalFallback();
+        } else {
+          await playPreviousLogicalFallback();
+        }
+      }
+    } finally {
+      remoteFallbackProcessingRef.current = false;
+    }
+  }, [playNextLogicalFallback, playPreviousLogicalFallback]);
+
+  const scheduleRemoteSkipFallback = useCallback((direction) => {
+    const startLogicalIndex = queueIdxRef.current;
+
+    setTimeout(async () => {
+      if (queueIdxRef.current !== startLogicalIndex) return;
+
+      try {
+        const nativeQueue = await TrackPlayer.getQueue();
+        const nativeActiveIndex = await TrackPlayer.getActiveTrackIndex();
+        const hasNativeTarget = direction === 'next'
+          ? Number(nativeActiveIndex) < nativeQueue.length - 1
+          : Number(nativeActiveIndex) > 0;
+
+        if (hasNativeTarget) return;
+      } catch (_) {}
+
+      remoteFallbackQueueRef.current.push(direction);
+      processRemoteFallbackQueue();
+    }, 350);
+  }, [processRemoteFallbackQueue]);
+
   useTrackPlayerEvents(
-    [Event.PlaybackActiveTrackChanged, Event.PlaybackQueueEnded],
+    [Event.PlaybackActiveTrackChanged, Event.PlaybackQueueEnded, Event.RemoteNext, Event.RemotePrevious],
     async (event) => {
+      if (event.type === Event.RemoteNext) {
+        scheduleRemoteSkipFallback('next');
+        return;
+      }
+
+      if (event.type === Event.RemotePrevious) {
+        scheduleRemoteSkipFallback('previous');
+        return;
+      }
+
       if (event.type === Event.PlaybackActiveTrackChanged) {
         const logicalIndex = Number(event.track?.logicalIndex);
         const queue = queueRef.current;
@@ -493,6 +568,7 @@ export const PlayerProvider = ({ children }) => {
 
       setSuggestions(hasRadioSuggestions ? newQueue.filter(t => t.isSuggestion) : []);
       lastRecordedPlaybackRef.current = null;
+      remoteFallbackQueueRef.current = [];
       const activeTrack = await loadNativeQueueFrom(newQueue, newIdx);
       if (!activeTrack) {
         alert('Lien non disponible');
@@ -514,10 +590,7 @@ export const PlayerProvider = ({ children }) => {
 
   // ─── Next / Prev depuis l'UI (boutons PlayerScreen) ───────────────────────
   const handleNext = useCallback(async () => {
-    const queue = queueRef.current;
-    const idx = queueIdxRef.current;
-
-    if (!queue.length) return;
+    if (!queueRef.current.length) return;
     triggerHaptic('selection');
 
     try {
@@ -525,21 +598,11 @@ export const PlayerProvider = ({ children }) => {
       return;
     } catch (_) {}
 
-    const isLast = !shuffleRef.current && idx >= queue.length - 1;
-    if (isLast && repeatRef.current !== REPEAT_MODE.LOOP_ALL) {
-      await TrackPlayer.pause();
-      return;
-    }
-
-    const nextIdx = isLast ? 0 : getNextIndex(queue, idx, shuffleRef.current);
-    playLogicalIndex(nextIdx, { preserveRadioSource: true });
-  }, [getNextIndex, playLogicalIndex]);
+    playNextLogicalFallback();
+  }, [playNextLogicalFallback]);
 
   const handlePrevious = useCallback(async () => {
-    const queue = queueRef.current;
-    const idx = queueIdxRef.current;
-
-    if (!queue.length) return;
+    if (!queueRef.current.length) return;
     triggerHaptic('selection');
 
     try {
@@ -547,9 +610,8 @@ export const PlayerProvider = ({ children }) => {
       return;
     } catch (_) {}
 
-    const prevIdx = getPrevIndex(queue, idx, shuffleRef.current);
-    playLogicalIndex(prevIdx, { preserveRadioSource: true });
-  }, [getPrevIndex, playLogicalIndex]);
+    playPreviousLogicalFallback();
+  }, [playPreviousLogicalFallback]);
 
   // ─── Shuffle / Repeat toggles ──────────────────────────────────────────────
   const toggleShuffle = useCallback(() => {
@@ -590,6 +652,8 @@ export const PlayerProvider = ({ children }) => {
       queueIdxRef.current = 0;
       resolvedTrackByLogicalIndexRef.current = {};
       lastRecordedPlaybackRef.current = null;
+      remoteFallbackQueueRef.current = [];
+      remoteFallbackProcessingRef.current = false;
       triggerHaptic('notificationSuccess');
     } catch (e) {
       console.error('stopPlayer error:', e);
