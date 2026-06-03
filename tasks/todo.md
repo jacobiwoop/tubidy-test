@@ -156,6 +156,8 @@
 - RNTP est maintenant initialise avec `minBuffer: 50`, `maxBuffer: 120`, `playBuffer: 10`, `backBuffer: 30`.
 - La lecture utilise maintenant une queue native RNTP fenetree: morceau courant + prochains titres resolus en liens audio.
 - Les transitions automatiques et boutons suivant/precedent passent par la queue native quand possible, au lieu de reset entre chaque morceau.
+- Ajustement UX: le morceau courant demarre des que son lien est pret; la radio Chosic et les prochains titres se preparent en arriere-plan.
+- Les prochains titres sont dedupliques et proteges par un token anti-race pour eviter les queues natives obsoletes.
 - Objectif: reduire les coupures sur reseaux instables sans faire transiter tout l'audio par Render.
 - Le clic manuel sur une suggestion dans `QueueModal` joue l'item dans la queue existante et garde la base radio.
 - Un choix individuel sans option continue de redefinir la base radio et de generer son milieu.

@@ -141,7 +141,7 @@ export const PlayerProvider = ({ children }) => {
   const queueRef      = useRef([]);
   const queueIdxRef   = useRef(0);
   const currentTrackRef = useRef(null);
-  const nativeQueueRefreshingRef = useRef(false);
+  const nativeQueueRefreshIdRef = useRef(0);
   const resolvedTrackByLogicalIndexRef = useRef({});
   const lastRecordedPlaybackRef = useRef(null);
 
@@ -298,6 +298,7 @@ export const PlayerProvider = ({ children }) => {
 
   const getUpcomingIndexes = useCallback((queue, currentIndex, count = 3) => {
     if (!queue || queue.length <= 1 || repeatRef.current === REPEAT_MODE.STOP_CURRENT) return [];
+    const maxCount = Math.min(count, queue.length - 1);
 
     if (shuffleRef.current) {
       const pool = queue
@@ -305,7 +306,7 @@ export const PlayerProvider = ({ children }) => {
         .filter(index => index !== currentIndex);
       const picks = [];
 
-      while (pool.length > 0 && picks.length < count) {
+      while (pool.length > 0 && picks.length < maxCount) {
         const poolIndex = Math.floor(Math.random() * pool.length);
         picks.push(pool.splice(poolIndex, 1)[0]);
       }
@@ -314,7 +315,8 @@ export const PlayerProvider = ({ children }) => {
     }
 
     const indexes = [];
-    for (let step = 1; step <= count; step++) {
+    const seen = new Set([currentIndex]);
+    for (let step = 1; indexes.length < maxCount && step <= queue.length; step++) {
       let nextIndex = currentIndex + step;
 
       if (nextIndex >= queue.length) {
@@ -325,6 +327,8 @@ export const PlayerProvider = ({ children }) => {
         }
       }
 
+      if (seen.has(nextIndex)) continue;
+      seen.add(nextIndex);
       indexes.push(nextIndex);
     }
 
@@ -342,8 +346,8 @@ export const PlayerProvider = ({ children }) => {
   }, [addToHistory]);
 
   const ensureNativeUpcomingQueue = useCallback(async (queue, logicalIndex) => {
-    if (nativeQueueRefreshingRef.current || !queue || !queue[logicalIndex]) return;
-    nativeQueueRefreshingRef.current = true;
+    if (!queue || !queue[logicalIndex]) return;
+    const refreshId = ++nativeQueueRefreshIdRef.current;
 
     try {
       const upcomingIndexes = getUpcomingIndexes(queue, logicalIndex, 3);
@@ -358,15 +362,15 @@ export const PlayerProvider = ({ children }) => {
         }
       }
 
+      if (refreshId !== nativeQueueRefreshIdRef.current) return;
       await TrackPlayer.removeUpcomingTracks();
+      if (refreshId !== nativeQueueRefreshIdRef.current) return;
       if (upcomingTracks.length > 0) {
         await TrackPlayer.add(upcomingTracks);
       }
 
     } catch (e) {
       console.warn('[NativeQueue] ensure upcoming failed:', e.message);
-    } finally {
-      nativeQueueRefreshingRef.current = false;
     }
   }, [getUpcomingIndexes, resolvePlayableTrack]);
 
@@ -374,24 +378,14 @@ export const PlayerProvider = ({ children }) => {
     const current = queue?.[logicalIndex];
     if (!current) return null;
 
+    const refreshId = ++nativeQueueRefreshIdRef.current;
     resolvedTrackByLogicalIndexRef.current = {};
     const currentPlayable = await resolvePlayableTrack(current, logicalIndex, { enrichMetadata: true });
     if (!currentPlayable?.playerTrack) return null;
 
-    const upcomingIndexes = getUpcomingIndexes(queue, logicalIndex, 3);
-    const playerTracks = [currentPlayable.playerTrack];
-
-    for (const upcomingIndex of upcomingIndexes) {
-      try {
-        const playable = await resolvePlayableTrack(queue[upcomingIndex], upcomingIndex);
-        if (playable?.playerTrack) playerTracks.push(playable.playerTrack);
-      } catch (e) {
-        console.log(`[NativeQueue] Failed to preload ${queue[upcomingIndex]?.title}: ${e.message}`);
-      }
-    }
-
+    if (refreshId !== nativeQueueRefreshIdRef.current) return null;
     await TrackPlayer.reset();
-    await TrackPlayer.add(playerTracks);
+    await TrackPlayer.add(currentPlayable.playerTrack);
 
     setCurrentTrack(currentPlayable.finalTrack);
     currentTrackRef.current = currentPlayable.finalTrack;
@@ -403,8 +397,9 @@ export const PlayerProvider = ({ children }) => {
     }
 
     recordActivePlayback(currentPlayable.finalTrack, logicalIndex);
+    ensureNativeUpcomingQueue(queue, logicalIndex);
     return currentPlayable.finalTrack;
-  }, [getUpcomingIndexes, recordActivePlayback, resolvePlayableTrack]);
+  }, [ensureNativeUpcomingQueue, recordActivePlayback, resolvePlayableTrack]);
 
   const playLogicalIndex = useCallback(async (logicalIndex, options = {}) => {
     const queue = queueRef.current;
@@ -473,31 +468,12 @@ export const PlayerProvider = ({ children }) => {
       currentTrackRef.current = track;
       setLoadingTrackId(track.id);
 
+      const isIsolatedPlayback = !queue || queue.length <= 1;
       let newQueue = (queue && queue.length > 0) ? queue : [track];
       const hasProvidedQueue = Array.isArray(queue) && queue.length > 1;
-      let generatedRadioQueue = false;
-
-      if (!queue || queue.length <= 1) {
-        try {
-          const res = await axios.get(`${BASE_URL}/chosic/recommend`, {
-            params: {
-              artist: track.artist?.name || track.artist,
-              track: track.title,
-              limit: 15
-            }
-          });
-          if (res.data && res.data.track) {
-            const suggs = res.data.track.slice(0, 15).map(t => ({ ...t, isSuggestion: true }));
-            newQueue = [track, ...suggs];
-            generatedRadioQueue = suggs.length > 0;
-          }
-        } catch (e) {
-          console.warn('[Queue] Failed to auto-fill milieu (Chosic):', e.message);
-        }
-      }
 
       const hasRadioSuggestions = newQueue.some(t => t.isSuggestion);
-      const isRadioSeedPlayback = !preserveRadioSource && !hasProvidedQueue && generatedRadioQueue;
+      const isRadioSeedPlayback = !preserveRadioSource && isIsolatedPlayback;
       const isListPlayback = !preserveRadioSource && hasProvidedQueue && !hasRadioSuggestions;
 
       const newIdx = forceIndex !== null
@@ -521,6 +497,10 @@ export const PlayerProvider = ({ children }) => {
       if (!activeTrack) {
         alert('Lien non disponible');
         return false;
+      }
+
+      if (isRadioSeedPlayback) {
+        fetchRecommendations(activeTrack, false, false);
       }
 
       return true;
@@ -780,20 +760,17 @@ export const PlayerProvider = ({ children }) => {
       const activeIndex = queueIdxRef.current;
       const baseQueue = queueRef.current.length ? queueRef.current : currentQueue;
 
-      if (index === activeIndex) {
+      if (index <= activeIndex) {
         triggerHaptic('notificationError');
         return;
       }
 
       const newQueue = [...baseQueue];
       newQueue.splice(index, 1);
-      const nextActiveIndex = index < activeIndex ? Math.max(0, activeIndex - 1) : activeIndex;
 
       setCurrentQueue(newQueue);
       queueRef.current = newQueue;
-      setCurrentQueueIndex(nextActiveIndex);
-      queueIdxRef.current = nextActiveIndex;
-      await ensureNativeUpcomingQueue(newQueue, nextActiveIndex);
+      await ensureNativeUpcomingQueue(newQueue, activeIndex);
       triggerHaptic('impactLight');
     } catch (e) {
       console.error('[Queue] removeFromQueue error:', e);
