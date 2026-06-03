@@ -10,7 +10,12 @@ const audioModule = {
   TrackPlayer: {
     setupPlayer: async () => {
       try {
-        await TrackPlayer.setupPlayer();
+        await TrackPlayer.setupPlayer({
+          minBuffer: 50,
+          maxBuffer: 120,
+          playBuffer: 10,
+          backBuffer: 30,
+        });
         await TrackPlayer.updateOptions({
           android: {
             appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,

@@ -141,7 +141,9 @@ export const PlayerProvider = ({ children }) => {
   const queueRef      = useRef([]);
   const queueIdxRef   = useRef(0);
   const currentTrackRef = useRef(null);
-  const handlePlayTrackRef = useRef(null);
+  const nativeQueueRefreshingRef = useRef(false);
+  const resolvedTrackByLogicalIndexRef = useRef({});
+  const lastRecordedPlaybackRef = useRef(null);
 
   useEffect(() => { shuffleRef.current  = isShuffle;   }, [isShuffle]);
   useEffect(() => { repeatRef.current   = repeatMode;  }, [repeatMode]);
@@ -156,7 +158,12 @@ export const PlayerProvider = ({ children }) => {
   useEffect(() => {
     (async () => {
       try {
-        await TrackPlayer.setupPlayer();
+        await TrackPlayer.setupPlayer({
+          minBuffer: 50,
+          maxBuffer: 120,
+          playBuffer: 10,
+          backBuffer: 30,
+        });
         await TrackPlayer.updateOptions({
           capabilities: [
             Capability.Play, Capability.Pause,
@@ -206,141 +213,278 @@ export const PlayerProvider = ({ children }) => {
     return (idx - 1 + queue.length) % queue.length;
   };
 
-  // ─── Fin de morceau / boutons notif → applique les règles ─────────────────
+  const getTrackCacheKey = useCallback((track) => String(track?.id || ''), []);
+
+  const toPlayerTrack = useCallback((track, url, logicalIndex) => ({
+    id: `${String(track.id)}:${logicalIndex}`,
+    url,
+    title: track.title,
+    artist: getArtistNames(track),
+    artwork: track.artwork || track.album?.cover_big || track.album?.cover_medium || track.thumbnail,
+    duration: track.duration,
+    artist_id: track.artist?.id || track.artist_id,
+    album_id: track.album?.id,
+    sourceId: String(track.id),
+    logicalIndex,
+  }), []);
+
+  const resolvePlayableTrack = useCallback(async (track, logicalIndex, options = {}) => {
+    if (!track) return null;
+
+    let finalTrack = track;
+    let finalLink = null;
+    const cacheKey = getTrackCacheKey(track);
+    const isDownloaded = downloads.some(d => String(d.id) === String(track.id));
+
+    if (options.enrichMetadata && (!track.contributors || track.contributors.length === 0)) {
+      try {
+        const fullData = await getTrack(track.id);
+        if (fullData && fullData.contributors) {
+          finalTrack = { ...track, ...fullData };
+        }
+      } catch (e) {
+        console.warn(`[Metadata] Failed to enrich ${track.title}:`, e.message);
+      }
+    }
+
+    const cached = prefetchCache.current[cacheKey];
+    if (cached && cached.expires > Date.now()) {
+      finalLink = cached.link;
+    }
+
+    const physicallyExists = await isTrackDownloaded(finalTrack);
+    if (physicallyExists) {
+      finalLink = getTrackPath(finalTrack);
+      const updatedDownloads = await getDownloadMetadata();
+      const localTrack = updatedDownloads.find(d => String(d.id) === String(finalTrack.id));
+
+      if (localTrack) {
+        finalTrack = { ...localTrack, localUri: finalLink };
+        if (downloads.find(d => String(d.id) === String(finalTrack.id))?.localUri !== localTrack.localUri) {
+          setDownloads(updatedDownloads);
+        }
+      } else {
+        finalTrack = { ...finalTrack, localUri: finalLink };
+      }
+    } else if (isDownloaded) {
+      console.warn(`[Local] Metadata found but file missing for: ${finalTrack.title}`);
+    }
+
+    if (!finalLink && (String(finalTrack.id).startsWith('lfm-') || String(finalTrack.id).startsWith('cho-'))) {
+      const q = `${finalTrack.title} ${finalTrack.artist?.name || finalTrack.artist}`;
+      const res = await axios.get(`${BASE_URL}/search/play`, { params: { q } });
+      if (res.data?.link) {
+        finalLink = res.data.link;
+        finalTrack = { ...finalTrack, title: res.data.title || finalTrack.title };
+      }
+    }
+
+    if (!finalLink) {
+      const dl = await getTrackDownload(finalTrack.id);
+      finalLink = dl?.target?.link || dl?.link;
+    }
+
+    if (!finalLink) return null;
+
+    prefetchCache.current[cacheKey] = { link: finalLink, expires: Date.now() + 600000 };
+    resolvedTrackByLogicalIndexRef.current[logicalIndex] = finalTrack;
+
+    return {
+      logicalIndex,
+      finalTrack,
+      playerTrack: toPlayerTrack(finalTrack, finalLink, logicalIndex),
+    };
+  }, [downloads, getTrackCacheKey, toPlayerTrack]);
+
+  const getUpcomingIndexes = useCallback((queue, currentIndex, count = 3) => {
+    if (!queue || queue.length <= 1 || repeatRef.current === REPEAT_MODE.STOP_CURRENT) return [];
+
+    if (shuffleRef.current) {
+      const pool = queue
+        .map((_, index) => index)
+        .filter(index => index !== currentIndex);
+      const picks = [];
+
+      while (pool.length > 0 && picks.length < count) {
+        const poolIndex = Math.floor(Math.random() * pool.length);
+        picks.push(pool.splice(poolIndex, 1)[0]);
+      }
+
+      return picks;
+    }
+
+    const indexes = [];
+    for (let step = 1; step <= count; step++) {
+      let nextIndex = currentIndex + step;
+
+      if (nextIndex >= queue.length) {
+        if (repeatRef.current === REPEAT_MODE.LOOP_ALL) {
+          nextIndex = nextIndex % queue.length;
+        } else {
+          break;
+        }
+      }
+
+      indexes.push(nextIndex);
+    }
+
+    return indexes;
+  }, []);
+
+  const recordActivePlayback = useCallback((track, logicalIndex) => {
+    if (!track) return;
+    const playbackKey = `${String(track.id)}:${logicalIndex}`;
+    if (lastRecordedPlaybackRef.current === playbackKey) return;
+    lastRecordedPlaybackRef.current = playbackKey;
+
+    addToHistory(track);
+    StatsService.recordTrackPlay(track).then(() => refreshDNA());
+  }, [addToHistory]);
+
+  const ensureNativeUpcomingQueue = useCallback(async (queue, logicalIndex) => {
+    if (nativeQueueRefreshingRef.current || !queue || !queue[logicalIndex]) return;
+    nativeQueueRefreshingRef.current = true;
+
+    try {
+      const upcomingIndexes = getUpcomingIndexes(queue, logicalIndex, 3);
+      const upcomingTracks = [];
+
+      for (const upcomingIndex of upcomingIndexes) {
+        try {
+          const playable = await resolvePlayableTrack(queue[upcomingIndex], upcomingIndex);
+          if (playable?.playerTrack) upcomingTracks.push(playable.playerTrack);
+        } catch (e) {
+          console.log(`[NativeQueue] Failed to prepare ${queue[upcomingIndex]?.title}: ${e.message}`);
+        }
+      }
+
+      await TrackPlayer.removeUpcomingTracks();
+      if (upcomingTracks.length > 0) {
+        await TrackPlayer.add(upcomingTracks);
+      }
+
+    } catch (e) {
+      console.warn('[NativeQueue] ensure upcoming failed:', e.message);
+    } finally {
+      nativeQueueRefreshingRef.current = false;
+    }
+  }, [getUpcomingIndexes, resolvePlayableTrack]);
+
+  const loadNativeQueueFrom = useCallback(async (queue, logicalIndex, options = {}) => {
+    const current = queue?.[logicalIndex];
+    if (!current) return null;
+
+    resolvedTrackByLogicalIndexRef.current = {};
+    const currentPlayable = await resolvePlayableTrack(current, logicalIndex, { enrichMetadata: true });
+    if (!currentPlayable?.playerTrack) return null;
+
+    const upcomingIndexes = getUpcomingIndexes(queue, logicalIndex, 3);
+    const playerTracks = [currentPlayable.playerTrack];
+
+    for (const upcomingIndex of upcomingIndexes) {
+      try {
+        const playable = await resolvePlayableTrack(queue[upcomingIndex], upcomingIndex);
+        if (playable?.playerTrack) playerTracks.push(playable.playerTrack);
+      } catch (e) {
+        console.log(`[NativeQueue] Failed to preload ${queue[upcomingIndex]?.title}: ${e.message}`);
+      }
+    }
+
+    await TrackPlayer.reset();
+    await TrackPlayer.add(playerTracks);
+
+    setCurrentTrack(currentPlayable.finalTrack);
+    currentTrackRef.current = currentPlayable.finalTrack;
+    setCurrentQueueIndex(logicalIndex);
+    queueIdxRef.current = logicalIndex;
+
+    if (options.autoPlay !== false) {
+      await TrackPlayer.play();
+    }
+
+    recordActivePlayback(currentPlayable.finalTrack, logicalIndex);
+    return currentPlayable.finalTrack;
+  }, [getUpcomingIndexes, recordActivePlayback, resolvePlayableTrack]);
+
+  const playLogicalIndex = useCallback(async (logicalIndex, options = {}) => {
+    const queue = queueRef.current;
+    if (!queue || !queue[logicalIndex]) return false;
+
+    try {
+      const nativeQueue = await TrackPlayer.getQueue();
+      const nativeIndex = nativeQueue.findIndex(track => Number(track.logicalIndex) === logicalIndex);
+      if (nativeIndex >= 0 && !options.forceReload) {
+        await TrackPlayer.skip(nativeIndex);
+        if (options.autoPlay !== false) await TrackPlayer.play();
+        return true;
+      }
+
+      const activeTrack = await loadNativeQueueFrom(queue, logicalIndex, options);
+      return Boolean(activeTrack);
+    } catch (e) {
+      console.error('[NativeQueue] play index error:', e.message);
+      return false;
+    }
+  }, [loadNativeQueueFrom]);
+
   useTrackPlayerEvents(
-    [Event.PlaybackTrackChanged, Event.RemoteNext, Event.RemotePrevious, Event.PlaybackQueueEnded],
+    [Event.PlaybackActiveTrackChanged, Event.PlaybackQueueEnded],
     async (event) => {
-      const queue   = queueRef.current;
-      const idx     = queueIdxRef.current;
-      const shuffle = shuffleRef.current;
-      const repeat  = repeatRef.current;
-      const playFn  = handlePlayTrackRef.current; // Utilise la ref pour éviter les stale closures
+      if (event.type === Event.PlaybackActiveTrackChanged) {
+        const logicalIndex = Number(event.track?.logicalIndex);
+        const queue = queueRef.current;
 
-      if (!playFn) return;
+        if (!Number.isFinite(logicalIndex) || !queue?.[logicalIndex]) return;
 
-      // Fin naturelle du morceau (Transition automatique)
-      if ((event.type === Event.PlaybackTrackChanged && event.nextTrack == null) || event.type === Event.PlaybackQueueEnded) {
-        // Mode 0: Désactivation -> S'arrête juste après l'élément en cours
-        if (repeat === REPEAT_MODE.STOP_CURRENT) {
+        const activeTrack = resolvedTrackByLogicalIndexRef.current[logicalIndex] || queue[logicalIndex];
+        setCurrentTrack(activeTrack);
+        currentTrackRef.current = activeTrack;
+        setCurrentQueueIndex(logicalIndex);
+        queueIdxRef.current = logicalIndex;
+        recordActivePlayback(activeTrack, logicalIndex);
+        ensureNativeUpcomingQueue(queue, logicalIndex);
+        return;
+      }
+
+      if (event.type === Event.PlaybackQueueEnded) {
+        const queue = queueRef.current;
+        const idx = queueIdxRef.current;
+
+        if (!queue.length || repeatRef.current !== REPEAT_MODE.LOOP_ALL) {
           await TrackPlayer.pause();
           return;
         }
 
-        const isLast = !shuffle && idx >= queue.length - 1;
-
-        if (isLast) {
-          if (repeat === REPEAT_MODE.LOOP_ALL) {
-            // Mode 1: Boucle -> Reprend au début
-            playFn(queue[0], queue, 0, { preserveRadioSource: true });
-          } else if (repeat === REPEAT_MODE.PLAY_ALL_ONCE) {
-            // Mode 2: Tout lire une fois -> S'arrête à la fin de la liste
-            await TrackPlayer.pause();
-          }
-          return;
-        }
-
-        // Cas normal ou Aléatoire
-        const nextIdx = getNextIndex(queue, idx, shuffle);
-        playFn(queue[nextIdx], queue, nextIdx, { preserveRadioSource: true });
-        return;
-      }
-
-      // Bouton Suivant (Skip manuel)
-      if (event.type === Event.RemoteNext) {
-        const isLast = !shuffle && idx >= queue.length - 1;
-        
-        if (isLast) {
-          if (repeat === REPEAT_MODE.LOOP_ALL) {
-            playFn(queue[0], queue, 0, { preserveRadioSource: true });
-          } else {
-            // On s'arrête si on est au dernier et pas en boucle
-            await TrackPlayer.pause();
-          }
-        } else {
-          const nextIdx = getNextIndex(queue, idx, shuffle);
-          playFn(queue[nextIdx], queue, nextIdx, { preserveRadioSource: true });
-        }
-        return;
-      }
-
-      // Bouton Précédent
-      if (event.type === Event.RemotePrevious) {
-        const prevIdx = getPrevIndex(queue, idx, shuffle);
-        playTrackAtIndex(queue, prevIdx, { preserveRadioSource: true });
-        return;
+        const nextIndex = getNextIndex(queue, idx, shuffleRef.current);
+        playLogicalIndex(nextIndex, { preserveRadioSource: true });
       }
     }
   );
-
-  // ─── Joue un morceau de la queue par index (interne) ──────────────────────
-  const prefetchNext = useCallback(async (queue, currentIndex) => {
-    if (!queue || queue.length === 0) return;
-    // On prefetch les 3 suivants
-    for (let i = 1; i <= 3; i++) {
-      const nextIdx = (currentIndex + i) % queue.length;
-      const nextTrack = queue[nextIdx];
-      if (!nextTrack || prefetchCache.current[nextTrack.id]) continue;
-
-      // Si c'est déjà téléchargé, pas besoin de prefetch
-      if (downloads.some(d => String(d.id) === String(nextTrack.id))) continue;
-
-      // Résolution silencieuse du lien
-      (async () => {
-        try {
-          let link = null;
-          if (String(nextTrack.id).startsWith('lfm-') || String(nextTrack.id).startsWith('cho-')) {
-            const q = `${nextTrack.title} ${nextTrack.artist?.name || nextTrack.artist}`;
-            const res = await axios.get(`${BASE_URL}/search/play`, { params: { q } });
-            link = res.data.link;
-          } else {
-            const res = await getTrackDownload(nextTrack.id);
-            link = res?.target?.link || res?.link;
-          }
-          if (link) {
-            prefetchCache.current[nextTrack.id] = { link, expires: Date.now() + 600000 }; // 10 min
-          }
-        } catch (e) {
-          console.log(`[Prefetch] Failed for ${nextTrack.title}`);
-        }
-      })();
-    }
-  }, [downloads]);
-
-  const playTrackAtIndex = useCallback((queue, index, options = {}) => {
-    if (!queue || !queue[index]) return;
-    handlePlayTrack(queue[index], queue, index, options);
-  }, []);
 
   // ─── Lecture principale ────────────────────────────────────────────────────
   const handlePlayTrack = async (track, queue = [], forceIndex = null, options = {}) => {
     if (!track) return false;
     const preserveRadioSource = Boolean(options.preserveRadioSource);
-    
-    addToHistory(track);
 
     try {
       triggerHaptic('impactMedium');
 
-      // ── Optimistic update immédiat ──────────────────────────────────────────
       setCurrentTrack(track);
       currentTrackRef.current = track;
       setLoadingTrackId(track.id);
 
-      // Détermination de la queue "Milieu"
       let newQueue = (queue && queue.length > 0) ? queue : [track];
       const hasProvidedQueue = Array.isArray(queue) && queue.length > 1;
       let generatedRadioQueue = false;
-      
-      // Si la queue est vide ou ne contient que le titre (contexte Isolé)
-      // On fetch immédiatement des suggestions pour créer un milieu
+
       if (!queue || queue.length <= 1) {
         try {
-          const res = await axios.get(`${BASE_URL}/chosic/recommend`, { 
-            params: { 
+          const res = await axios.get(`${BASE_URL}/chosic/recommend`, {
+            params: {
               artist: track.artist?.name || track.artist,
               track: track.title,
-              limit: 15 
-            } 
+              limit: 15
+            }
           });
           if (res.data && res.data.track) {
             const suggs = res.data.track.slice(0, 15).map(t => ({ ...t, isSuggestion: true }));
@@ -351,160 +495,34 @@ export const PlayerProvider = ({ children }) => {
           console.warn('[Queue] Failed to auto-fill milieu (Chosic):', e.message);
         }
       }
+
       const hasRadioSuggestions = newQueue.some(t => t.isSuggestion);
       const isRadioSeedPlayback = !preserveRadioSource && !hasProvidedQueue && generatedRadioQueue;
       const isListPlayback = !preserveRadioSource && hasProvidedQueue && !hasRadioSuggestions;
 
       const newIdx = forceIndex !== null
         ? forceIndex
-        : Math.max(0, newQueue.findIndex(t => t.id === track.id));
+        : Math.max(0, newQueue.findIndex(t => String(t.id) === String(track.id)));
 
       setCurrentQueue(newQueue);
-      queueRef.current    = newQueue;
+      queueRef.current = newQueue;
       setCurrentQueueIndex(newIdx);
       queueIdxRef.current = newIdx;
 
-      // La base radio change uniquement quand un morceau individuel genere une
-      // radio. Les vraies listes (album, playlist, liked, downloads) ne doivent
-      // pas afficher de base radio.
       if (isRadioSeedPlayback) {
         setRadioSource(track);
       } else if (isListPlayback) {
         setRadioSource(null);
       }
-      
-      // On met à jour l'état suggestions global pour l'UI
+
       setSuggestions(hasRadioSuggestions ? newQueue.filter(t => t.isSuggestion) : []);
-
-      // ─── Mise à jour de la ref pour les events headless ───────────────────
-      handlePlayTrackRef.current = handlePlayTrack;
-
-      // ─── Mise à jour immédiate de l'UI ────────────────────────────────────
-      setCurrentTrack(track);
-      currentTrackRef.current = track;
-      setLoadingTrackId(track.id);
-
-      // ─── Vérification Connectivité & Local ─────────────────────────────────
-      const isDownloaded = downloads.some(d => String(d.id) === String(track.id));
-      let isOffline = false; 
-      // On retire le check santé bloquant (trop lent). 
-      // On se basera sur l'échec des requêtes suivantes pour le mode hors-ligne.
-
-      // Si Hors-ligne et non téléchargé -> on cherche le prochain téléchargé
-      if (isOffline && !isDownloaded) {
-        console.log(`[Offline] Skip: ${track.title}`);
-        const q = queueRef.current;
-        if (q && q.length > 1) {
-          const currentIndex = q.findIndex(t => String(t.id) === String(track.id));
-          for (let i = 1; i < q.length; i++) {
-            const nextIdx = (currentIndex + i) % q.length;
-            const nextTrack = q[nextIdx];
-            if (downloads.some(d => String(d.id) === String(nextTrack.id))) {
-              return handlePlayTrack(nextTrack, q, nextIdx, { preserveRadioSource: true });
-            }
-          }
-        }
-        alert('Mode Hors-ligne : Seuls vos téléchargements sont disponibles.');
+      lastRecordedPlaybackRef.current = null;
+      const activeTrack = await loadNativeQueueFrom(newQueue, newIdx);
+      if (!activeTrack) {
+        alert('Lien non disponible');
         return false;
       }
 
-      // ─── Reset immédiat APRES le check offline ──────────────────────────
-      await TrackPlayer.reset();
-
-      // ── Résolution du lien (Local ou Réseau) ────────────────────────────────
-      let finalTrack = track;
-      let finalLink  = null;
-
-      // Enrichissement des métadonnées (Récupération des contributeurs complets)
-      if (!isOffline && (!track.contributors || track.contributors.length === 0)) {
-        try {
-          const fullData = await getTrack(track.id);
-          if (fullData && fullData.contributors) {
-            finalTrack = { ...track, ...fullData };
-            setCurrentTrack(finalTrack);
-            currentTrackRef.current = finalTrack;
-          }
-        } catch (e) {
-          console.warn(`[Metadata] Failed to enrich ${track.title}:`, e.message);
-        }
-      }
-
-      // ─── Cache & Local ─────────────────────────────────────────────────────
-      // 1. Vérification du cache de prefetch
-      const cached = prefetchCache.current[track.id];
-      if (cached && cached.expires > Date.now()) {
-        finalLink = cached.link;
-        console.log(`[Cache] Hit for: ${track.title}`);
-      }
-
-      // 2. Priorité absolue au fichier local si téléchargé (physiquement présent)
-      const physicallyExists = await isTrackDownloaded(track);
-      if (physicallyExists) {
-        finalLink = getTrackPath(track);
-        console.log(`[Local] Playing from physical storage: ${track.title}`);
-        
-        const updatedDownloads = await getDownloadMetadata();
-        const localTrack = updatedDownloads.find(d => String(d.id) === String(track.id));
-        
-        if (localTrack) {
-          finalTrack = { ...localTrack, localUri: finalLink };
-          if (downloads.find(d => String(d.id) === String(track.id))?.localUri !== localTrack.localUri) {
-            setDownloads(updatedDownloads);
-          }
-        } else {
-          finalTrack = { ...track, localUri: finalLink };
-        }
-      } else if (isDownloaded) {
-        console.warn(`[Local] Metadata found but file missing for: ${track.title}`);
-      }
-
-      // 3. Résolution réseau si nécessaire
-      if (!finalLink && (String(track.id).startsWith('lfm-') || String(track.id).startsWith('cho-'))) {
-        const q = `${track.title} ${track.artist?.name || track.artist}`;
-        const res = await axios.get(`${BASE_URL}/search/play`, { params: { q } });
-        if (res.data?.link) {
-          finalLink  = res.data.link;
-          finalTrack = { ...track, title: res.data.title || track.title };
-          if (finalTrack.title !== track.title) {
-            setCurrentTrack(finalTrack);
-            currentTrackRef.current = finalTrack;
-          }
-        } else {
-          alert('Impossible de trouver ce morceau sur les serveurs.');
-          return false;
-        }
-      }
-
-      if (!finalLink) {
-        const dl  = await getTrackDownload(finalTrack.id);
-        finalLink = dl?.target?.link || dl?.link;
-      }
-
-      if (!finalLink) { alert('Lien non disponible'); return false; }
-
-      // ── Lancement RNTP ─────────────────────────────────────────────────────
-      await TrackPlayer.add({
-        id:       String(finalTrack.id),
-        url:      finalLink,
-        title:    finalTrack.title,
-        artist:   getArtistNames(finalTrack),
-        artwork:  finalTrack.artwork || finalTrack.album?.cover_big || finalTrack.album?.cover_medium || finalTrack.thumbnail,
-        duration: finalTrack.duration,
-        // Champs custom pour la navigation depuis le lecteur
-        artist_id: finalTrack.artist?.id || finalTrack.artist_id,
-        album_id:  finalTrack.album?.id,
-      });
-      await TrackPlayer.play();
-      
-      // Prefetch les suivants pour une lecture instantanée plus tard
-      prefetchNext(newQueue, newIdx);
-
-      // Enregistrement dans l'ADN musical
-      StatsService.recordTrackPlay(finalTrack).then(() => refreshDNA());
-
-      // fetchRecommendations n'est PAS appelé ici.
-      // Il est appelé uniquement quand on est au dernier morceau de la queue
-      // (dans le handler PlaybackTrackChanged) pour éviter des requêtes inutiles.
       return true;
     } catch (err) {
       console.error('handlePlayTrack error:', err);
@@ -515,51 +533,60 @@ export const PlayerProvider = ({ children }) => {
   };
 
   // ─── Next / Prev depuis l'UI (boutons PlayerScreen) ───────────────────────
-  const handleNext = useCallback(() => {
-    const queue   = queueRef.current;
-    const idx     = queueIdxRef.current;
-    const shuffle = shuffleRef.current;
-    const repeat  = repeatRef.current;
+  const handleNext = useCallback(async () => {
+    const queue = queueRef.current;
+    const idx = queueIdxRef.current;
 
     if (!queue.length) return;
     triggerHaptic('selection');
 
-    const isLast = !shuffle && idx >= queue.length - 1;
+    try {
+      await TrackPlayer.skipToNext();
+      return;
+    } catch (_) {}
 
-    if (isLast) {
-      if (repeat === REPEAT_MODE.LOOP_ALL) {
-        handlePlayTrack(queue[0], queue, 0, { preserveRadioSource: true });
-      } else {
-        // Stop ou ne rien faire si on est au dernier et pas en boucle
-        TrackPlayer.pause();
-      }
-    } else {
-      const nextIdx = getNextIndex(queue, idx, shuffle);
-      handlePlayTrack(queue[nextIdx], queue, nextIdx, { preserveRadioSource: true });
+    const isLast = !shuffleRef.current && idx >= queue.length - 1;
+    if (isLast && repeatRef.current !== REPEAT_MODE.LOOP_ALL) {
+      await TrackPlayer.pause();
+      return;
     }
-  }, []);
 
-  const handlePrevious = useCallback(() => {
-    const queue   = queueRef.current;
-    const idx     = queueIdxRef.current;
-    const shuffle = shuffleRef.current;
+    const nextIdx = isLast ? 0 : getNextIndex(queue, idx, shuffleRef.current);
+    playLogicalIndex(nextIdx, { preserveRadioSource: true });
+  }, [getNextIndex, playLogicalIndex]);
+
+  const handlePrevious = useCallback(async () => {
+    const queue = queueRef.current;
+    const idx = queueIdxRef.current;
 
     if (!queue.length) return;
     triggerHaptic('selection');
-    const prevIdx = getPrevIndex(queue, idx, shuffle);
-    playTrackAtIndex(queue, prevIdx, { preserveRadioSource: true });
-  }, []);
+
+    try {
+      await TrackPlayer.skipToPrevious();
+      return;
+    } catch (_) {}
+
+    const prevIdx = getPrevIndex(queue, idx, shuffleRef.current);
+    playLogicalIndex(prevIdx, { preserveRadioSource: true });
+  }, [getPrevIndex, playLogicalIndex]);
 
   // ─── Shuffle / Repeat toggles ──────────────────────────────────────────────
   const toggleShuffle = useCallback(() => {
     triggerHaptic('selection');
-    setIsShuffle(prev => !prev);
-  }, []);
+    const nextShuffle = !shuffleRef.current;
+    shuffleRef.current = nextShuffle;
+    setIsShuffle(nextShuffle);
+    ensureNativeUpcomingQueue(queueRef.current, queueIdxRef.current);
+  }, [ensureNativeUpcomingQueue]);
 
   const cycleRepeatMode = useCallback(() => {
     triggerHaptic('selection');
-    setRepeatMode(prev => (prev + 1) % 3);
-  }, []);
+    const nextRepeat = (repeatRef.current + 1) % 3;
+    repeatRef.current = nextRepeat;
+    setRepeatMode(nextRepeat);
+    ensureNativeUpcomingQueue(queueRef.current, queueIdxRef.current);
+  }, [ensureNativeUpcomingQueue]);
 
   // ─── Play/Pause & Stop ───────────────────────────────────────────────────
   const togglePlay = async () => {
@@ -576,8 +603,13 @@ export const PlayerProvider = ({ children }) => {
       await TrackPlayer.reset();
       setCurrentTrack(null);
       setCurrentQueue([]);
+      setCurrentQueueIndex(0);
       setRadioSource(null);
       setLoadingTrackId(null);
+      queueRef.current = [];
+      queueIdxRef.current = 0;
+      resolvedTrackByLogicalIndexRef.current = {};
+      lastRecordedPlaybackRef.current = null;
       triggerHaptic('notificationSuccess');
     } catch (e) {
       console.error('stopPlayer error:', e);
@@ -656,8 +688,7 @@ export const PlayerProvider = ({ children }) => {
       setCurrentQueueIndex(0);
       queueIdxRef.current = 0;
 
-      // Prefetch les nouveaux venus
-      prefetchNext(newQueue, 0);
+      ensureNativeUpcomingQueue(newQueue, 0);
 
       // Si appelé en fin de queue → lancer automatiquement la 1ère suggestion
       if (autoPlay && newQueue[1]) {
@@ -701,57 +732,73 @@ export const PlayerProvider = ({ children }) => {
   // ─── Gestion avancée de la File d'attente ──────────────────────────────────
   const playNext = useCallback(async (track) => {
     try {
-      const newQueue = [...currentQueue];
-      // On insère juste après l'index actuel
-      const insertIdx = currentQueueIndex + 1;
+      const baseQueue = queueRef.current.length ? queueRef.current : currentQueue;
+      if (!baseQueue.length) {
+        await handlePlayTrack(track);
+        closeActionSheet();
+        return;
+      }
+
+      const activeIndex = queueIdxRef.current;
+      const newQueue = [...baseQueue];
+      const insertIdx = activeIndex + 1;
       newQueue.splice(insertIdx, 0, track);
       
       setCurrentQueue(newQueue);
       queueRef.current = newQueue;
-      
-      // On ajoute aussi au TrackPlayer physique
-      await TrackPlayer.add(track, insertIdx);
+      await ensureNativeUpcomingQueue(newQueue, activeIndex);
       triggerHaptic('notificationSuccess');
       closeActionSheet();
     } catch (e) {
       console.error('[Queue] playNext error:', e);
     }
-  }, [currentQueue, currentQueueIndex]);
+  }, [currentQueue, ensureNativeUpcomingQueue]);
 
   const addToQueue = useCallback(async (track) => {
     try {
-      const newQueue = [...currentQueue, track];
+      const baseQueue = queueRef.current.length ? queueRef.current : currentQueue;
+      if (!baseQueue.length) {
+        await handlePlayTrack(track);
+        closeActionSheet();
+        return;
+      }
+
+      const activeIndex = queueIdxRef.current;
+      const newQueue = [...baseQueue, track];
       setCurrentQueue(newQueue);
       queueRef.current = newQueue;
-      
-      // On ajoute à la fin du TrackPlayer physique
-      await TrackPlayer.add(track);
+      await ensureNativeUpcomingQueue(newQueue, activeIndex);
       triggerHaptic('notificationSuccess');
       closeActionSheet();
     } catch (e) {
       console.error('[Queue] addToQueue error:', e);
     }
-  }, [currentQueue]);
+  }, [currentQueue, ensureNativeUpcomingQueue]);
 
   const removeFromQueue = useCallback(async (index) => {
     try {
-      if (index === currentQueueIndex) {
+      const activeIndex = queueIdxRef.current;
+      const baseQueue = queueRef.current.length ? queueRef.current : currentQueue;
+
+      if (index === activeIndex) {
         triggerHaptic('notificationError');
         return;
       }
 
-      const newQueue = [...currentQueue];
+      const newQueue = [...baseQueue];
       newQueue.splice(index, 1);
+      const nextActiveIndex = index < activeIndex ? Math.max(0, activeIndex - 1) : activeIndex;
 
       setCurrentQueue(newQueue);
       queueRef.current = newQueue;
-
-      await TrackPlayer.remove(index);
+      setCurrentQueueIndex(nextActiveIndex);
+      queueIdxRef.current = nextActiveIndex;
+      await ensureNativeUpcomingQueue(newQueue, nextActiveIndex);
       triggerHaptic('impactLight');
     } catch (e) {
       console.error('[Queue] removeFromQueue error:', e);
     }
-  }, [currentQueue, currentQueueIndex]);
+  }, [currentQueue, ensureNativeUpcomingQueue]);
 
   // ─── Loaders ───────────────────────────────────────────────────────────────
   const loadFavorites = async () => { setFavorites((await getFavorites()) || []); };

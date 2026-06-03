@@ -138,6 +138,25 @@
 
 - `handlePlayTrack` accepte maintenant `preserveRadioSource`.
 - Les transitions internes de queue, next/previous, remote next/previous, boucle et skip offline gardent la base radio.
+
+---
+
+# Stabilite du streaming mobile
+
+## Plan
+
+- [x] Identifier si le flux audio passe par Render ou directement par le lien MP3.
+- [x] Verifier la configuration RNTP actuelle.
+- [x] Augmenter le buffer lecteur sans activer le proxy audio par defaut.
+- [x] Verifier le diff et la syntaxe des fichiers modifies.
+
+## Review
+
+- Le streaming actif reste direct depuis le telephone vers le lien MP3 final.
+- RNTP est maintenant initialise avec `minBuffer: 50`, `maxBuffer: 120`, `playBuffer: 10`, `backBuffer: 30`.
+- La lecture utilise maintenant une queue native RNTP fenetree: morceau courant + prochains titres resolus en liens audio.
+- Les transitions automatiques et boutons suivant/precedent passent par la queue native quand possible, au lieu de reset entre chaque morceau.
+- Objectif: reduire les coupures sur reseaux instables sans faire transiter tout l'audio par Render.
 - Le clic manuel sur une suggestion dans `QueueModal` joue l'item dans la queue existante et garde la base radio.
 - Un choix individuel sans option continue de redefinir la base radio et de generer son milieu.
 - Ajustement final: une vraie liste fournie (album, playlist, liked, downloads) vide `radioSource` et `suggestions` au lieu d'afficher une base radio.
