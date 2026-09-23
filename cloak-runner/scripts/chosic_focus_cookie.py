@@ -7,6 +7,7 @@ from cloakbrowser import launch
 
 
 URL = "https://www.chosic.com/playlist-generator/"
+APP_NAME = "playlist_generator"
 
 
 def main() -> None:
@@ -24,14 +25,30 @@ def main() -> None:
     except Exception:
         pass
 
-    focus = page.get_by_text("Focus", exact=True).first
-    focus.wait_for(state="visible", timeout=30000)
-    focus.click()
+    # Chosic now issues its anonymous API token during the page handshake.
+    # The former Focus click no longer exists on the current page.
+    handshake = page.evaluate(
+        """
+        async ({app}) => {
+            const response = await fetch('/api/tools/handshake/', {
+                method: 'POST',
+                headers: {
+                    app,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'include',
+            });
+            return { status: response.status, body: await response.text() };
+        }
+        """,
+        {"app": APP_NAME},
+    )
+    if handshake["status"] != 200:
+        raise RuntimeError(f"Chosic handshake failed with HTTP {handshake['status']}")
 
-    try:
-        page.wait_for_load_state("networkidle", timeout=15000)
-    except Exception:
-        time.sleep(3)
+    handshake_body = json.loads(handshake["body"])
+    if not handshake_body.get("success"):
+        raise RuntimeError("Chosic handshake returned no success")
 
     cookies = context.cookies()
     chosic_cookies = [
@@ -44,6 +61,7 @@ def main() -> None:
         "ok": True,
         "url": page.url,
         "title": page.title(),
+        "handshake_status": handshake["status"],
         "cookies": chosic_cookies,
         "cookie_header": cookie_header,
         "network_tail": logs[-40:],

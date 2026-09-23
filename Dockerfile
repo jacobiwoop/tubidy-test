@@ -1,12 +1,16 @@
 # Utilise une image Node.js stable et légère pour Render.
 FROM node:20-slim
 
-# Outils de compilation nécessaires pour better-sqlite3 si le prebuild n'est pas disponible.
+# Outils système : Python/C++ pour better-sqlite3, ffmpeg et yt-dlp pour la résolution YouTube haute vitesse.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
+    curl \
+    ffmpeg \
     ca-certificates \
+    && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
+    && chmod a+rx /usr/local/bin/yt-dlp \
     && rm -rf /var/lib/apt/lists/*
 
 # Dossier de travail

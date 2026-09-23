@@ -27,6 +27,7 @@ RUNNER_TOKEN = os.environ.get("RUNNER_TOKEN", "")
 ENABLE_DEBUG_RUN = os.environ.get("ENABLE_DEBUG_RUN", "").lower() in {"1", "true", "yes"}
 BASE_DIR = Path(__file__).resolve().parent
 CHOSIC_FOCUS_SCRIPT = BASE_DIR / "scripts" / "chosic_focus_cookie.py"
+CHOSIC_API_SCRIPT = BASE_DIR / "scripts" / "chosic_api.py"
 
 
 def json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict) -> None:
@@ -77,7 +78,12 @@ def get_timeout(payload: dict | None, default: int = 120) -> tuple[int | None, s
         return None, "invalid_timeout"
 
 
-def execute_python(script_path: Path, timeout: int, work_dir: Path | None = None) -> dict:
+def execute_python(
+    script_path: Path,
+    timeout: int,
+    work_dir: Path | None = None,
+    extra_env: dict[str, str] | None = None,
+) -> dict:
     job_id = uuid.uuid4().hex
     job_dir = Path(tempfile.mkdtemp(prefix=f"cloak-job-{job_id}-"))
     cwd = work_dir or job_dir
@@ -87,6 +93,8 @@ def execute_python(script_path: Path, timeout: int, work_dir: Path | None = None
     env["PYTHONUNBUFFERED"] = "1"
     env["CLOAK_JOB_ID"] = job_id
     env["CLOAK_OUTPUT_DIR"] = str(job_dir)
+    if extra_env:
+        env.update(extra_env)
 
     timed_out = False
     try:
@@ -175,6 +183,10 @@ class RunnerHandler(BaseHTTPRequestHandler):
             self.handle_chosic_focus_cookie()
             return
 
+        if self.path == "/chosic/api":
+            self.handle_chosic_api()
+            return
+
         if self.path == "/run":
             if not ENABLE_DEBUG_RUN:
                 json_response(self, 404, {"ok": False, "error": "debug_run_disabled"})
@@ -231,6 +243,45 @@ class RunnerHandler(BaseHTTPRequestHandler):
             payload["stdout"] = response["stdout"]
 
         json_response(self, 200 if payload["ok"] else 500, payload)
+
+    def handle_chosic_api(self) -> None:
+        payload, error = read_json_body(self)
+        if error:
+            status = 413 if error == "invalid_body_size" else 400
+            json_response(self, status, {"ok": False, "error": error})
+            return
+
+        operation = payload.get("operation")
+        params = payload.get("params", {})
+        if operation not in {"search", "recommendations"} or not isinstance(params, dict):
+            json_response(self, 400, {"ok": False, "error": "invalid_chosic_request"})
+            return
+
+        timeout, error = get_timeout(payload, default=90)
+        if error:
+            json_response(self, 400, {"ok": False, "error": error})
+            return
+
+        response = execute_python(
+            CHOSIC_API_SCRIPT,
+            timeout,
+            work_dir=BASE_DIR,
+            extra_env={
+                "CLOAK_CHOSIC_OPERATION": operation,
+                "CLOAK_CHOSIC_PARAMS": json.dumps(params),
+            },
+        )
+        result = parse_stdout_json(response["stdout"])
+        output = {
+            "ok": response["ok"] and bool(result and result.get("ok")),
+            "job_id": response["job_id"],
+            "exit_code": response["exit_code"],
+            "timed_out": response["timed_out"],
+            "duration_ms": response["duration_ms"],
+            "result": result,
+            "stderr": response["stderr"],
+        }
+        json_response(self, 200 if output["ok"] else 502, output)
 
     def log_message(self, fmt: str, *args) -> None:
         print(f"{self.address_string()} - {fmt % args}", flush=True)

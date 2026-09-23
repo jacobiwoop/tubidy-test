@@ -8,8 +8,7 @@ const axios = require('axios');
 // NOTE: Le cookie de session est nécessaire pour les recommandations.
 // Il peut expirer. Preferer CHOSIC_COOKIE dans .env pour eviter de repatcher le code.
 const DEFAULT_CHOSIC_COOKIE =
-    process.env.CHOSIC_COOKIE ||
-    "pll_language=en; r_34874064=1780348856%7C5afe2943a0b56d94%7Ce09188070a6ba8ed952b221bb837981c47308bb9963294b720730271b9387c65";
+    process.env.CHOSIC_COOKIE || '';
 
 const CLOAK_RUNNER_URL =
     (process.env.CLOAK_RUNNER_URL || "http://cloak.204.236.198.29.traefik.me").replace(/\/+$/, "");
@@ -26,7 +25,16 @@ const COMMON_HEADERS = {
     'Sec-Ch-Ua': '"Not:A-Brand";v="99", "Brave";v="145", "Chromium";v="145"',
     'Sec-Ch-Ua-Mobile': '?0',
     'Sec-Ch-Ua-Platform': '"Linux"',
+    'app': 'playlist_generator',
 };
+
+const CHOSIC_TIMEOUT_MS = 20000;
+
+function requestHeaders() {
+    const headers = { ...COMMON_HEADERS };
+    if (currentChosicCookie) headers.Cookie = currentChosicCookie;
+    return headers;
+}
 
 function getStatus() {
     return {
@@ -43,6 +51,19 @@ function isCookieError(error) {
         /missing token/i.test(message) ||
         /token expired/i.test(message) ||
         /cookie/i.test(message);
+}
+
+async function callBrowserAPI(operation, params) {
+    const response = await axios.post(
+        `${CLOAK_RUNNER_URL}/chosic/api`,
+        { operation, params, timeout: 90 },
+        { timeout: 120000 },
+    );
+    const result = response.data?.result;
+    if (!response.data?.ok || !result?.ok) {
+        throw new Error(`CloakRunner Chosic ${operation} failed`);
+    }
+    return result.data;
 }
 
 async function refreshChosicCookie() {
@@ -110,16 +131,10 @@ async function withCookieRefresh(operationName, requestFn) {
  * Recherche des morceaux sur Chosic (Source Spotify)
  */
 async function search(query, limit = 10) {
-    return withCookieRefresh('search', async () => {
-        console.log(`[Chosic] Recherche : ${query}`);
-        const response = await axios.get('https://www.chosic.com/api/tools/search', {
-            params: { q: query, type: 'track', limit },
-            headers: {
-                ...COMMON_HEADERS,
-                'Cookie': currentChosicCookie
-            }
-        });
-        return response.data;
+    return callBrowserAPI('search', {
+        q: query,
+        type: 'track',
+        limit,
     });
 }
 
@@ -131,46 +146,19 @@ async function search(query, limit = 10) {
  * @param {number} options.limit - Nombre de résultats (max 100)
  */
 async function getRecommendations({ seedTracks = [], seedGenres = [], limit = 20 }) {
-    return withCookieRefresh('recommendations', async () => {
-        const tracksParam = Array.isArray(seedTracks) ? seedTracks.join(',') : seedTracks;
-        const genresParam = Array.isArray(seedGenres) ? seedGenres.join(',') : seedGenres;
-
-        console.log(`[Chosic] Récupération des recommandations. Tracks: ${tracksParam} | Genres: ${genresParam}`);
-        
-        const params = { limit };
-        if (tracksParam) params.seed_tracks = tracksParam;
-        if (genresParam) params.seed_genres = genresParam;
-
-        const response = await axios.get('https://www.chosic.com/api/tools/recommendations', {
-            params,
-            headers: {
-                ...COMMON_HEADERS,
-                'Cookie': currentChosicCookie
-            }
-        });
-        
-        return response.data;
-    });
+    const tracksParam = Array.isArray(seedTracks) ? seedTracks.join(',') : seedTracks;
+    const genresParam = Array.isArray(seedGenres) ? seedGenres.join(',') : seedGenres;
+    const params = { limit };
+    if (tracksParam) params.seed_tracks = tracksParam;
+    if (genresParam) params.seed_genres = genresParam;
+    return callBrowserAPI('recommendations', params);
 }
 
 /**
  * Recommandations basées uniquement sur un genre
  */
 async function getGenreRecommendations(genre, limit = 50) {
-    return withCookieRefresh('genre recommendations', async () => {
-        console.log(`[Chosic] Découvertes pour le genre : ${genre}`);
-        const response = await axios.get('https://www.chosic.com/api/tools/recommendations', {
-            params: { 
-                seed_genres: genre,
-                limit 
-            },
-            headers: {
-                ...COMMON_HEADERS,
-                'Cookie': currentChosicCookie
-            }
-        });
-        return response.data;
-    });
+    return callBrowserAPI('recommendations', { seed_genres: genre, limit });
 }
 
 module.exports = {
