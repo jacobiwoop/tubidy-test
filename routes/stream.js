@@ -32,11 +32,20 @@ router.get("/resolve", (req, res, next) => {
   const runYtDlp = (sourceQuery, isFallback = false) => {
     execFile(
       "yt-dlp",
-      ["-f", "ba/b", "--no-warnings", "--no-playlist", "--geo-bypass", "--get-url", sourceQuery],
+      [
+        "-f", "ba/b",
+        "--no-warnings",
+        "--no-playlist",
+        "--geo-bypass",
+        "--match-filter", "!is_drm",
+        "--get-url",
+        sourceQuery,
+      ],
       { timeout: 15000 },
       (error, stdout, stderr) => {
-        const url = stdout ? stdout.trim().split("\n")[0] : null;
-        if (!error && url && url.startsWith("http")) {
+        const lines = stdout ? stdout.trim().split("\n").filter(l => l.startsWith("http")) : [];
+        const url = lines[0] || null;
+        if (!error && url) {
           const src = isFallback ? "SoundCloud HQ" : "YouTube HQ";
           console.log(`[stream-resolve] Success via ${src}! Resolved: ${url.substring(0, 60)}...`);
           return res.json({
@@ -46,10 +55,10 @@ router.get("/resolve", (req, res, next) => {
           });
         }
 
-        // Si YouTube échoue (ex: blocage bot datacenter sur Render), fallback vers SoundCloud
+        // Si YouTube échoue (ex: blocage bot datacenter sur Render), fallback vers SoundCloud (5 résultats hors-DRM)
         if (!isFallback && !query.startsWith("http")) {
           console.warn(`[stream-resolve] YouTube blocked or failed, falling back to SoundCloud for '${query}'...`);
-          return runYtDlp(`scsearch1:${query}`, true);
+          return runYtDlp(`scsearch5:${query}`, true);
         }
 
         console.error(`[stream-resolve] Error: ${error ? error.message : "Aucun flux trouvé"}`);
