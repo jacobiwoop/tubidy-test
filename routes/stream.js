@@ -33,6 +33,7 @@ router.get("/resolve", (req, res, next) => {
     execFile(
       "yt-dlp",
       [
+        "-i",
         "-f", "ba/b",
         "--no-warnings",
         "--no-playlist",
@@ -45,7 +46,7 @@ router.get("/resolve", (req, res, next) => {
       (error, stdout, stderr) => {
         const lines = stdout ? stdout.trim().split("\n").filter(l => l.startsWith("http")) : [];
         const url = lines[0] || null;
-        if (!error && url) {
+        if (url) {
           const src = isFallback ? "SoundCloud HQ" : "YouTube HQ";
           console.log(`[stream-resolve] Success via ${src}! Resolved: ${url.substring(0, 60)}...`);
           return res.json({
