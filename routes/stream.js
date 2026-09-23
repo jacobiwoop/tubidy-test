@@ -29,29 +29,36 @@ router.get("/resolve", (req, res, next) => {
   const searchQuery = query.startsWith("http") ? query : `ytsearch1:${query} audio`;
   console.log(`[stream-resolve] Resolving audio for: ${searchQuery}`);
 
-  execFile(
-    "yt-dlp",
-    ["-f", "ba/b", "--no-warnings", "--no-playlist", "--geo-bypass", "--get-url", searchQuery],
-    { timeout: 15000 },
-    (error, stdout, stderr) => {
-      if (error) {
-        console.error(`[stream-resolve] Error: ${error.message}`);
+  const runYtDlp = (sourceQuery, isFallback = false) => {
+    execFile(
+      "yt-dlp",
+      ["-f", "ba/b", "--no-warnings", "--no-playlist", "--geo-bypass", "--get-url", sourceQuery],
+      { timeout: 15000 },
+      (error, stdout, stderr) => {
+        const url = stdout ? stdout.trim().split("\n")[0] : null;
+        if (!error && url && url.startsWith("http")) {
+          const src = isFallback ? "SoundCloud HQ" : "YouTube HQ";
+          console.log(`[stream-resolve] Success via ${src}! Resolved: ${url.substring(0, 60)}...`);
+          return res.json({
+            url,
+            source: src,
+            quality: isFallback ? "AAC/MP3 (Complet)" : "Audio HQ (Complet)",
+          });
+        }
+
+        // Si YouTube échoue (ex: blocage bot datacenter sur Render), fallback vers SoundCloud
+        if (!isFallback && !query.startsWith("http")) {
+          console.warn(`[stream-resolve] YouTube blocked or failed, falling back to SoundCloud for '${query}'...`);
+          return runYtDlp(`scsearch1:${query}`, true);
+        }
+
+        console.error(`[stream-resolve] Error: ${error ? error.message : "Aucun flux trouvé"}`);
         return res.status(500).json({ error: "Échec de résolution audio", details: stderr });
       }
+    );
+  };
 
-      const url = stdout.trim().split("\n")[0];
-      if (!url || !url.startsWith("http")) {
-        return res.status(404).json({ error: "Aucun flux audio trouvé" });
-      }
-
-      console.log(`[stream-resolve] Success! Resolved: ${url.substring(0, 60)}...`);
-      res.json({
-        url,
-        source: "YouTube HQ",
-        quality: "Audio HQ (Complet)",
-      });
-    }
-  );
+  runYtDlp(searchQuery, false);
 });
 
 router.get("/:id", async (req, res, next) => {
