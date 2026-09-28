@@ -1,0 +1,13 @@
+{
+  "name": "tubidy-resolver-api",
+  "version": "1.0.0",
+  "description": "Serverless Tubidy resolver with Turso LibSQL cloud cache",
+  "main": "api/resolve.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "keywords": ["tubidy", "resolver", "turso", "serverless", "vercel"],
+  "author": "jacobiwoop",
+  "license": "MIT"
+}
