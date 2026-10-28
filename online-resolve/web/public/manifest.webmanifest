@@ -1,0 +1,22 @@
+{
+  "name": "Spotywoop",
+  "short_name": "Spotywoop",
+  "description": "Écoute, paroles mot par mot et titres téléchargés pour l'écoute hors ligne.",
+  "lang": "fr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F0F0F",
+  "theme_color": "#0F0F0F",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Téléchargés", "url": "/library?tab=downloads", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Recherche", "url": "/search", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

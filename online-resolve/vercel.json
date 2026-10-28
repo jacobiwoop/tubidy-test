@@ -1,0 +1,12 @@
+{
+  "regions": ["cdg1"],
+  "buildCommand": "cd web && npm ci && npm run build",
+  "outputDirectory": "web/dist",
+  "functions": {
+    "api/index.go": { "maxDuration": 25 }
+  },
+  "rewrites": [
+    { "source": "/api/:route", "destination": "/api/index?route=:route" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
