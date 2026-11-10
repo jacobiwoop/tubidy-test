@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useApi } from '../useApi';
 import { usePlayer } from '../player/PlayerContext';
-import { useLibrary } from '../library';
+import { createPlaylist, deletePlaylist, useLibrary } from '../library';
 import { clearDownloads, storageInfo, useDownloads } from '../downloads';
 import { clearSearches, pushSearch, removeSearch, useSearchHistory } from '../searchHistory';
-import { CardGrid, Chips, ErrorState, Explicit, Loading, Section, TrackList } from '../components/Common';
+import { CardGrid, Chips, DownloadAllButton, ErrorState, Explicit, Loading, Section, TrackList } from '../components/Common';
 import { usePlayCard } from './Browse';
 import { artistPath, compact, date, flag, full, totalDuration } from '../format';
 import * as I from '../components/Icons';
@@ -56,7 +56,7 @@ export function Search() {
             {topTrack && (
               <section style={{ flex: '2 1 300px' }} aria-labelledby="h-best" className="section">
                 <h2 className="section-title" id="h-best">Meilleur résultat</h2>
-                <button type="button" className="panel" onClick={() => player.playList(data.tracks, 0, { continuous: true, label: `Recherche « ${q} »` })}
+                <button type="button" className="panel" onClick={() => player.playList([topTrack], 0, { continuous: true, label: `Radio · ${topTrack.title}` })}
                   style={{ display: 'flex', flexDirection: 'column', gap: 16, color: 'var(--text)', textAlign: 'left', cursor: 'pointer' }}>
                   {topTrack.image && <img src={topTrack.image} alt="" style={{ width: 120, height: 120, borderRadius: 8, objectFit: 'cover' }} />}
                   <span style={{ font: '800 30px var(--display)' }}>{topTrack.title}</span>
@@ -69,7 +69,7 @@ export function Search() {
             )}
             <section style={{ flex: '3 1 440px' }} className="section" aria-labelledby="h-stracks">
               <div className="section-head"><h2 className="section-title" id="h-stracks">Titres</h2><Link className="section-link" to={`/search?q=${encodeURIComponent(q)}&tab=tracks`}>Tout voir</Link></div>
-              <TrackList tracks={data.tracks.slice(0, 6)} showAlbum={false} numbered={false} context={`Recherche « ${q} »`} />
+              <TrackList tracks={data.tracks.slice(0, 6)} showAlbum={false} numbered={false} solo />
             </section>
           </div>
           {data.albums.length > 0 && <Section title="Albums" id="h-salb"><CardGrid cards={data.albums.slice(0, 8)} onPlay={playCard} /></Section>}
@@ -77,7 +77,7 @@ export function Search() {
           {data.playlists.length > 0 && <Section title="Playlists" id="h-spl"><CardGrid cards={data.playlists.slice(0, 8)} onPlay={playCard} /></Section>}
         </>
       )}
-      {data && tab === 'tracks' && <TrackList tracks={data.tracks} context={`Recherche « ${q} »`} />}
+      {data && tab === 'tracks' && <TrackList tracks={data.tracks} solo />}
       {data && tab === 'albums' && <CardGrid cards={data.albums} onPlay={playCard} />}
       {data && tab === 'artists' && <CardGrid cards={data.artists} />}
       {data && tab === 'playlists' && <CardGrid cards={data.playlists} onPlay={playCard} />}
@@ -142,6 +142,7 @@ export function CollectionPage({ kind }) {
           <div className="hero-actions">
             <button type="button" className="btn btn-primary" onClick={() => player.playList(data.tracks, 0, { continuous: true, label })} disabled={!data.tracks.length}><I.Play size={18} />Écouter</button>
             <button type="button" className="btn btn-ghost" onClick={() => { player.playList(data.tracks, Math.floor(Math.random() * data.tracks.length), { continuous: true, label }); if (!player.shuffle) player.toggleShuffle(); }} disabled={!data.tracks.length}><I.Shuffle size={18} />Aléatoire</button>
+            <DownloadAllButton tracks={data.tracks} />
           </div>
           {data.label && <div className="faint" style={{ fontSize: 13 }}>{data.label}{data.copyright ? ` · ${data.copyright}` : ''}</div>}
         </div>
@@ -221,6 +222,8 @@ export function LibraryPage() {
   const dl = useDownloads();
   const downloaded = [...dl.items.values()].sort((a, b) => b.savedAt - a.savedAt).map((i) => i.track);
   const list = tab === 'recent' ? lib.recent : tab === 'downloads' ? downloaded : lib.liked;
+  const player = usePlayer();
+  const [newName, setNewName] = useState('');
   const empty = {
     recent: 'Rien écouté pour le moment.',
     liked: 'Aucun titre aimé. Touche le cœur à côté d\'un titre pour le retrouver ici.',
@@ -233,12 +236,71 @@ export function LibraryPage() {
         { value: 'liked', label: `Titres aimés (${lib.liked.length})` },
         { value: 'downloads', label: `Téléchargés (${dl.items.size})` },
         { value: 'recent', label: 'Écoutés récemment' },
+        { value: 'playlists', label: `Playlists (${lib.playlists.length})` },
       ]} value={tab} onChange={(t) => setParams(t === 'liked' ? {} : { tab: t })} />
       {tab === 'downloads' && <DownloadsInfo count={dl.items.size} />}
-      {list.length === 0
+      {tab === 'playlists' && (
+        <>
+          <form className="modal-new" style={{ maxWidth: 480, margin: '18px 0' }} onSubmit={(e) => { e.preventDefault(); if (newName.trim()) { createPlaylist(newName); setNewName(''); } }}>
+            <label className="sr-only" htmlFor="lib-pl-name">Nom de la nouvelle playlist</label>
+            <input id="lib-pl-name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nouvelle playlist" />
+            <button type="submit" className="btn btn-primary" disabled={!newName.trim()}>Créer</button>
+          </form>
+          {lib.playlists.length === 0
+            ? <div className="state">Aucune playlist. Crée-en une ici, ou depuis le menu ⋯ d'un titre.</div>
+            : <div className="pl-list">{lib.playlists.map((p) => (
+              <Link key={p.id} to={`/my-playlist/${p.id}`} className="pl-row">
+                {p.tracks[0]?.image ? <img src={p.tracks[0].image} alt="" loading="lazy" /> : <span className="pl-empty"><I.Queue size={24} /></span>}
+                <span><strong>{p.name}</strong><span className="faint">{p.tracks.length} titre{p.tracks.length > 1 ? 's' : ''}</span></span>
+              </Link>
+            ))}</div>}
+        </>
+      )}
+      {tab === 'liked' && lib.liked.length > 0 && (
+        <div className="hero-actions" style={{ margin: '18px 0' }}>
+          <button type="button" className="btn btn-primary" onClick={() => player.playList(lib.liked, 0, { continuous: true, label: 'Titres aimés' })}><I.Play size={18} />Lecture</button>
+          <DownloadAllButton tracks={lib.liked} />
+        </div>
+      )}
+      {tab !== 'playlists' && (list.length === 0
         ? <div className="state">{empty}</div>
-        : <TrackList tracks={list} context={{ recent: 'Écoutés récemment', liked: 'Titres aimés', downloads: 'Téléchargés' }[tab]} />}
+        : <TrackList tracks={list} context={{ recent: 'Écoutés récemment', liked: 'Titres aimés', downloads: 'Téléchargés' }[tab]} />)}
       <p className="faint" style={{ fontSize: 13 }}>Ta bibliothèque et tes téléchargements sont enregistrés dans ce navigateur.</p>
+    </>
+  );
+}
+
+// Playlist de l'utilisateur : même page qu'un album.
+export function UserPlaylistPage() {
+  const { id } = useParams();
+  const lib = useLibrary();
+  const player = usePlayer();
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+  const p = lib.playlists.find((x) => x.id === id);
+  if (!p) return <div className="state">Cette playlist n'existe pas dans ce navigateur. <Link to="/library?tab=playlists">Mes playlists</Link></div>;
+  const label = p.name;
+  return (
+    <>
+      <section className="hero" aria-labelledby="h-mypl">
+        {p.tracks[0]?.image ? <img className="hero-img" src={p.tracks[0].image} alt="" /> : <span className="hero-img pl-empty"><I.Queue size={64} /></span>}
+        <div className="hero-body">
+          <div className="hero-kicker">Playlist</div>
+          <h1 id="h-mypl" className="hero-title">{p.name}</h1>
+          <div className="hero-meta"><span>{p.tracks.length} titre{p.tracks.length > 1 ? 's' : ''}{p.tracks.length ? `, ${totalDuration(p.tracks)}` : ''}</span></div>
+          <div className="hero-actions">
+            <button type="button" className="btn btn-primary" onClick={() => player.playList(p.tracks, 0, { continuous: true, label })} disabled={!p.tracks.length}><I.Play size={18} />Lecture</button>
+            <button type="button" className="btn btn-ghost" onClick={() => { player.playList(p.tracks, Math.floor(Math.random() * p.tracks.length), { continuous: true, label }); if (!player.shuffle) player.toggleShuffle(); }} disabled={!p.tracks.length}><I.Shuffle size={18} />Aléatoire</button>
+            <DownloadAllButton tracks={p.tracks} />
+            {confirming
+              ? <button type="button" className="btn btn-ghost" style={{ color: '#ff6b6b' }} onClick={() => { deletePlaylist(p.id); navigate('/library?tab=playlists'); }}>Confirmer la suppression</button>
+              : <button type="button" className="btn btn-ghost" onClick={() => setConfirming(true)}>Supprimer</button>}
+          </div>
+        </div>
+      </section>
+      {p.tracks.length === 0
+        ? <div className="state">Aucun titre. Ajoute-en depuis le menu ⋯ d'un titre.</div>
+        : <TrackList tracks={p.tracks} context={label} playlistId={p.id} />}
     </>
   );
 }

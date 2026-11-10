@@ -47,6 +47,7 @@ var routes = map[string]route{
 // La route se lit dans le chemin, ou dans ?route= quand Vercel réécrit /api/<route> vers /api/index.
 func API(cfg Config) http.HandlerFunc {
 	resolve := ResolveHandler(cfg)
+	audio := AudioHandler(cfg)
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := r.URL.Query().Get("route")
 		if name == "" {
@@ -54,6 +55,10 @@ func API(cfg Config) http.HandlerFunc {
 		}
 		if name == "resolve" {
 			resolve(w, r)
+			return
+		}
+		if name == "audio" {
+			audio(w, r)
 			return
 		}
 		if name == "lyrics" && r.Method == http.MethodGet {
@@ -96,6 +101,11 @@ func API(cfg Config) http.HandlerFunc {
 		start := time.Now()
 		v, err := rt.fn(ctx, cfg, r)
 		if err != nil {
+			if staleBody, ok := apiCache.getStale(key); ok {
+				log.Printf("api %s : repli sur le cache de secours (stale) suite à: %v", key, err)
+				writeCached(w, rt.ttl, staleBody, "STALE")
+				return
+			}
 			status := http.StatusBadGateway
 			switch {
 			case errors.Is(err, errNotFound):
@@ -152,6 +162,16 @@ func (c *memCache) get(key string) ([]byte, bool) {
 	defer c.mu.Unlock()
 	e, ok := c.entries[key]
 	if !ok || time.Now().After(e.expires) {
+		return nil, false
+	}
+	return e.body, true
+}
+
+func (c *memCache) getStale(key string) ([]byte, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	e, ok := c.entries[key]
+	if !ok || len(e.body) == 0 {
 		return nil, false
 	}
 	return e.body, true
@@ -221,7 +241,14 @@ type discoverResult struct {
 func apiDiscover(ctx context.Context, cfg Config, r *http.Request) (any, error) {
 	genre := strings.TrimSpace(r.URL.Query().Get("genre"))
 	country := countryParam(r)
-	out := discoverResult{Genre: genre, Country: country}
+	out := discoverResult{
+		Genre:          genre,
+		Country:        country,
+		TrendingSongs:  []Track{},
+		TrendingAlbums: []Card{},
+		Recent:         []Track{},
+		Top:            []Track{},
+	}
 	var songs, albums, recent, top []audiomack.Item
 	errs := parallel(
 		func() (err error) { songs, err = cfg.AM.Trending(ctx, genre, false, 12); return },
@@ -229,7 +256,19 @@ func apiDiscover(ctx context.Context, cfg Config, r *http.Request) (any, error) 
 		func() (err error) { recent, err = cfg.AM.Recent(ctx, genre, 12); return },
 		func() (err error) { top, err = cfg.AM.Chart(ctx, "songs", country, genre, 10); return },
 	)
-	if songs == nil && albums == nil {
+	if len(songs) == 0 && len(albums) == 0 && len(recent) == 0 && len(top) == 0 {
+		// Repli de secours : si Audiomack est en panne (504), utiliser Spotify
+		if cfg.SP != nil {
+			if spRes, spErr := cfg.SP.Search(ctx, "Top Hits", 12, 0); spErr == nil && len(spRes.Tracks) > 0 {
+				for _, t := range spRes.Tracks {
+					out.TrendingSongs = append(out.TrendingSongs, fromSPSearchTrack(t))
+				}
+				for _, a := range spRes.Albums {
+					out.TrendingAlbums = append(out.TrendingAlbums, Card{Kind: "album", Ref: "sp:" + a.ID, Title: a.Name, Image: a.Cover})
+				}
+				return out, nil
+			}
+		}
 		return nil, errors.Join(errs...)
 	}
 	out.TrendingSongs = mapTracks(songs)

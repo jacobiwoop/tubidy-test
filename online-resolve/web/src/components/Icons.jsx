@@ -45,3 +45,5 @@ export const Download = (p) => <Svg {...p}><path d="M12 4v11M7 10l5 5 5-5M5 20h1
 export const Downloaded = (p) => <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M8 12.5l2.8 2.8L16 10" /></Svg>;
 export const Offline = (p) => <Svg {...p}><path d="M3 3l18 18M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 4.2-2.6M19 13a10 10 0 0 0-2.4-1.8M2 9.5a15 15 0 0 1 4.6-3M22 9.5A15 15 0 0 0 11 5.1" /><circle cx="12" cy="20" r="1" /></Svg>;
 export const Mic = (p) => <Svg {...p}><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></Svg>;
+export const Share = (p) => <Svg {...p}><path d="M12 15V3M8 7l4-4 4 4M7 11H5v10h14V11h-2" /></Svg>;
+export const AddSquare = (p) => <Svg {...p}><rect x="3" y="3" width="18" height="18" rx="4" /><path d="M12 8v8M8 12h8" /></Svg>;

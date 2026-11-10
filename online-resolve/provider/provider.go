@@ -21,6 +21,9 @@ type Query struct {
 	// StrictFeatured : avec un invité, ne pas se rabattre sur une version qui ne le cite pas (l'app a
 	// yt-dlp en secours ; le site, lui, préfère jouer l'original que rien).
 	StrictFeatured bool
+	// ToleranceSec remplace DurationToleranceSec si non nul : la durée d'une vidéo YouTube inclut
+	// souvent l'intro et la fin du clip.
+	ToleranceSec int
 }
 
 // MentionsFeatured est vrai si title cite chaque artiste invité (tous sauf le premier) de q.
@@ -54,8 +57,8 @@ func TitleWords(q Query) []string {
 }
 
 var (
-	parenRE = regexp.MustCompile(`[(\[].*?[)\]]`)
-	dashRE  = regexp.MustCompile(`\s+[-–—]\s+`)
+	parenRE = regexp.MustCompile(`[(\[《【「『（〔].*?[)\]》】」』）〕]`)
+	dashRE  = regexp.MustCompile(`\s*[-–—]\s*`)
 )
 
 // HasTitleWords est vrai si title contient tous les mots (sans liste, rien n'est vérifiable : vrai).
@@ -67,6 +70,53 @@ func HasTitleWords(title string, words []string) bool {
 		}
 	}
 	return true
+}
+
+// sameRecording garde un résultat du bon artiste et du bon titre, sans version retouchée (« Last Last Mashup »,
+// « Comme un fils ») : chaque mot du titre trouvé (hors parenthèses : « (Explicit) ») est dans la demande, et
+// chaque mot du titre demandé est dans le titre trouvé.
+func sameRecording(title, artist string, q Query) bool {
+	cleanTitle := parenRE.ReplaceAllString(title, " ")
+	found := strings.Fields(normalize(cleanTitle))
+	if len(found) == 0 {
+		return false
+	}
+	wanted := TitleWords(q)
+	hasWanted := HasTitleWords(title, wanted)
+	if !hasWanted && len(wanted) > 0 {
+		tTitle := TransliterateKana(title)
+		var tWanted []string
+		for _, w := range wanted {
+			tWanted = append(tWanted, TransliterateKana(w))
+		}
+		hasWanted = HasTitleWords(tTitle, tWanted)
+	}
+	if !hasWanted {
+		return false
+	}
+
+	// Pour les titres occidentaux, chaque mot du titre trouvé doit figurer dans la requête.
+	// Pour les titres CJK (japonais/chinois), les catalogues ajoutent souvent des sous-titres
+	// d'anime ou d'OST (« 《火影忍者》TV动画片头曲 ») : tant que le titre voulu est présent, on valide.
+	if !ContainsCJK(title) && !ContainsCJK(q.Text) {
+		if !HasTitleWords(q.Text, found) {
+			return false
+		}
+	}
+
+	return !IsAlteredVersion(title, q.Text) && artist != "" && ArtistMatches(artist, q.Text)
+}
+
+// searchTerm prépare la recherche : les catalogues cherchent mal avec les invités et les parenthèses
+// (« Rema, Selena Gomez Calm Down (with…) » → « Rema Calm Down »).
+func searchTerm(q Query) string {
+	text := q.Text
+	if len(q.Artists) > 0 {
+		if prefix := strings.Join(q.Artists, ", "); strings.HasPrefix(text, prefix) {
+			text = q.Artists[0] + " " + strings.TrimPrefix(text, prefix)
+		}
+	}
+	return strings.Join(strings.Fields(parenRE.ReplaceAllString(text, " ")), " ")
 }
 
 // SplitArtists découpe la liste d'artistes envoyée par l'app ("Stromae, Erik Hassle").
@@ -84,13 +134,23 @@ func SplitArtists(s string) []string {
 // Mesuré le 09/10/2026 : même enregistrement à 0-4 s, reprises et autres versions à 8 s et plus.
 const DurationToleranceSec = 5
 
+// LooseToleranceSec est l'écart accepté en second essai pour un titre connu seulement par sa vidéo YouTube.
+const LooseToleranceSec = 30
+
+func (q Query) tolerance() int {
+	if q.ToleranceSec > 0 {
+		return q.ToleranceSec
+	}
+	return DurationToleranceSec
+}
+
 // durationMatches est vrai si la durée est inconnue d'un côté ou dans la tolérance.
 func durationMatches(q Query, sec int) bool {
 	if q.DurationSec <= 0 || sec <= 0 {
 		return true
 	}
 	d := sec - q.DurationSec
-	return d >= -DurationToleranceSec && d <= DurationToleranceSec
+	return d >= -q.tolerance() && d <= q.tolerance()
 }
 
 // alteredMarkers repèrent les versions qui ne sont pas l'enregistrement original : souvent à la même
@@ -111,6 +171,18 @@ func ArtistMatches(artist, query string) bool {
 	for _, w := range words {
 		if len([]rune(w)) >= 3 && strings.Contains(q, " "+w+" ") {
 			return true
+		}
+	}
+	// Si aucun match direct et que l'un contient du Kana/japonais, tenter avec la translittération
+	tArtist := TransliterateKana(artist)
+	tQuery := TransliterateKana(query)
+	if tArtist != artist || tQuery != query {
+		tWords := strings.Fields(normalize(tArtist))
+		tQ := " " + normalize(tQuery) + " "
+		for _, w := range tWords {
+			if len([]rune(w)) >= 3 && (strings.Contains(tQ, " "+w+" ") || strings.Contains(normalize(tQuery), w)) {
+				return true
+			}
 		}
 	}
 	return false
@@ -165,10 +237,16 @@ type Outcome struct {
 	Error    string        `json:"error,omitempty"`
 	Elapsed  time.Duration `json:"-"`
 	Ms       int64         `json:"ms"`
+
+	lastResort bool
 }
+
+// LastResort marque une source de dernier choix : son lien ne sert que si toutes les autres échouent.
+type LastResort interface{ LastResort() }
 
 // Race interroge toutes les sources en parallèle : la première qui fournit un lien gagne
 // et les autres sont annulées. Les issues des sources déjà terminées sont rendues avec.
+// Une source LastResort tourne en même temps, pour être prête, mais ne gagne que si les autres ont échoué.
 // Si toutes échouent, ok vaut false et outcomes contient chaque erreur.
 func Race(ctx context.Context, q Query, providers ...Provider) (winner Outcome, outcomes []Outcome, ok bool) {
 	ctx, cancel := context.WithCancel(ctx)
@@ -186,15 +264,23 @@ func Race(ctx context.Context, q Query, providers ...Provider) (winner Outcome, 
 			} else {
 				o.Result = &res
 			}
+			_, o.lastResort = p.(LastResort)
 			done <- o
 		}(p)
 	}
+	var fallback *Outcome
 	for range providers {
 		o := <-done
 		outcomes = append(outcomes, o)
 		if o.Result != nil {
-			return o, outcomes, true
+			if !o.lastResort {
+				return o, outcomes, true
+			}
+			fallback = &o
 		}
+	}
+	if fallback != nil {
+		return *fallback, outcomes, true
 	}
 	return Outcome{}, outcomes, false
 }

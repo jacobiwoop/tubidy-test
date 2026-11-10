@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePlayer } from '../player/PlayerContext';
-import { isLiked, toggleLike, useLibrary } from '../library';
-import { download, removeDownload, useDownloads } from '../downloads';
+import { addToPlaylist, createPlaylist, isLiked, removeFromPlaylist, toggleLike, useLibrary } from '../library';
+import { download, isDownloaded as isDownloadedNow, removeDownload, useDownloads } from '../downloads';
 import { artistPath, compact, duration, pagePath } from '../format';
 import * as I from './Icons';
 
@@ -108,12 +108,13 @@ export function Card({ card, onPlay }) {
 
 // ---------- Titres ----------
 
-export function TrackList({ tracks, showAlbum = true, showRank = false, numbered = true, context }) {
+export function TrackList({ tracks, showAlbum = true, showRank = false, numbered = true, context, playlistId, solo = false }) {
   const player = usePlayer();
   const lib = useLibrary();
   const dl = useDownloads();
   const [menu, setMenu] = useState(null);
-  const play = (i) => player.playList(tracks, i, { continuous: true, label: context });
+  // solo : le titre se lance seul, suivi des suggestions, et non du reste de la liste (résultats de recherche).
+  const play = (i) => (solo ? player.playList([tracks[i]], 0, { continuous: true, label: `Radio · ${tracks[i].title}` }) : player.playList(tracks, i, { continuous: true, label: context }));
   return (
     <>
       <ol className={`tracks${showAlbum ? '' : ' no-album'}`}>
@@ -154,12 +155,12 @@ export function TrackList({ tracks, showAlbum = true, showRank = false, numbered
           );
         })}
       </ol>
-      {menu && <TrackMenu {...menu} onClose={() => setMenu(null)} />}
+      {menu && <TrackMenu {...menu} playlistId={playlistId} onClose={() => setMenu(null)} />}
     </>
   );
 }
 
-export function TrackMenu({ track, x, y, onClose }) {
+export function TrackMenu({ track, x, y, onClose, playlistId }) {
   const player = usePlayer();
   const lib = useLibrary();
   const dl = useDownloads();
@@ -183,10 +184,84 @@ export function TrackMenu({ track, x, y, onClose }) {
       <button type="button" role="menuitem" onClick={act(() => player.startRadio({ track }))}><I.Radio size={18} />Radio de ce titre</button>
       <button type="button" role="menuitem" onClick={act(() => player.startRadio({ artist: track.artist.split(/,| feat\. /)[0] }))}><I.Radio size={18} />Radio de l'artiste</button>
       <button type="button" role="menuitem" onClick={act(() => toggleLike(track))}><I.Heart size={18} filled={isLiked(lib, track.id)} />{isLiked(lib, track.id) ? 'Retirer des titres aimés' : 'Aimer'}</button>
+      <button type="button" role="menuitem" onClick={act(() => window.dispatchEvent(new CustomEvent('pick-playlist', { detail: track })))}><I.AddQueue size={18} />Ajouter à une playlist</button>
+      {playlistId && <button type="button" role="menuitem" onClick={act(() => removeFromPlaylist(playlistId, track.id))}><I.Close size={18} />Retirer de cette playlist</button>}
       {dl.items.has(track.id)
         ? <button type="button" role="menuitem" onClick={act(() => removeDownload(track.id).then(() => player.notify(`« ${track.title} » retiré des téléchargements.`)))}><I.Downloaded size={18} />Supprimer le téléchargement</button>
         : <button type="button" role="menuitem" disabled={dl.progress.has(track.id)} onClick={act(() => startDownload(track, player.notify))}><I.Download size={18} />{dl.progress.has(track.id) ? 'Téléchargement…' : 'Télécharger'}</button>}
     </div>
+  );
+}
+
+// Fenêtre « Ajouter à une playlist », ouverte par le menu d'un titre.
+export function PlaylistPicker() {
+  const player = usePlayer();
+  const lib = useLibrary();
+  const [track, setTrack] = useState(null);
+  const [name, setName] = useState('');
+  useEffect(() => {
+    const open = (e) => { setTrack(e.detail); setName(''); };
+    window.addEventListener('pick-playlist', open);
+    return () => window.removeEventListener('pick-playlist', open);
+  }, []);
+  useEffect(() => {
+    if (!track) return undefined;
+    const esc = (e) => e.key === 'Escape' && setTrack(null);
+    document.addEventListener('keydown', esc);
+    return () => document.removeEventListener('keydown', esc);
+  }, [track]);
+  if (!track) return null;
+  const add = (playlist) => {
+    addToPlaylist(playlist.id, track);
+    player.notify(`« ${track.title} » ajouté à ${playlist.name}.`);
+    setTrack(null);
+  };
+  return (
+    <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && setTrack(null)}>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="h-pick">
+        <h2 id="h-pick">Ajouter à une playlist</h2>
+        <form className="modal-new" onSubmit={(e) => { e.preventDefault(); if (name.trim()) add(createPlaylist(name)); }}>
+          <label className="sr-only" htmlFor="pl-name">Nom de la nouvelle playlist</label>
+          <input id="pl-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Nouvelle playlist" />
+          <button type="submit" className="btn btn-primary" disabled={!name.trim()}>Créer</button>
+        </form>
+        <div className="modal-list">
+          {lib.playlists.map((p) => (
+            <button type="button" key={p.id} onClick={() => add(p)}><span>{p.name}</span><span className="faint">{p.tracks.length} titres</span></button>
+          ))}
+        </div>
+        <button type="button" className="btn btn-ghost" onClick={() => setTrack(null)}>Fermer</button>
+      </div>
+    </div>
+  );
+}
+
+// Télécharge tout un album ou une playlist : les titres déjà présents ne sont pas repris, un échec n'arrête pas les autres.
+export function DownloadAllButton({ tracks }) {
+  const player = usePlayer();
+  const dl = useDownloads();
+  const [running, setRunning] = useState(false);
+  const [failed, setFailed] = useState(0);
+  const total = tracks.length;
+  const done = tracks.filter((t) => dl.items.has(t.id)).length;
+  const run = async () => {
+    setRunning(true);
+    setFailed(0);
+    let errors = 0;
+    for (const t of tracks) {
+      if (isDownloadedNow(t.id)) continue;
+      try { await download(t); } catch { errors += 1; }
+    }
+    setRunning(false);
+    setFailed(errors);
+    player.notify(errors ? `${errors} titre${errors > 1 ? 's' : ''} n'ont pas pu être téléchargés.` : 'Tout est disponible hors ligne.');
+  };
+  if (running) return <button type="button" className="btn btn-ghost" disabled><I.Download size={18} />{done}/{total} — Téléchargement…</button>;
+  if (total > 0 && done === total) return <span className="btn btn-ghost" style={{ color: 'var(--accent)' }}><I.Downloaded size={18} />Téléchargé</span>;
+  return (
+    <button type="button" className="btn btn-ghost" onClick={run} disabled={!total}>
+      <I.Download size={18} />{failed ? `${done}/${total} — Réessayer` : done ? `Télécharger les ${total - done} restants` : 'Télécharger'}
+    </button>
   );
 }
 

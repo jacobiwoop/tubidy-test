@@ -12,9 +12,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -23,7 +25,6 @@ import (
 	"online-resolve/lyrics"
 	"online-resolve/provider"
 	"online-resolve/spotify"
-	"online-resolve/tubidy"
 )
 
 // Config regroupe les sources (dans l'ordre de préférence), le délai, la clé d'accès et les clients du catalogue.
@@ -42,23 +43,27 @@ type Config struct {
 	RelayURL, RelaySecret string
 }
 
-// DefaultProviders renvoie Audiomack puis Tubidy (miroir tubidyBase, ou celui par défaut si vide).
-func DefaultProviders(tubidyBase string) []provider.Provider {
-	if tubidyBase == "" {
-		tubidyBase = tubidy.DefaultBaseURL
-	}
-	return []provider.Provider{
+// DefaultProviders renvoie Audiomack, NetEase, Kuwo et QQ, plus JOOX si jooxToken est fourni, et Waptrick en dernier
+// choix (Tubidy a fermé son accès aux programmes en octobre 2026).
+func DefaultProviders(jooxToken string) []provider.Provider {
+	out := []provider.Provider{
 		provider.NewAudiomack(nil),
-		provider.NewTubidy(tubidy.New(tubidy.WithBaseURL(tubidyBase))),
+		provider.NewNetEase(nil),
+		provider.NewKuwo(nil),
+		provider.NewQQ(nil),
 	}
+	if jooxToken != "" {
+		out = append(out, provider.NewJOOX(jooxToken))
+	}
+	return append(out, provider.NewWaptrick(nil))
 }
 
-// ConfigFromEnv lit RESOLVE_API_KEY, TUBIDY_BASE_URL, AUDIOMACK_TOKEN / AUDIOMACK_TOKEN_SECRET
+// ConfigFromEnv lit RESOLVE_API_KEY, JOOX_TOKEN (facultatif), AUDIOMACK_TOKEN / AUDIOMACK_TOKEN_SECRET
 // (session du compte de service, rendue par /v1/access_token ; valable un an) et RELAY_URL / RELAY_SECRET
 // (relais de téléchargement).
 func ConfigFromEnv() Config {
 	cfg := Config{
-		Providers:   DefaultProviders(os.Getenv("TUBIDY_BASE_URL")),
+		Providers:   DefaultProviders(os.Getenv("JOOX_TOKEN")),
 		Timeout:     15 * time.Second,
 		APIKey:      os.Getenv("RESOLVE_API_KEY"),
 		AM:          audiomack.New(),
@@ -95,19 +100,113 @@ type Response struct {
 	DownloadURL string `json:"downloadUrl,omitempty"`
 }
 
-// relayTTL : durée de validité d'un lien de téléchargement signé.
-const relayTTL = 15 * time.Minute
+// relayTTL : durée de validité d'un lien de téléchargement signé. playTTL est plus longue : le lecteur redemande le
+// fichier par morceaux tout au long de l'écoute, et aussi après une longue pause.
+var audioRangeRE = regexp.MustCompile(`^bytes=(\d+)-(\d*)$`)
 
-// downloadURL signe le lien source pour le relais : s = HMAC-SHA256(secret, u + "\n" + e).
-func downloadURL(cfg Config, src string) string {
+const (
+	relayTTL = 15 * time.Minute
+	playTTL  = 6 * time.Hour
+)
+
+// downloadURL signe un lien de téléchargement pour le relais.
+func downloadURL(cfg Config, src string) string { return signedRelayURL(cfg, src, relayTTL) }
+
+// relayPlainHTTP fait passer par le relais les liens en http, qu'une page en https ne peut pas lire. À appeler après
+// downloadURL, qui doit signer le lien d'origine. Sans relais configuré, les liens restent tels quels.
+func relayPlainHTTP(cfg Config, apiBase string, resp *Response) {
+	wrap := func(r *provider.Result) {
+		if r != nil && strings.HasPrefix(r.StreamURL, "http://") {
+			target := cfg
+			if u, err := url.Parse(r.StreamURL); err == nil && net.ParseIP(u.Hostname()) != nil {
+				target.RelayURL = apiBase + "/api/audio" // Cloudflare refuse les fichiers sur une adresse IP (Waptrick)
+			}
+			if signed := signedRelayURL(target, r.StreamURL, playTTL); signed != "" {
+				r.StreamURL = signed
+			}
+		}
+	}
+	wrap(resp.Best)
+	for _, o := range resp.Outcomes {
+		wrap(o.Result)
+	}
+}
+
+// audioChunk : taille maximale d'une réponse de /api/audio, sous la limite de 4,5 Mo des fonctions Vercel. Le
+// navigateur redemande la suite tout seul, puisque la réponse annonce la plage servie et la taille totale.
+const audioChunk = 4 << 20
+
+// AudioHandler relaie par morceaux un lien signé par signedRelayURL. La signature tient lieu de clé d'accès : une
+// balise audio ne peut pas envoyer d'en-tête, et sans elle ce serait un proxy ouvert.
+func AudioHandler(cfg Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		src, e := q.Get("u"), q.Get("e")
+		exp, err := strconv.ParseInt(e, 10, 64)
+		mac := hmac.New(sha256.New, []byte(cfg.RelaySecret))
+		mac.Write([]byte(src + "\n" + e))
+		if cfg.RelaySecret == "" || err != nil || !strings.HasPrefix(src, "http://") || time.Now().Unix() > exp ||
+			!hmac.Equal([]byte(q.Get("s")), []byte(hex.EncodeToString(mac.Sum(nil)))) {
+			writeError(w, http.StatusForbidden, "lien invalide ou expiré")
+			return
+		}
+		start, end := int64(0), int64(audioChunk-1)
+		if m := audioRangeRE.FindStringSubmatch(r.Header.Get("Range")); m != nil {
+			start, _ = strconv.ParseInt(m[1], 10, 64)
+			end = start + audioChunk - 1
+			if asked, err := strconv.ParseInt(m[2], 10, 64); err == nil && asked < end {
+				end = asked
+			}
+		}
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, src, nil)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "lien source invalide")
+			return
+		}
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36")
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "source injoignable")
+			return
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusPartialContent {
+			writeError(w, http.StatusBadGateway, fmt.Sprintf("source : HTTP %d", res.StatusCode))
+			return
+		}
+		for _, h := range []string{"Content-Type", "Content-Length", "Content-Range"} {
+			if v := res.Header.Get(h); v != "" {
+				w.Header().Set(h, v)
+			}
+		}
+		w.Header().Set("Accept-Ranges", "bytes")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Cache-Control", "private, no-store")
+		w.WriteHeader(http.StatusPartialContent)
+		io.Copy(w, res.Body)
+	}
+}
+
+// publicBase rend l'adresse par laquelle l'API a été appelée.
+func publicBase(r *http.Request) string {
+	scheme := "https"
+	if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" && strings.HasPrefix(r.Host, "localhost") {
+		scheme = "http"
+	}
+	return scheme + "://" + r.Host
+}
+
+// signedRelayURL signe le lien source pour le relais : s = HMAC-SHA256(secret, u + "\n" + e).
+func signedRelayURL(cfg Config, src string, ttl time.Duration) string {
 	if cfg.RelayURL == "" || cfg.RelaySecret == "" || src == "" {
 		return ""
 	}
-	e := strconv.FormatInt(time.Now().Add(relayTTL).Unix(), 10)
+	e := strconv.FormatInt(time.Now().Add(ttl).Unix(), 10)
 	mac := hmac.New(sha256.New, []byte(cfg.RelaySecret))
 	mac.Write([]byte(src + "\n" + e))
 	v := url.Values{"u": {src}, "e": {e}, "s": {hex.EncodeToString(mac.Sum(nil))}}
-	return cfg.RelayURL + "/?" + v.Encode()
+	return cfg.RelayURL + "?" + v.Encode()
 }
 
 // Resolve lance la course (ou toutes les sources si all) avec le délai de cfg.
@@ -137,7 +236,10 @@ func Resolve(ctx context.Context, cfg Config, q provider.Query, all bool) Respon
 	return resp
 }
 
-// ResolveHandler répond à GET ?q=<artistes> <titre>&duration=<s>[&all=1][&am=<id Audiomack>], quel que soit le chemin.
+// looseRetryMaxMs : au-delà, le second essai risquerait de dépasser les 25 s de la fonction Vercel.
+const looseRetryMaxMs = 10000
+
+// ResolveHandler répond à GET ?q=<artistes> <titre>&duration=<s>[&all=1][&am=<id Audiomack>][&loose=1], quel que soit le chemin.
 // Avec am, le titre Audiomack est lu directement ; s'il est refusé, la course reprend sur q.
 // 200 avec best, 404 si aucune source n'a de lien, 400 si q manque, 401 si l'accès est refusé.
 func ResolveHandler(cfg Config) http.HandlerFunc {
@@ -183,19 +285,30 @@ func ResolveHandler(cfg Config) http.HandlerFunc {
 			dur = d
 		}
 
-		resp := Resolve(r.Context(), cfg, provider.Query{Text: q, DurationSec: dur, Artists: provider.SplitArtists(params.Get("artist")), StrictFeatured: params.Get("strict") == "1"}, params.Get("all") == "1")
-		for _, o := range resp.Outcomes {
-			status := "lien"
-			if o.Result == nil {
-				status = o.Error
+		query := provider.Query{Text: q, DurationSec: dur, Artists: provider.SplitArtists(params.Get("artist")), StrictFeatured: params.Get("strict") == "1"}
+		logOutcomes := func(resp Response) {
+			for _, o := range resp.Outcomes {
+				status := "lien"
+				if o.Result == nil {
+					status = o.Error
+				}
+				log.Printf("%q (%d s) %s %d ms : %s", q, dur, o.Provider, o.Ms, status)
 			}
-			log.Printf("%q (%d s) %s %d ms : %s", q, dur, o.Provider, o.Ms, status)
+		}
+		resp := Resolve(r.Context(), cfg, query, params.Get("all") == "1")
+		logOutcomes(resp)
+		// Durée venue d'une vidéo YouTube : second essai plus souple, si le temps d'exécution le permet.
+		if resp.Best == nil && dur > 0 && params.Get("loose") == "1" && resp.TotalMs < looseRetryMaxMs {
+			query.ToleranceSec = provider.LooseToleranceSec
+			resp = Resolve(r.Context(), cfg, query, params.Get("all") == "1")
+			logOutcomes(resp)
 		}
 		if resp.Best == nil {
 			w.WriteHeader(http.StatusNotFound)
 		} else if params.Get("download") == "1" {
 			resp.DownloadURL = downloadURL(cfg, resp.Best.StreamURL)
 		}
+		relayPlainHTTP(cfg, publicBase(r), &resp)
 		json.NewEncoder(w).Encode(resp)
 	}
 }

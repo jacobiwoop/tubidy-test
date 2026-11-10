@@ -17,7 +17,10 @@ import (
 
 var (
 	ytHTTP     = &http.Client{Timeout: 8 * time.Second}
-	ytNoiseRE  = regexp.MustCompile(`(?i)\s*[\(\[][^\)\]]*(Official|Video|Visuali[sz]er|Clip|Audio|Lyric|Paroles|HQ|HD|4K)[^\)\]]*[\)\]]`)
+	ytNoiseRE  = regexp.MustCompile(`(?i)\s*[\(\[][^\)\]]*(Official|Video|Visuali[sz]er|Clip|Audio|Lyric|Paroles|HQ|HD|4K|From\s)[^\)\]]*[\)\]]`)
+	ytCutRE    = regexp.MustCompile(`\s*(//|\|).*$`)
+	ytTailRE   = regexp.MustCompile(`(?i)\s+(official\s+(music\s+)?(video|audio|visuali[sz]er)|music\s+video|lyrics?\s+video|clip\s+officiel|vid[ée]o\s+officielle)\b.*$`)
+	ytGuestRE  = regexp.MustCompile(`(?i)\s+(ft\.?|feat\.?|featuring)\s+[^()\[\]]*$`)
 	ytDashRE   = regexp.MustCompile(`\s[-–—]\s`)
 	ytSpacesRE = regexp.MustCompile(`\s+`)
 	ytChanRE   = regexp.MustCompile(`(?i)(\s*-\s*Topic|VEVO|\s+Official|TV)$`)
@@ -149,12 +152,14 @@ func youtubeMix(ctx context.Context, q string, limit int) ([]Track, error) {
 // sans « - », la chaîne (sans « VEVO », « - Topic »…) sert d'artiste.
 func splitVideoTitle(videoTitle, channel string) (string, string) {
 	cleaned := strings.TrimSpace(ytSpacesRE.ReplaceAllString(ytNoiseRE.ReplaceAllString(videoTitle, ""), " "))
+	cleaned = ytTailRE.ReplaceAllString(ytCutRE.ReplaceAllString(cleaned, ""), "")
 	if loc := ytDashRE.FindStringIndex(cleaned); loc != nil {
 		left, right := strings.TrimSpace(cleaned[:loc[0]]), strings.TrimSpace(cleaned[loc[1]:])
 		if left != "" && right != "" {
-			return left, right
+			return left, ytGuestRE.ReplaceAllString(right, "")
 		}
 	}
+	cleaned = ytGuestRE.ReplaceAllString(cleaned, "")
 	artist := strings.TrimSpace(ytChanRE.ReplaceAllString(strings.TrimSpace(channel), ""))
 	if artist == "" {
 		artist = channel

@@ -115,6 +115,7 @@ export async function download(track) {
       duration: track.duration || undefined,
       artist: track.artist || undefined,
       am: track.amId && !track.blocked ? track.amId : undefined,
+      loose: track.id?.startsWith('yt:') ? 1 : undefined,
       download: 1,
     }, { fresh: true });
     if (!res?.downloadUrl) throw new Error('téléchargement indisponible pour ce titre');

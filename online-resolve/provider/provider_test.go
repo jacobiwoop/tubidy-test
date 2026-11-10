@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"online-resolve/audiomack"
+	"online-resolve/qq"
 )
 
 type fakeProvider struct {
@@ -186,6 +187,30 @@ func TestArtistMatches(t *testing.T) {
 	if !ArtistMatches("Wizkid feat. Tems", "Wizkid, Tems Essence (feat. Tems)") || ArtistMatches("Esther", "The Weeknd Blinding Lights") {
 		t.Error("cas Wizkid / Esther")
 	}
+	if !ArtistMatches("いきものがかり", "Ikimonogakari ブルーバード") {
+		t.Error("ArtistMatches(いきものがかり, Ikimonogakari ブルーバード) attendu true via translittération")
+	}
+}
+
+func TestSameRecordingCJK(t *testing.T) {
+	q := Query{
+		Text:        "Ikimonogakari ブルーバード",
+		Artists:     []string{"Ikimonogakari"},
+		DurationSec: 216,
+	}
+
+	// Kuwo retourne souvent le titre avec le sous-titre de l'anime Naruto
+	kuwoTitle := "ブルーバード-《火影忍者疾风传》TV动画第274-297集片头曲"
+	kuwoArtist := "いきものがかり"
+
+	if !sameRecording(kuwoTitle, kuwoArtist, q) {
+		t.Errorf("sameRecording(%q, %q) attendu true pour requête %+v", kuwoTitle, kuwoArtist, q)
+	}
+
+	// Instrumental doit être rejeté
+	if sameRecording("ブルーバード (Instrumental)", kuwoArtist, q) {
+		t.Error("Instrumental doit être rejeté")
+	}
 }
 
 func TestAudiomackSkipsKaraokeAndOtherArtists(t *testing.T) {
@@ -285,5 +310,66 @@ func TestTitleWords(t *testing.T) {
 	}
 	if TitleWords(Query{Text: "Wizkid Essence"}) != nil {
 		t.Error("sans artistes, pas de vérification")
+	}
+}
+
+func TestSearchTermDropsGuestsAndBrackets(t *testing.T) {
+	q := Query{Text: "Rema, Selena Gomez Calm Down (with Selena Gomez)", Artists: []string{"Rema", "Selena Gomez"}}
+	if got := searchTerm(q); got != "Rema Calm Down" {
+		t.Fatalf("%q", got)
+	}
+	if got := searchTerm(Query{Text: "Stromae Fils de joie"}); got != "Stromae Fils de joie" {
+		t.Fatalf("%q", got)
+	}
+}
+
+func TestSameRecordingKeepsTheSongAndRejectsNeighbours(t *testing.T) {
+	q := Query{Text: "Burna Boy Last Last"}
+	for _, r := range [][2]string{{"Last Last", "Burna Boy"}, {"Last Last (Explicit)", "Burna Boy"}} {
+		if !sameRecording(r[0], r[1], q) {
+			t.Errorf("%v refusé", r)
+		}
+	}
+	for _, r := range [][2]string{{"Last Last Mashup", "Burna Boy"}, {"Last Last (Remix Zouk)", "Burna Boy"}, {"Last Last", "Raybekah"}, {"Last Christmas", "Burna Boy"}, {"Last Last", ""}} {
+		if sameRecording(r[0], r[1], q) {
+			t.Errorf("%v accepté", r)
+		}
+	}
+}
+
+func TestQQSkipsPaidAndWrongDuration(t *testing.T) {
+	// « Fils de joie » sur QQ : payant sans lien, gratuit à 217 s, puis le bon à 195 s.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Query().Get("mid") {
+		case "":
+			w.Write([]byte(`[{"song_title":"Fils de joie","song_mid":"paye","singer_name":"Stromae"},{"song_title":"Fils de joie","song_mid":"autre","singer_name":"Stromae"},{"song_title":"Fils de joie","song_mid":"bon","singer_name":"Stromae"}]`))
+		case "paye":
+			w.Write([]byte(`{"song_play_time":195}`))
+		case "autre":
+			w.Write([]byte(`{"song_play_time":217,"song_play_url_hq":"http://x/autre"}`))
+		case "bon":
+			w.Write([]byte(`{"song_play_time":195,"song_play_url_hq":"http://x/bon"}`))
+		}
+	}))
+	defer srv.Close()
+	res, err := NewQQ(&qq.Client{Base: srv.URL}).Resolve(context.Background(), Query{Text: "Stromae Fils de joie", DurationSec: 195})
+	if err != nil || res.StreamURL != "http://x/bon" {
+		t.Fatalf("%+v, %v", res, err)
+	}
+}
+
+type lastResortProvider struct{ fakeProvider }
+
+func (lastResortProvider) LastResort() {}
+
+func TestRaceKeepsLastResortForWhenAllOthersFail(t *testing.T) {
+	reserve := lastResortProvider{fakeProvider{name: "reserve"}}
+	winner, _, ok := Race(context.Background(), Query{}, reserve, fakeProvider{name: "lent", delay: 50 * time.Millisecond})
+	if !ok || winner.Provider != "lent" {
+		t.Fatalf("gagnant = %q, attendu la source normale même plus lente", winner.Provider)
+	}
+	winner, _, ok = Race(context.Background(), Query{}, reserve, fakeProvider{name: "ko", delay: 50 * time.Millisecond, err: ErrNotFound})
+	if !ok || winner.Provider != "reserve" {
+		t.Fatalf("gagnant = %q, attendu le dernier choix", winner.Provider)
 	}
 }

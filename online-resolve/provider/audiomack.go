@@ -76,7 +76,7 @@ func (a *Audiomack) Resolve(ctx context.Context, q Query) (Result, error) {
 		return Result{}, lastErr
 	}
 	if skippedDuration > 0 {
-		return Result{}, fmt.Errorf("%w : %d titres écartés, aucun à %d s ± %d", ErrNotFound, skippedDuration, q.DurationSec, DurationToleranceSec)
+		return Result{}, fmt.Errorf("%w : %d titres écartés, aucun à %d s ± %d", ErrNotFound, skippedDuration, q.DurationSec, q.tolerance())
 	}
 	return Result{}, ErrNotFound
 }

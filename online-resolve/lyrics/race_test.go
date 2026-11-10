@@ -3,6 +3,8 @@ package lyrics
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -123,5 +125,23 @@ func TestSameSongRejectsAnotherArtist(t *testing.T) {
 	}
 	if !sameSong("Burna Boy", "Last Last", Query{Artist: "Burna Boy", Title: "Last Last (Remix)"}) {
 		t.Fatal("le bon morceau a été refusé")
+	}
+}
+
+func TestGeniusDecodesHTMLEntities(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"title":"Location","artist":"Dave &amp; Burna Boy","lyrics":"[Intro]\nThen I&#x27;ll be right there\nI don&#x27;t need a Carti"}`))
+	}))
+	defer srv.Close()
+	old := geniusWorkerURL
+	geniusWorkerURL = srv.URL + "/"
+	defer func() { geniusWorkerURL = old }()
+
+	res, err := New().genius(context.Background(), Query{Artist: "Dave", Title: "Location"})
+	if err != nil || len(res) != 1 {
+		t.Fatalf("genius = %v, %v", res, err)
+	}
+	if got := res[0].Lines[0].Text; got != "Then I'll be right there" {
+		t.Fatalf("première ligne = %q", got)
 	}
 }

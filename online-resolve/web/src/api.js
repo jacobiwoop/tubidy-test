@@ -26,6 +26,7 @@ export function resolveTrack(track, signal) {
     duration: track.duration || undefined,
     artist: track.artist || undefined, // les invités départagent deux versions de même durée
     am: track.amId && !track.blocked ? track.amId : undefined,
+    loose: track.id?.startsWith('yt:') ? 1 : undefined, // durée de la vidéo, pas du morceau
   }, { signal, fresh: true });
 }
 

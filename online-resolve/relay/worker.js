@@ -1,8 +1,8 @@
-// Relais de téléchargement (Cloudflare Worker) : Audiomack et Tubidy ne permettent pas à une page web de lire
-// leurs fichiers audio (pas d'en-tête CORS), donc pas de les enregistrer pour l'écoute hors ligne. Le relais
-// récupère le fichier et le renvoie avec cette autorisation.
+// Relais audio (Cloudflare Worker), pour deux cas qu'une page web en https ne peut pas faire seule :
+// - enregistrer un fichier pour l'écoute hors ligne quand la source n'a pas d'en-tête CORS (Audiomack) ;
+// - lire un lien en http (Kuwo, QQ, Waptrick), que le navigateur bloque sur une page en https.
 //
-// Il ne relaie que les liens signés par notre API (/api/resolve?download=1) : u (lien source), e (expiration,
+// Il ne relaie que les liens signés par notre API (/api/resolve) : u (lien source), e (expiration,
 // secondes Unix), s = HMAC-SHA256(RELAY_SECRET, u + "\n" + e) en hexadécimal. Sinon ce serait un proxy ouvert.
 
 const cors = {
@@ -41,7 +41,7 @@ export default {
     const u = params.get('u') || '';
     const e = Number(params.get('e'));
     const s = params.get('s') || '';
-    if (!u.startsWith('https://') || !Number.isFinite(e)) return fail(400, 'lien incomplet');
+    if (!/^https?:\/\//.test(u) || !Number.isFinite(e)) return fail(400, 'lien incomplet');
     if (e * 1000 < Date.now()) return fail(403, 'lien expiré');
     if (!env.RELAY_SECRET || !same(s, await signature(env.RELAY_SECRET, `${u}\n${e}`))) return fail(403, 'signature invalide');
 
@@ -60,6 +60,12 @@ export default {
     for (const h of ['Content-Type', 'Content-Length', 'Content-Range', 'Accept-Ranges']) {
       const v = upstream.headers.get(h);
       if (v) out.set(h, v);
+    }
+    // QQ annonce ses .m4a en « application/x-www-form-urlencoded », que certains navigateurs refusent de lire.
+    if (!(out.get('Content-Type') || '').startsWith('audio/')) {
+      const ext = new URL(u).pathname.split('.').pop().toLowerCase();
+      const type = { m4a: 'audio/mp4', mp3: 'audio/mpeg', ogg: 'audio/ogg', flac: 'audio/flac' }[ext];
+      if (type) out.set('Content-Type', type);
     }
     out.set('Cache-Control', 'private, no-store');
     return new Response(upstream.body, { status: upstream.status, headers: out });

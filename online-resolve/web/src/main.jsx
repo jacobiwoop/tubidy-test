@@ -5,7 +5,7 @@ import './styles.css';
 import { PlayerProvider } from './player/PlayerContext';
 import Shell from './components/Shell';
 import { BrowsePage, Category, Charts, Discover } from './pages/Browse';
-import { Artist, CollectionPage, LibraryPage, Search } from './pages/Pages';
+import { Artist, CollectionPage, LibraryPage, UserPlaylistPage, Search } from './pages/Pages';
 
 function NotFound() {
   return <div className="state"><h1 className="page-title">Page introuvable</h1></div>;
@@ -26,6 +26,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="playlist/:ref" element={<CollectionPage kind="playlist" />} />
             <Route path="artist/:ref" element={<Artist />} />
             <Route path="library" element={<LibraryPage />} />
+            <Route path="my-playlist/:id" element={<UserPlaylistPage />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

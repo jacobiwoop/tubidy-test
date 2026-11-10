@@ -15,12 +15,13 @@ import (
 	"online-resolve/provider"
 	"online-resolve/server"
 	"online-resolve/tubidy"
+	"online-resolve/waptrick"
 )
 
 func main() {
 	query := flag.String("q", "", "recherche, au format de l'app : \"<artistes> <titre>\" (noms Spotify)")
 	duration := flag.Int("duration", 0, "durée Spotify en secondes, pour reconnaître le bon enregistrement (0 : pas de vérification)")
-	only := flag.String("providers", "audiomack,tubidy", "sources à interroger, dans l'ordre de préférence")
+	only := flag.String("providers", "audiomack,netease,kuwo,qq,waptrick", "sources à interroger, dans l'ordre de préférence")
 	tubidyBase := flag.String("tubidy-base", tubidy.DefaultBaseURL, "miroir Tubidy à contacter")
 	timeout := flag.Duration("timeout", 15*time.Second, "délai maximal par recherche")
 	all := flag.Bool("all", false, "attendre toutes les sources au lieu de rendre le premier lien (comparaison)")
@@ -85,11 +86,21 @@ func buildProviders(list, tubidyBase string) ([]provider.Provider, error) {
 		switch strings.TrimSpace(name) {
 		case "audiomack":
 			out = append(out, provider.NewAudiomack(nil))
+		case "netease":
+			out = append(out, provider.NewNetEase(nil))
+		case "kuwo":
+			out = append(out, provider.NewKuwo(nil))
+		case "qq":
+			out = append(out, provider.NewQQ(nil))
+		case "joox":
+			out = append(out, provider.NewJOOX(os.Getenv("JOOX_TOKEN")))
+		case "waptrick":
+			out = append(out, provider.NewWaptrick(waptrick.New()))
 		case "tubidy":
 			out = append(out, provider.NewTubidy(tubidy.New(tubidy.WithBaseURL(tubidyBase))))
 		case "":
 		default:
-			return nil, fmt.Errorf("source inconnue %q (disponibles : audiomack, tubidy)", name)
+			return nil, fmt.Errorf("source inconnue %q (disponibles : audiomack, netease, kuwo, qq, joox, waptrick, tubidy)", name)
 		}
 	}
 	if len(out) == 0 {

@@ -1,5 +1,5 @@
 // Fonction Vercel unique pour toute l'API : /api/<route> est réécrit vers /api/index?route=<route> (vercel.json).
-// Variables : RESOLVE_API_KEY, TUBIDY_BASE_URL, AUDIOMACK_TOKEN, AUDIOMACK_TOKEN_SECRET.
+// Variables : RESOLVE_API_KEY, AUDIOMACK_TOKEN, AUDIOMACK_TOKEN_SECRET, RELAY_URL, RELAY_SECRET, JOOX_TOKEN (facultatif).
 package handler
 
 import (

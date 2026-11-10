@@ -25,7 +25,7 @@ func (t *Tubidy) Resolve(ctx context.Context, q Query) (Result, error) {
 	words := TitleWords(q)
 	tr, err := t.client.Resolve(ctx, q.Text, tubidy.ResolveOptions{
 		DurationSec:  q.DurationSec,
-		ToleranceSec: DurationToleranceSec,
+		ToleranceSec: q.tolerance(),
 		// Autre version, ou autre chanson à la même durée (mots du titre absents).
 		Reject: func(title string) bool {
 			return IsAlteredVersion(title, q.Text) || !HasTitleWords(title, words)

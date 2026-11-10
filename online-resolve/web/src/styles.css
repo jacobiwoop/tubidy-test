@@ -343,3 +343,39 @@ h1, h2, h3 { font-family: var(--display); margin: 0; }
     .main { padding-bottom: calc(var(--player-h) + 86px + env(safe-area-inset-bottom)); }
   }
 }
+
+/* Toast d'installation : en haut à droite, glisse depuis la droite ; pleine largeur sur téléphone. */
+.install-toast { position: fixed; top: 86px; right: 24px; z-index: 70; width: min(440px, calc(100vw - 32px)); padding: 14px 14px 14px 16px; border-radius: 14px; border: 1px solid #2c2c2c; background: #1a1a1a; box-shadow: 0 14px 40px rgba(0,0,0,.55); animation: install-in .45s cubic-bezier(.2,.8,.2,1) both; }
+.install-toast-row { display: flex; align-items: center; gap: 12px; }
+.install-toast-row img { flex: none; border-radius: 50%; box-shadow: 0 0 0 1px #3a3a3a; }
+.install-toast-text { flex: 1; min-width: 0; }
+.install-toast-text p { margin: 0; color: var(--text-2); font-size: 13px; line-height: 1.35; }
+.install-toast-text .install-toast-title { color: var(--text); font: 700 15px var(--display); margin-bottom: 2px; }
+.install-toast-go { flex: none; height: 40px; padding: 0 14px; gap: 6px; }
+.install-toast-close { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border: none; border-radius: 999px; background: none; color: var(--text-2); cursor: pointer; }
+.install-toast-close:hover { color: var(--text); background: #262626; }
+.install-steps { margin: 12px 0 0; padding: 12px 0 0 22px; border-top: 1px solid #2a2a2a; color: var(--text-2); font-size: 14px; display: grid; gap: 8px; }
+.install-key { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 6px; background: #262626; color: var(--text); font-weight: 600; white-space: nowrap; vertical-align: middle; }
+@keyframes install-in { from { transform: translateX(calc(100% + 40px)); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (max-width: 900px) {
+  .install-toast { top: calc(70px + env(safe-area-inset-top, 0px)); right: 16px; }
+  .install-btn { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .install-toast { animation: none; } }
+
+/* Playlists de l'utilisateur */
+.modal-back { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.65); }
+.modal { width: min(440px, 100%); max-height: 80vh; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 16px; background: #222; border: 1px solid #333; }
+.modal h2 { font: 800 20px var(--display); }
+.modal-new { display: flex; gap: 10px; }
+.modal-new input { flex: 1; min-width: 0; height: 48px; padding: 0 14px; border-radius: 10px; border: 1px solid #444; background: #181818; color: var(--text); font: inherit; }
+.modal-new input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.modal-list { overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.modal-list button { display: flex; justify-content: space-between; gap: 12px; min-height: 44px; padding: 8px 10px; border: none; border-radius: 8px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.modal-list button:hover { background: #2e2e2e; }
+.pl-list { display: flex; flex-direction: column; gap: 4px; }
+.pl-row { display: flex; align-items: center; gap: 14px; padding: 8px; border-radius: 10px; color: var(--text); text-decoration: none; }
+.pl-row:hover { background: #1c1c1c; }
+.pl-row img, .pl-row .pl-empty { width: 64px; height: 64px; flex: none; border-radius: 6px; object-fit: cover; }
+.pl-row > span:last-child { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pl-empty { display: flex; align-items: center; justify-content: center; background: #1f1f1f; color: #8a8a8a; }

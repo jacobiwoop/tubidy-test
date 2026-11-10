@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"math"
 	"net/http"
@@ -30,9 +31,11 @@ const (
 	sourceTimeout    = 8 * time.Second // FETCH_TIMEOUT_MS du composant
 	spicyClientKey   = "sl_pk_8nNuJf0L-xFUv8L5uU-pfin69WU4j3IzzV2-T3GPWKY"
 	spotifyTokenURL  = "https://flxgjwpkztgpdywkgckk.supabase.co/functions/v1/spotify-token"
-	geniusWorkerURL  = "https://fetch-genius.samidy.workers.dev/"
 	browserLikeAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36"
 )
+
+// geniusWorkerURL : variable pour les tests.
+var geniusWorkerURL = "https://fetch-genius.samidy.workers.dev/"
 
 // Miroirs LyricsPlus, dans l'ordre du composant ; on les interroge tous en même temps.
 var kpoeServers = []string{
@@ -699,6 +702,8 @@ func (c *Client) genius(ctx context.Context, q Query) ([]Result, error) {
 	if err := c.fetchJSON(ctx, http.MethodGet, geniusWorkerURL+"?"+url.Values{"title": {q.Title}, "artist": {q.Artist}}.Encode(), nil, &data); err != nil {
 		return nil, err
 	}
+	// Le service rend le texte avec les entités HTML de la page (« I&#x27;ll », « &amp; »).
+	data.Lyrics, data.Title, data.Artist = html.UnescapeString(data.Lyrics), html.UnescapeString(data.Title), html.UnescapeString(data.Artist)
 	if !sameSong(data.Artist, data.Title, q) {
 		return nil, nil
 	}

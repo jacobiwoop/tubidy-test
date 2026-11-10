@@ -8,6 +8,12 @@ func TestSplitVideoTitle(t *testing.T) {
 		{"Pheelz - Finesse (ft. BNXN) [Official Music Video]", "Pheelz", "Pheelz", "Finesse (ft. BNXN)"},
 		{"Last Last", "BurnaBoyVEVO", "BurnaBoy", "Last Last"},
 		{"Ye (Official Audio)", "Burna Boy - Topic", "Burna Boy", "Ye"},
+		{"Phénoménal // Clip officiel // 2025", "JuL", "JuL", "Phénoménal"},
+		{`Zoo (From "Zootopia 2") Official Music Video`, "Shakira", "Shakira", "Zoo"},
+		{"GIMS - Corazon ft. Lil Wayne & French Montana", "GIMS", "GIMS", "Corazon"},
+		{"Lartiste - Chocolat feat. Awa Imani", "Lartiste", "Lartiste", "Chocolat"},
+		{"Keblack Ft. Guy2Bezbar - Melrose Place", "Keblack", "Keblack Ft. Guy2Bezbar", "Melrose Place"},
+		{"Paroles Paroles", "Dalida", "Dalida", "Paroles Paroles"},
 	}
 	for _, c := range cases {
 		a, s := splitVideoTitle(c.title, c.channel)

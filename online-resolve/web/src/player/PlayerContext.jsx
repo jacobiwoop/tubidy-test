@@ -30,6 +30,8 @@ export function PlayerProvider({ children }) {
   const streams = useRef(new Map());
   const loadSeq = useRef(0);
   const extending = useRef(false);
+  const extendRef = useRef(null); // extendWithRadio est défini après load, qui l'appelle
+  const prefetchRef = useRef(null); // prefetch se rappelle lui-même après un retrait
   const toastTimer = useRef(null);
 
   const notify = useCallback((message) => {
@@ -51,10 +53,24 @@ export function PlayerProvider({ children }) {
     return s;
   }, []);
 
+  // Prépare le titre suivant ; s'il n'existe chez aucune source (404), il quitte la file au lieu de sauter à l'écoute.
   const prefetch = useCallback((i) => {
     const t = live.current.queue[i];
-    if (t) getStream(t).catch(() => {});
+    if (!t) return;
+    getStream(t).catch((err) => {
+      if (err?.status !== 404 && err?.message !== 'aucun lien') return;
+      const { queue: q, index } = live.current;
+      if (q[i]?.id !== t.id || i <= index) return;
+      const list = q.filter((_, j) => j !== i);
+      live.current.queue = list;
+      setQueue(list);
+      prefetchRef.current(i);
+      if (i >= list.length && live.current.context?.continuous && live.current.repeat === 'off') {
+        extendRef.current(index).then((added) => { if (added) prefetchRef.current(i); });
+      }
+    });
   }, [getStream]);
+  prefetchRef.current = prefetch;
 
   // load joue l'élément i de q ; un chargement plus récent annule les précédents.
   const load = useCallback(async (i, q = live.current.queue, retried = false) => {
@@ -75,6 +91,10 @@ export function PlayerProvider({ children }) {
       setSource(s);
       pushRecent(track);
       prefetch(i + 1);
+      // Dernier ou avant-dernier titre : la suite est chargée d'avance pour apparaître dans « Ensuite ».
+      if (live.current.context?.continuous && live.current.repeat === 'off' && i >= q.length - 2) {
+        extendRef.current(i).then((added) => { if (added && seq === loadSeq.current) prefetch(i + 1); });
+      }
     } catch (err) {
       if (seq !== loadSeq.current || err?.name === 'AbortError') return;
       streams.current.delete(track.id);
@@ -87,14 +107,14 @@ export function PlayerProvider({ children }) {
   }, [audio, getStream, prefetch, notify]);
 
   // Radio en fin de file : suggestions à partir du titre en cours, sans doublons.
-  const extendWithRadio = useCallback(async () => {
+  const extendWithRadio = useCallback(async (i = live.current.index) => {
     if (extending.current) return 0;
-    const { queue: q, index: i } = live.current;
-    const seed = q[i];
+    const seed = live.current.queue[i];
     if (!seed) return 0;
     extending.current = true;
     try {
       const r = await api('radio', { seed: 'track', am: seed.amId && !seed.blocked ? seed.amId : undefined, q: `${seed.artist} ${seed.title}`, duration: seed.duration, artist: seed.artist });
+      if (live.current.queue[i]?.id !== seed.id) return 0; // l'auditeur a changé de liste entre-temps
       const fresh = (r.tracks || []).filter((t) => !live.current.queue.some((x) => sameSong(x, t)));
       if (!fresh.length) return 0;
       const next = [...live.current.queue, ...fresh.slice(0, 20)];
@@ -107,6 +127,8 @@ export function PlayerProvider({ children }) {
       extending.current = false;
     }
   }, []);
+
+  extendRef.current = extendWithRadio;
 
   const next = useCallback(async (auto = false) => {
     const { queue: q, index: i, shuffle: sh, repeat: rp, context: ctx } = live.current;

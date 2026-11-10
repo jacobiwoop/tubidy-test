@@ -5,10 +5,11 @@ import { isLiked, toggleLike, useLibrary } from '../library';
 import { pushSearch, useSearchHistory } from '../searchHistory';
 import { artistPath, duration } from '../format';
 import * as I from './Icons';
-import { DownloadButton } from './Common';
+import { DownloadButton, PlaylistPicker } from './Common';
 import Lyrics from './Lyrics';
 import LyricLine from './LyricLine';
 import { useLyrics, useServerLyrics } from '../player/lyricsStore';
+import { canInstall, dismiss, dismissedRecently, install, useInstall } from '../install';
 
 const NAV = [
   { to: '/', label: 'Découvrir', icon: I.Discover, end: true },
@@ -29,6 +30,7 @@ export default function Shell() {
     <div className="app">
       <TopBar />
       <OfflineBanner />
+      <InstallToast />
       <div className="body">
         <nav className="sidebar" aria-label="Navigation principale">
           <div className="nav-group">
@@ -42,10 +44,12 @@ export default function Shell() {
             <div className="nav-label">MA MUSIQUE</div>
             <NavLink to="/library" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} style={{ fontSize: 15 }}><I.Heart size={20} />Titres aimés</NavLink>
             <NavLink to="/library?tab=recent" className="nav-link" style={{ fontSize: 15 }}><I.Clock size={20} />Écoutés récemment</NavLink>
+            <NavLink to="/library?tab=playlists" className="nav-link" style={{ fontSize: 15 }}><I.Queue size={20} />Mes playlists</NavLink>
           </div>
         </nav>
         <main className="main" id="contenu">
           <Outlet />
+          <PlaylistPicker />
         </main>
       </div>
       <nav className="bottomnav" aria-label="Navigation">
@@ -311,20 +315,52 @@ function OfflineBanner() {
   );
 }
 
-// « Installer l'appli » quand le navigateur le propose (Chrome, Edge, Android) ; sur iPhone, voir Ma musique.
+// « Installer l'appli » dans la barre du haut, tant que l'installation est proposable ici.
 function InstallButton() {
-  const [prompt, setPrompt] = useState(null);
-  useEffect(() => {
-    const keep = (e) => { e.preventDefault(); setPrompt(e); };
-    const done = () => setPrompt(null);
-    window.addEventListener('beforeinstallprompt', keep);
-    window.addEventListener('appinstalled', done);
-    return () => { window.removeEventListener('beforeinstallprompt', keep); window.removeEventListener('appinstalled', done); };
-  }, []);
-  if (!prompt) return null;
+  const inst = useInstall();
+  if (!canInstall(inst)) return null;
   return (
-    <button type="button" className="btn btn-ghost" style={{ height: 44 }} onClick={() => { prompt.prompt(); prompt.userChoice.finally(() => setPrompt(null)); }}>
+    <button type="button" className="btn btn-ghost install-btn" style={{ height: 44 }} onClick={install}>
       <I.Download size={18} />Installer l'appli
     </button>
+  );
+}
+
+// Toast d'accueil qui propose l'installation, glissé depuis la droite peu après l'ouverture. Sur iPhone, le
+// bouton montre les deux gestes à faire (aucun site ne peut lancer l'installation lui-même).
+function InstallToast() {
+  const inst = useInstall();
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (dismissedRecently()) return undefined;
+    const t = setTimeout(() => setShown(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
+  // Le bouton de la barre du haut ouvre aussi les gestes iPhone, même si le toast a été fermé.
+  const open = inst.steps || (shown && canInstall(inst));
+  if (!open || inst.installed) return null;
+  const close = () => { setShown(false); dismiss(); };
+  return (
+    <div className="install-toast" role="dialog" aria-label="Installer Spotywoop">
+      <div className="install-toast-row">
+        <img src="/icon-192.png" alt="" width="40" height="40" />
+        <div className="install-toast-text">
+          <p className="install-toast-title">L'appli Spotywoop</p>
+          <p>Plein écran, titres téléchargés lus sans réseau.</p>
+        </div>
+        {!inst.steps && (
+          <button type="button" className="btn btn-primary install-toast-go" onClick={install}>
+            <I.Download size={18} />Installer
+          </button>
+        )}
+        <button type="button" className="install-toast-close" onClick={close} aria-label="Fermer"><I.Close size={18} /></button>
+      </div>
+      {inst.steps && (
+        <ol className="install-steps">
+          <li>Touche <span className="install-key"><I.Share size={16} /> Partager</span> dans la barre de Safari</li>
+          <li>Choisis <span className="install-key"><I.AddSquare size={16} /> Sur l'écran d'accueil</span>, puis Ajouter</li>
+        </ol>
+      )}
+    </div>
   );
 }

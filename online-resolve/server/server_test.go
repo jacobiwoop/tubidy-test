@@ -162,3 +162,49 @@ func TestDownloadURLIsSignedForTheRelay(t *testing.T) {
 		t.Fatalf("paramètres = %v", q)
 	}
 }
+
+func TestRelayPlainHTTPWrapsOnlyHTTPLinks(t *testing.T) {
+	plain, secure := provider.Result{StreamURL: "http://kw.example/a.mp3"}, provider.Result{StreamURL: "https://n.example/a.mp3"}
+	resp := Response{Best: &plain, Outcomes: []provider.Outcome{{Result: &plain}, {Result: &secure}}}
+	relayPlainHTTP(Config{RelayURL: "https://relay.example", RelaySecret: "k"}, "https://site.example", &resp)
+	u, err := url.Parse(plain.StreamURL)
+	if err != nil || u.Host != "relay.example" || u.Query().Get("u") != "http://kw.example/a.mp3" {
+		t.Fatalf("lien http = %q", plain.StreamURL)
+	}
+	if secure.StreamURL != "https://n.example/a.mp3" {
+		t.Fatalf("lien https modifié : %q", secure.StreamURL)
+	}
+	other := provider.Result{StreamURL: "http://kw.example/a.mp3"}
+	relayPlainHTTP(Config{}, "https://site.example", &Response{Best: &other})
+	if other.StreamURL != "http://kw.example/a.mp3" {
+		t.Fatalf("sans relais : %q", other.StreamURL)
+	}
+}
+
+func TestAudioHandlerServesSignedChunksOnly(t *testing.T) {
+	var asked string
+	src := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked = r.Header.Get("Range")
+		w.Header().Set("Content-Range", "bytes 0-4194303/9000000")
+		w.WriteHeader(http.StatusPartialContent)
+		w.Write([]byte("audio"))
+	}))
+	defer src.Close()
+	cfg := Config{RelaySecret: "k"}
+	ip := provider.Result{StreamURL: src.URL + "/a.mp3"}
+	relayPlainHTTP(Config{RelayURL: "https://relay.example", RelaySecret: "k"}, "https://site.example", &Response{Best: &ip})
+	u, err := url.Parse(ip.StreamURL)
+	if err != nil || u.Host != "site.example" || u.Path != "/api/audio" {
+		t.Fatalf("lien = %q", ip.StreamURL)
+	}
+	rec := httptest.NewRecorder()
+	AudioHandler(cfg)(rec, httptest.NewRequest("GET", "/api/audio?"+u.RawQuery, nil))
+	if rec.Code != http.StatusPartialContent || rec.Body.String() != "audio" || asked != "bytes=0-4194303" {
+		t.Fatalf("code %d, plage %q, corps %q", rec.Code, asked, rec.Body.String())
+	}
+	rec = httptest.NewRecorder()
+	AudioHandler(cfg)(rec, httptest.NewRequest("GET", "/api/audio?"+u.RawQuery+"0", nil))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("mauvaise signature : code %d", rec.Code)
+	}
+}
