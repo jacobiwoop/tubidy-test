@@ -8,8 +8,8 @@ Dernière mise à jour : 10/11/2026
 - **Type :** Application Android native en Kotlin / Jetpack Compose.
 - **Package :** `com.spotywoop.kt`.
 - **Dépôt GitHub :** `jacobiwoop/spotiwoop`.
-- **Version actuelle :** `0.2.10` (`versionCode: 21`).
-- **Release GitHub :** `https://github.com/jacobiwoop/spotiwoop/releases/tag/v0.2.10`
+- **Version actuelle :** `0.2.11` (`versionCode: 22`).
+- **Release GitHub :** `https://github.com/jacobiwoop/spotiwoop/releases/tag/v0.2.11`
 - **Moteur de streaming (`StreamResolver`) :**
   - Course multi-couloirs native en local :
     1. Kuwo (MP3 320 kbps direct)
@@ -79,6 +79,13 @@ Dernière mise à jour : 10/11/2026
   - Sécurisation du chargeur ICU dans `SongMatch.kt` par réflexion + vérification `SDK_INT >= 29` (évite tout crash sur Android 8 et 9).
   - Optimisation de la détection de mise à jour dans `AppUpdateManager` avec repli universel automatique.
   - Tag `v0.2.10` publié avec `app-universal-release.apk`, `app-arm64-v8a-release.apk`, `app-armeabi-v7a-release.apk`, `app-x86_64-release.apk` et `mapping-v0.2.10.zip`.
+- **Sortie de Spotiwoop v0.2.11 (Version Allégée -65% taille) :**
+  - Suppression de la dépendance FFmpeg inutilisée (car Spotiwoop fait de l'extraction d'URL streaming directe et du téléchargement direct via OkHttp sans réencodage vidéo).
+  - Poids de l'APK arm64 réduit de 55 Mo à **21 Mo** (-62%).
+  - Poids de l'APK universel réduit de 194 Mo à **61 Mo** (-68%).
+  - Poids de l'APK armeabi-v7a (32-bit) réduit à **19 Mo**.
+  - Téléchargements hors-ligne et streaming vérifiés et 100% fonctionnels.
+  - Tag `v0.2.11` publié sur GitHub avec les APKs et le mapping ProGuard.
 - **Résilience et déploiement d'online-resolve :**
   - Poussé sur `main` de `jacobiwoop/tubidy-test`.
   - `/api/discover` sécurisé avec repli Spotify et cache stale pour éviter les erreurs 502 dues aux pannes Audiomack.
